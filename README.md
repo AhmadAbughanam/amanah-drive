@@ -86,6 +86,4 @@ amanah-drive/
 6. Build the Next.js dashboard.
 7. Add Docker Compose and Nginx for VPS deployment.
 
-## Git
 
-This directory is intended to be its own git repository so it can be pushed independently from the learning workspace.
