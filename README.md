@@ -1,89 +1,377 @@
 # Amanah Drive
 
-`Amanah Drive` is a single-user personal AI drive: a private cloud storage app with AI search, chat, summaries, and tagging.
+> **A secure AI-powered personal knowledge drive built with modern backend engineering practices.**
 
-The product is designed as a practical capstone project with:
+Amanah Drive is a self-hosted intelligent document management system designed for a **single user**. It combines secure file storage, semantic search, and Retrieval-Augmented Generation (RAG) to transform a personal document collection into a searchable knowledge base.
 
-- `Go` for the core backend API
-- `Python FastAPI` for ingestion and AI workflows
-- `PostgreSQL` + `pgvector` for metadata and embeddings
-- `Cloudflare R2` for object storage
-- `Next.js` for the web dashboard
-- `Docker Compose` + `Nginx` for VPS deployment
+This project is intentionally focused on demonstrating **software engineering quality** rather than implementing every possible feature. Every architectural decision prioritizes clean design, security, maintainability, and scalability.
 
-## Product Goals
+---
 
-- Upload and organize files in folders
-- Store raw file objects in `Cloudflare R2`
-- Index file content for semantic search and chat
-- Ask questions over your files with citations
-- Generate summaries and tag suggestions
-- Keep the first version single-user and operationally simple
+# Project Goals
 
-## v1 Scope
+The primary goal of Amanah Drive is to showcase professional backend engineering skills through a real-world application.
 
-### Included
+The project focuses on:
 
-- Single-user auth
-- Folder and file CRUD
-- Upload, download, move, rename, and soft delete
-- Support for `PDF`, `text`, and `markdown`
-- Text extraction and chunking
-- Embeddings stored in `pgvector`
-- Semantic search
-- AI chat with citations
-- Suggested tags with confirmation
-- Docker-based deployment to one VPS
+* Secure authentication and authorization
+* Clean software architecture
+* Modern API design
+* AI integration
+* Background processing
+* Containerized deployment
+* Database design
+* Security best practices
+* Scalable system design
 
-### Excluded
+Although V1 is built for a single user, the architecture is designed so that cloud storage, multiple users, and additional services can be added later with minimal changes.
 
-- Multi-user sharing
-- End-to-end encryption
-- OCR-heavy image workflows
-- `DOCX` / `XLSX` ingestion
-- Fully agentic file actions
+---
 
-## Architecture
+# Core Features (V1)
 
-### Applications
+## Secure Authentication
 
-- `drive-api/` → Go modular monolith for auth, files, folders, tags, search metadata, and orchestration
-- `ai-service/` → Python FastAPI service for extraction, embeddings, retrieval, summaries, and suggestions
-- `web/` → Next.js dashboard
+* Single administrator account
+* Argon2id password hashing
+* JWT authentication
+* Refresh token rotation
+* HTTP-only secure cookies
+* Rate limiting
+* Account lockout after repeated failed logins
+* Session management
+* CSRF protection where applicable
 
-### Storage
+---
 
-- `Cloudflare R2` → raw files and derived assets
-- `PostgreSQL` → users, folders, files, jobs, chat history, tags, extracted text, chunk metadata
-- `pgvector` → embeddings for semantic retrieval
+## Personal Drive
 
-## Deployment
+* Folder management
+* File upload
+* File download
+* Rename
+* Move
+* Delete
+* File metadata
+* File previews (future)
+* Local filesystem storage
 
-- one VPS
-- one domain
-- `Nginx` reverse proxy
-- `Docker Compose` for local and VPS orchestration
-- environment-variable based secrets
+---
 
-## Suggested Repository Layout
+## AI Knowledge Engine
 
-```txt
-amanah-drive/
-  drive-api/
-  ai-service/
-  web/
-  infra/
-  docs/
+Automatically process uploaded documents.
+
+Pipeline:
+
+Upload
+
+↓
+
+Text Extraction
+
+↓
+
+Chunking
+
+↓
+
+Embedding Generation
+
+↓
+
+Vector Storage
+
+↓
+
+Semantic Search
+
+↓
+
+AI Chat
+
+Supported initially:
+
+* PDF
+* Markdown
+* Plain Text
+
+Additional document formats will be added later.
+
+---
+
+## Semantic Search
+
+Instead of searching filenames:
+
+> contract_final_v3.pdf
+
+Users can search naturally:
+
+> "employment agreement"
+
+The system retrieves the most relevant document sections using vector similarity search.
+
+---
+
+## AI Chat
+
+Chat with your documents using Retrieval-Augmented Generation (RAG).
+
+Features:
+
+* Context-aware answers
+* Source citations
+* Conversation history
+* Retrieval from vector database
+* Grounded responses
+
+---
+
+## Background Processing
+
+Document processing runs asynchronously.
+
+Upload
+
+↓
+
+Processing Job Created
+
+↓
+
+Worker
+
+↓
+
+Extract Text
+
+↓
+
+Generate Embeddings
+
+↓
+
+Completed
+
+This keeps uploads responsive while supporting larger files.
+
+---
+
+# Technology Stack
+
+## Frontend
+
+* Next.js
+* TypeScript
+* Tailwind CSS
+
+---
+
+## Backend
+
+* Go
+* REST API
+* JWT Authentication
+
+---
+
+## AI Service
+
+* Python
+* FastAPI
+* LangChain
+* Sentence Transformers
+* RAG Pipeline
+
+---
+
+## Database
+
+PostgreSQL
+
+Extensions:
+
+* pgvector
+
+Stores:
+
+* File metadata
+* Processing jobs
+* Embeddings
+* Chat history
+* Sessions
+
+---
+
+## Storage
+
+### V1
+
+Local filesystem on VPS.
+
+A storage abstraction layer is implemented from the beginning so the storage backend can be replaced without affecting business logic.
+
+Future storage providers:
+
+* Cloudflare R2
+* Amazon S3
+* MinIO
+
+---
+
+## Infrastructure
+
+* Docker
+* Docker Compose
+* Nginx
+* GitHub Actions (CI)
+
+---
+
+# Project Architecture
+
+```text
+                   Next.js Frontend
+                          │
+                          ▼
+                    Go REST API
+                          │
+        ┌─────────────────┼─────────────────┐
+        │                 │                 │
+        ▼                 ▼                 ▼
+ Authentication      File Service      AI Service
+        │                 │                 │
+        ▼                 ▼                 ▼
+ PostgreSQL      Local Filesystem      FastAPI
+        │                                   │
+        └───────────────┬───────────────────┘
+                        ▼
+                  pgvector Database
 ```
 
-## Initial Build Order
+---
 
-1. Build single-user auth in the Go API.
-2. Add folders, file metadata, and R2 upload flow.
-3. Add Python ingestion for PDF, text, and markdown.
-4. Store chunks and embeddings in PostgreSQL + `pgvector`.
-5. Add semantic search and AI chat with citations.
-6. Build the Next.js dashboard.
-7. Add Docker Compose and Nginx for VPS deployment.
+# Security
 
+Security is a first-class design goal.
 
+Implemented practices include:
+
+* Argon2id password hashing
+* JWT authentication
+* Refresh token rotation
+* HTTP-only cookies
+* Secure cookie configuration
+* Rate limiting
+* Request validation
+* MIME type validation
+* File size limits
+* Path traversal prevention
+* Structured logging
+* Environment-based configuration
+* Secret management
+* Secure error handling
+
+---
+
+# Engineering Principles
+
+This project emphasizes engineering quality over feature quantity.
+
+Key principles:
+
+* Clean Architecture
+* Dependency Injection
+* Repository Pattern
+* Storage Abstraction
+* Separation of Concerns
+* SOLID Principles
+* Structured Logging
+* Configuration via Environment Variables
+* RESTful API Design
+* Background Workers
+* Modular Services
+
+---
+
+# Roadmap
+
+## Phase 1 — Foundation
+
+* Project setup
+* Docker environment
+* PostgreSQL
+* Configuration system
+* Logging
+* Authentication
+
+---
+
+## Phase 2 — Secure Drive
+
+* Folder management
+* Upload
+* Download
+* Rename
+* Delete
+* Filesystem storage
+
+---
+
+## Phase 3 — AI Processing
+
+* PDF extraction
+* Markdown support
+* Chunk generation
+* Embeddings
+* Vector indexing
+
+---
+
+## Phase 4 — Search & Chat
+
+* Semantic search
+* AI chat
+* Source citations
+* Conversation history
+
+---
+
+## Phase 5 — Production Polish
+
+* Testing
+* CI/CD
+* Documentation
+* Performance optimization
+* Security review
+
+---
+
+# Future Improvements
+
+The architecture is intentionally designed to support future expansion.
+
+Potential future features include:
+
+* Cloudflare R2 storage
+* Multi-user support
+* File sharing
+* Role-based access control
+* OCR
+* Additional document formats
+* Image understanding
+* Local LLM support
+* End-to-end encryption
+* Mobile application
+* Real-time synchronization
+
+---
+
+# Why This Project?
+
+Amanah Drive is more than a file manager.
+
+It demonstrates the ability to design and build a production-inspired software system using modern backend engineering practices, AI integration, secure authentication, asynchronous processing, containerized deployment, and scalable architecture.
+
+The objective is to build a system that is small enough to complete independently while reflecting the design principles and implementation quality expected in professional software engineering.
