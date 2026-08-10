@@ -170,7 +170,7 @@ This keeps uploads responsive while supporting larger files.
 
 ## Backend
 
-* Go
+* ASP.NET Core
 * REST API
 * JWT Authentication
 
@@ -235,7 +235,7 @@ Future storage providers:
                    Next.js Frontend
                           │
                           ▼
-                    Go REST API
+                ASP.NET Core REST API
                           │
         ┌─────────────────┼─────────────────┐
         │                 │                 │

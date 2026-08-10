@@ -4,7 +4,7 @@ This is a short navigation document for agents. The full project plan and archit
 
 ## Stack
 
-- Backend API: Go REST API with JWT authentication
+- Backend API: ASP.NET Core REST API with JWT authentication
 - AI service: Python FastAPI with LangChain, Sentence Transformers, and a RAG pipeline
 - Web dashboard: Next.js, TypeScript, and Tailwind CSS
 - Database: PostgreSQL with `pgvector`
@@ -17,7 +17,7 @@ The current README defines the services and architecture but does not lock in di
 
 ## Boundaries
 
-- The Go REST API owns authentication, file service behavior, metadata access, and orchestration.
+- The ASP.NET Core REST API owns authentication, file service behavior, metadata access, and orchestration.
 - The Python FastAPI AI service owns extraction, embedding generation, retrieval, summaries, and RAG behavior.
 - The Next.js app owns the user dashboard.
 - V1 raw file storage is local filesystem storage on the VPS.
