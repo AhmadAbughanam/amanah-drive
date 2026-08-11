@@ -19,8 +19,11 @@ public static class DriveEndpoints
 
         group.MapGet("/folders", async (
             Guid? parentFolderId,
+            int? page,
+            int? pageSize,
             ClaimsPrincipal user,
             AmanahDriveDbContext dbContext,
+            IOptions<DriveOptions> options,
             CancellationToken cancellationToken) =>
         {
             var userId = GetUserId(user);
@@ -34,19 +37,27 @@ public static class DriveEndpoints
                 return Results.NotFound();
             }
 
+            var normalizedPage = NormalizePage(page);
+            var normalizedPageSize = NormalizePageSize(pageSize, options.Value.DefaultPageSize, options.Value.MaxPageSize);
+            var skip = (normalizedPage - 1) * normalizedPageSize;
+
             var folders = await dbContext.Folders
                 .Where(folder => folder.UserId == userId && folder.ParentFolderId == parentFolderId)
                 .OrderBy(folder => folder.Name)
+                .Skip(skip)
+                .Take(normalizedPageSize)
                 .Select(folder => new FolderResponse(folder.Id, folder.Name, folder.ParentFolderId, folder.CreatedAt, folder.UpdatedAt))
                 .ToListAsync(cancellationToken);
 
             var files = await dbContext.FileItems
                 .Where(file => file.UserId == userId && file.FolderId == parentFolderId)
                 .OrderBy(file => file.OriginalFileName)
+                .Skip(skip)
+                .Take(normalizedPageSize)
                 .Select(file => new FileItemResponse(file.Id, file.FolderId, file.OriginalFileName, file.ContentType, file.SizeBytes, file.ChecksumSha256, file.ProcessingJob == null ? null : file.ProcessingJob.Id, file.CreatedAt, file.UpdatedAt))
                 .ToListAsync(cancellationToken);
 
-            return Results.Ok(new FolderContentsResponse(parentFolderId, folders, files));
+            return Results.Ok(new FolderContentsResponse(parentFolderId, normalizedPage, normalizedPageSize, folders, files));
         });
 
         group.MapPost("/folders", async (
@@ -482,6 +493,19 @@ public static class DriveEndpoints
 
     private static string NormalizeContentType(string contentType) =>
         contentType.Split(';', 2)[0].Trim();
+
+    private static int NormalizePage(int? page) =>
+        Math.Max(1, page ?? 1);
+
+    private static int NormalizePageSize(int? pageSize, int defaultPageSize, int maxPageSize)
+    {
+        if (pageSize is null)
+        {
+            return defaultPageSize;
+        }
+
+        return Math.Clamp(pageSize.Value, 1, maxPageSize);
+    }
 }
 
 public sealed record CreateFolderRequest(
@@ -497,4 +521,4 @@ public sealed record FolderResponse(Guid Id, string Name, Guid? ParentFolderId, 
 
 public sealed record FileItemResponse(Guid Id, Guid? FolderId, string OriginalFileName, string ContentType, long SizeBytes, string ChecksumSha256, Guid? ProcessingJobId, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
 
-public sealed record FolderContentsResponse(Guid? ParentFolderId, IReadOnlyCollection<FolderResponse> Folders, IReadOnlyCollection<FileItemResponse> Files);
+public sealed record FolderContentsResponse(Guid? ParentFolderId, int Page, int PageSize, IReadOnlyCollection<FolderResponse> Folders, IReadOnlyCollection<FileItemResponse> Files);

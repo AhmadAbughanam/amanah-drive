@@ -18,8 +18,8 @@ public static class SearchChatEndpoints
 
     public static IEndpointRouteBuilder MapSearchChatEndpoints(this IEndpointRouteBuilder app)
     {
-        app.MapGet("/search", SearchAsync).RequireAuthorization();
-        app.MapPost("/chat", ChatAsync).RequireAuthorization();
+        app.MapGet("/search", SearchAsync).RequireAuthorization().RequireRateLimiting("ai");
+        app.MapPost("/chat", ChatAsync).RequireAuthorization().RequireRateLimiting("ai");
         app.MapGet("/chat/{conversationId:guid}", GetChatHistoryAsync).RequireAuthorization();
         return app;
     }
@@ -154,8 +154,11 @@ public static class SearchChatEndpoints
 
     private static async Task<IResult> GetChatHistoryAsync(
         Guid conversationId,
+        int? page,
+        int? pageSize,
         ClaimsPrincipal user,
         AmanahDriveDbContext dbContext,
+        IOptions<SearchOptions> options,
         CancellationToken cancellationToken)
     {
         var userId = GetUserId(user);
@@ -179,9 +182,15 @@ public static class SearchChatEndpoints
             return Results.NotFound();
         }
 
+        var normalizedPage = NormalizePage(page);
+        var normalizedPageSize = NormalizePageSize(pageSize, options.Value.ChatDefaultPageSize, options.Value.ChatMaxPageSize);
+        var skip = (normalizedPage - 1) * normalizedPageSize;
+
         var messages = await dbContext.ChatMessages
             .Where(message => message.ConversationId == conversationId)
             .OrderBy(message => message.CreatedAt)
+            .Skip(skip)
+            .Take(normalizedPageSize)
             .Select(message => new ChatMessageResponse(
                 message.Id,
                 message.Role,
@@ -190,7 +199,7 @@ public static class SearchChatEndpoints
                 message.CreatedAt))
             .ToListAsync(cancellationToken);
 
-        return Results.Ok(new ChatHistoryResponse(conversation.Id, conversation.CreatedAt, conversation.UpdatedAt, messages));
+        return Results.Ok(new ChatHistoryResponse(conversation.Id, conversation.CreatedAt, conversation.UpdatedAt, normalizedPage, normalizedPageSize, messages));
     }
 
     private static async Task<IReadOnlyCollection<ChatMessage>> LoadHistoryAsync(
@@ -259,6 +268,19 @@ public static class SearchChatEndpoints
         return Math.Clamp(requestedTopK.Value, 1, 25);
     }
 
+    private static int NormalizePage(int? page) =>
+        Math.Max(1, page ?? 1);
+
+    private static int NormalizePageSize(int? pageSize, int defaultPageSize, int maxPageSize)
+    {
+        if (pageSize is null)
+        {
+            return defaultPageSize;
+        }
+
+        return Math.Clamp(pageSize.Value, 1, maxPageSize);
+    }
+
     private static Guid? GetUserId(ClaimsPrincipal user)
     {
         var value = user.FindFirstValue(ClaimTypes.NameIdentifier)
@@ -299,6 +321,6 @@ public sealed record ChatResponse(Guid ConversationId, string Answer, IReadOnlyC
 
 public sealed record ChatCitation(Guid ChunkId, Guid? FileId, string FileName, string Snippet);
 
-public sealed record ChatHistoryResponse(Guid ConversationId, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, IReadOnlyCollection<ChatMessageResponse> Messages);
+public sealed record ChatHistoryResponse(Guid ConversationId, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, int Page, int PageSize, IReadOnlyCollection<ChatMessageResponse> Messages);
 
 public sealed record ChatMessageResponse(Guid Id, string Role, string Content, IReadOnlyCollection<ChatCitation> Citations, DateTimeOffset CreatedAt);

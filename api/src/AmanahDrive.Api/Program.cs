@@ -10,6 +10,7 @@ using AmanahDrive.Api.Storage;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.IdentityModel.Tokens;
 using Npgsql;
 using Pgvector;
@@ -18,6 +19,7 @@ using Serilog;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+const string CorsPolicyName = "dashboard";
 
 builder.Host.UseSerilog((context, loggerConfiguration) =>
 {
@@ -38,6 +40,7 @@ builder.Services.AddOptions<DriveOptions>()
     .ValidateDataAnnotations()
     .Validate(options => options.MaxFileSizeBytes > 0, "Drive:MaxFileSizeBytes must be greater than zero.")
     .Validate(options => options.AllowedContentTypes.Length > 0, "Drive:AllowedContentTypes must contain at least one content type.")
+    .Validate(options => options.DefaultPageSize <= options.MaxPageSize, "Drive:DefaultPageSize must be less than or equal to Drive:MaxPageSize.")
     .ValidateOnStart();
 
 var driveOptions = builder.Configuration.GetSection(DriveOptions.SectionName).Get<DriveOptions>() ?? new DriveOptions();
@@ -56,7 +59,19 @@ var aiServiceOptions = builder.Configuration.GetSection(AiServiceOptions.Section
 builder.Services.AddOptions<SearchOptions>()
     .Bind(builder.Configuration.GetSection(SearchOptions.SectionName))
     .ValidateDataAnnotations()
+    .Validate(options => options.ChatDefaultPageSize <= options.ChatMaxPageSize, "Search:ChatDefaultPageSize must be less than or equal to Search:ChatMaxPageSize.")
     .ValidateOnStart();
+
+var searchOptions = builder.Configuration.GetSection(SearchOptions.SectionName).Get<SearchOptions>() ?? new SearchOptions();
+
+builder.Services.AddOptions<CorsOptions>()
+    .Bind(builder.Configuration.GetSection(CorsOptions.SectionName))
+    .ValidateDataAnnotations()
+    .Validate(options => options.AllowedOrigins.Length > 0, "Cors:AllowedOrigins must contain at least one origin.")
+    .Validate(options => !options.AllowedOrigins.Contains("*", StringComparer.Ordinal), "Cors:AllowedOrigins must not contain '*'.")
+    .ValidateOnStart();
+
+var corsOptions = builder.Configuration.GetSection(CorsOptions.SectionName).Get<CorsOptions>() ?? new CorsOptions();
 
 builder.WebHost.ConfigureKestrel(options =>
 {
@@ -78,7 +93,13 @@ var dataSource = dataSourceBuilder.Build();
 builder.Services.AddSingleton(dataSource);
 
 builder.Services.AddDbContext<AmanahDriveDbContext>(options =>
-    options.UseNpgsql(dataSource, npgsqlOptions => npgsqlOptions.UseVector()));
+{
+    options.UseNpgsql(dataSource, npgsqlOptions => npgsqlOptions.UseVector());
+    if (builder.Environment.IsEnvironment("Testing"))
+    {
+        options.ConfigureWarnings(warnings => warnings.Ignore(CoreEventId.ManyServiceProvidersCreatedWarning));
+    }
+});
 
 var authOptions = builder.Configuration.GetSection(AuthOptions.SectionName).Get<AuthOptions>()
     ?? throw new InvalidOperationException("Auth configuration is not configured.");
@@ -101,6 +122,22 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 builder.Services.AddHealthChecks();
+builder.Services.AddHsts(options =>
+{
+    options.MaxAge = TimeSpan.FromDays(365);
+    options.IncludeSubDomains = true;
+});
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(CorsPolicyName, policy =>
+    {
+        policy
+            .WithOrigins(corsOptions.AllowedOrigins)
+            .WithHeaders("Authorization", "Content-Type")
+            .WithMethods("GET", "POST", "PATCH", "DELETE", "OPTIONS")
+            .AllowCredentials();
+    });
+});
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IPasswordHasher, Argon2idPasswordHasher>();
 builder.Services.AddScoped<ITokenService, TokenService>();
@@ -130,6 +167,16 @@ builder.Services.AddRateLimiter(options =>
                 Window = TimeSpan.FromMinutes(authOptions.LoginRateLimitWindowMinutes),
                 QueueLimit = 0
             }));
+
+    options.AddPolicy("ai", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = searchOptions.RateLimitPermitLimit,
+                Window = TimeSpan.FromMinutes(searchOptions.RateLimitWindowMinutes),
+                QueueLimit = 0
+            }));
 });
 
 var app = builder.Build();
@@ -141,6 +188,20 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.UseSerilogRequestLogging();
+if (!app.Environment.IsDevelopment() && !app.Environment.IsEnvironment("Testing"))
+{
+    app.UseHsts();
+}
+
+app.Use(async (context, next) =>
+{
+    context.Response.Headers.TryAdd("X-Content-Type-Options", "nosniff");
+    context.Response.Headers.TryAdd("X-Frame-Options", "DENY");
+    context.Response.Headers.TryAdd("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'");
+    await next();
+});
+
+app.UseCors(CorsPolicyName);
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();

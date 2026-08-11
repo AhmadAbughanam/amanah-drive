@@ -52,6 +52,34 @@ public sealed class AuthEndpointTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Responses_IncludeBaselineSecurityHeaders()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.GetAsync("/health");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("nosniff", response.Headers.GetValues("X-Content-Type-Options").Single());
+        Assert.Equal("DENY", response.Headers.GetValues("X-Frame-Options").Single());
+        Assert.Equal("default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'", response.Headers.GetValues("Content-Security-Policy").Single());
+        Assert.False(response.Headers.Contains("Strict-Transport-Security"));
+    }
+
+    [Fact]
+    public async Task Cors_Preflight_AllowsConfiguredDashboardOrigin()
+    {
+        var client = _factory.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Options, "/search");
+        request.Headers.Add("Origin", "http://localhost:3000");
+        request.Headers.Add("Access-Control-Request-Method", "GET");
+
+        var response = await client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Equal("http://localhost:3000", response.Headers.GetValues("Access-Control-Allow-Origin").Single());
+    }
+
+    [Fact]
     public async Task Register_AfterRepeatedInvalidBootstrapAttempts_IsRateLimited()
     {
         var client = _factory.CreateClient();
@@ -200,6 +228,7 @@ internal sealed class AmanahDriveApiFactory(
     string? storageRoot = null,
     long? maxFileSizeBytes = null,
     string[]? allowedContentTypes = null,
+    IReadOnlyDictionary<string, string?>? settings = null,
     Action<IServiceCollection>? configureServices = null) : WebApplicationFactory<Program>
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
@@ -214,6 +243,7 @@ internal sealed class AmanahDriveApiFactory(
         builder.UseSetting("AiService:BaseUrl", "http://ai-service.test");
         builder.UseSetting("AiService:ServiceToken", "tests-only-ai-service-token");
         builder.UseSetting("AiService:WorkerEnabled", "false");
+        builder.UseSetting("Cors:AllowedOrigins:0", "http://localhost:3000");
 
         if (storageRoot is not null)
         {
@@ -230,6 +260,14 @@ internal sealed class AmanahDriveApiFactory(
             for (var index = 0; index < allowedContentTypes.Length; index++)
             {
                 builder.UseSetting($"Drive:AllowedContentTypes:{index}", allowedContentTypes[index]);
+            }
+        }
+
+        if (settings is not null)
+        {
+            foreach (var (key, value) in settings)
+            {
+                builder.UseSetting(key, value);
             }
         }
 

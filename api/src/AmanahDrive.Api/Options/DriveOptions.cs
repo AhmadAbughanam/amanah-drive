@@ -17,4 +17,10 @@ public sealed class DriveOptions
         "text/markdown",
         "text/plain"
     ];
+
+    [Range(1, 100)]
+    public int DefaultPageSize { get; init; } = 50;
+
+    [Range(1, 500)]
+    public int MaxPageSize { get; init; } = 100;
 }

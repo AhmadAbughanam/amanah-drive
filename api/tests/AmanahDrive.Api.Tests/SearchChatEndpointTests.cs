@@ -34,6 +34,11 @@ public sealed class SearchChatEndpointTests : IAsyncLifetime
         _aiClient = new FakeAiProcessingClient();
         _factory = new AmanahDriveApiFactory(
             _postgres.GetConnectionString(),
+            settings: new Dictionary<string, string?>
+            {
+                ["Search:ChatDefaultPageSize"] = "2",
+                ["Search:ChatMaxPageSize"] = "3"
+            },
             configureServices: services =>
             {
                 services.RemoveAll<IAiProcessingClient>();
@@ -66,6 +71,21 @@ public sealed class SearchChatEndpointTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Search_AfterRepeatedRequests_IsRateLimited()
+    {
+        var client = await CreateAuthorizedClientAsync();
+        await SeedChunksAsync();
+
+        HttpResponseMessage response = null!;
+        for (var attempt = 0; attempt < 21; attempt++)
+        {
+            response = await client.GetAsync($"/search?query=renewal-{attempt}");
+        }
+
+        Assert.Equal((HttpStatusCode)429, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Chat_ReturnsAnswerWithCitations()
     {
         var client = await CreateAuthorizedClientAsync();
@@ -83,6 +103,24 @@ public sealed class SearchChatEndpointTests : IAsyncLifetime
         Assert.Single(body.Citations);
         Assert.Equal(chunks.LeaseChunkId, body.Citations[0].ChunkId);
         Assert.Equal("lease.pdf", body.Citations[0].FileName);
+    }
+
+    [Fact]
+    public async Task Chat_AfterRepeatedRequests_IsRateLimited()
+    {
+        var client = await CreateAuthorizedClientAsync();
+        await SeedChunksAsync();
+
+        HttpResponseMessage response = null!;
+        for (var attempt = 0; attempt < 21; attempt++)
+        {
+            response = await client.PostAsJsonAsync("/chat", new
+            {
+                Question = $"What is the renewal rule {attempt}?"
+            });
+        }
+
+        Assert.Equal((HttpStatusCode)429, response.StatusCode);
     }
 
     [Fact]
@@ -143,6 +181,49 @@ public sealed class SearchChatEndpointTests : IAsyncLifetime
         Assert.Equal("assistant", history.Messages[1].Role);
         Assert.Equal("Grounded answer from retrieved chunks.", history.Messages[1].Content);
         Assert.Single(history.Messages[1].Citations);
+    }
+
+    [Fact]
+    public async Task GetChatHistory_UsesPaginationDefaultsAndPageNavigation()
+    {
+        var client = await CreateAuthorizedClientAsync();
+        await SeedChunksAsync();
+
+        var firstChat = await PostChatAsync(client, "Question one?");
+        await PostChatAsync(client, "Question two?", firstChat.ConversationId);
+        await PostChatAsync(client, "Question three?", firstChat.ConversationId);
+
+        var firstPageResponse = await client.GetAsync($"/chat/{firstChat.ConversationId}");
+        Assert.Equal(HttpStatusCode.OK, firstPageResponse.StatusCode);
+        var firstPage = await ReadJsonAsync<ChatHistoryResponseDto>(firstPageResponse);
+        Assert.Equal(1, firstPage.Page);
+        Assert.Equal(2, firstPage.PageSize);
+        Assert.Equal(["user", "assistant"], firstPage.Messages.Select(message => message.Role));
+        Assert.Equal("Question one?", firstPage.Messages[0].Content);
+
+        var secondPageResponse = await client.GetAsync($"/chat/{firstChat.ConversationId}?page=2&pageSize=2");
+        Assert.Equal(HttpStatusCode.OK, secondPageResponse.StatusCode);
+        var secondPage = await ReadJsonAsync<ChatHistoryResponseDto>(secondPageResponse);
+        Assert.Equal(2, secondPage.Page);
+        Assert.Equal(2, secondPage.PageSize);
+        Assert.Equal("Question two?", secondPage.Messages[0].Content);
+    }
+
+    [Fact]
+    public async Task GetChatHistory_ClampsPageSizeToConfiguredMaximum()
+    {
+        var client = await CreateAuthorizedClientAsync();
+        await SeedChunksAsync();
+
+        var firstChat = await PostChatAsync(client, "Question one?");
+        await PostChatAsync(client, "Question two?", firstChat.ConversationId);
+
+        var response = await client.GetAsync($"/chat/{firstChat.ConversationId}?pageSize=99");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var history = await ReadJsonAsync<ChatHistoryResponseDto>(response);
+        Assert.Equal(3, history.PageSize);
+        Assert.Equal(3, history.Messages.Count);
     }
 
     private async Task<HttpClient> CreateAuthorizedClientAsync()
@@ -217,6 +298,18 @@ public sealed class SearchChatEndpointTests : IAsyncLifetime
         return new SeededChunks(leaseChunkId, policyChunkId);
     }
 
+    private static async Task<ChatResponseDto> PostChatAsync(HttpClient client, string question, Guid? conversationId = null)
+    {
+        var response = await client.PostAsJsonAsync("/chat", new
+        {
+            Question = question,
+            ConversationId = conversationId
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        return await ReadJsonAsync<ChatResponseDto>(response);
+    }
+
     private static float[] UnitVector(int axis)
     {
         var values = new float[384];
@@ -262,7 +355,7 @@ public sealed class SearchChatEndpointTests : IAsyncLifetime
 
     private sealed record ChatCitationDto(Guid ChunkId, Guid? FileId, string FileName, string Snippet);
 
-    private sealed record ChatHistoryResponseDto(Guid ConversationId, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, IReadOnlyList<ChatMessageDto> Messages);
+    private sealed record ChatHistoryResponseDto(Guid ConversationId, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, int Page, int PageSize, IReadOnlyList<ChatMessageDto> Messages);
 
     private sealed record ChatMessageDto(Guid Id, string Role, string Content, IReadOnlyList<ChatCitationDto> Citations, DateTimeOffset CreatedAt);
 

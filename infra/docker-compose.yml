@@ -26,6 +26,7 @@ services:
       Auth__JwtSigningKey: ${AUTH_JWT_SIGNING_KEY:?AUTH_JWT_SIGNING_KEY is required}
       Auth__BootstrapToken: ${AUTH_BOOTSTRAP_TOKEN:?AUTH_BOOTSTRAP_TOKEN is required}
       Auth__SecureCookies: ${AUTH_SECURE_COOKIES:-true}
+      Cors__AllowedOrigins__0: ${WEB_ORIGIN:-http://localhost:3000}
       AiService__BaseUrl: ${AI_SERVICE_BASE_URL:-http://ai-service:8000}
       AiService__ServiceToken: ${AI_SERVICE_TOKEN:?AI_SERVICE_TOKEN is required}
       AiService__WorkerEnabled: "true"

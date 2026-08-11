@@ -345,11 +345,19 @@ Key principles:
 
 ## Phase 5 — Hardening & Performance
 
-* End-to-end and CI test coverage across all phases
-* CI/CD
-* Documentation
-* Performance optimization
-* Security review
+Implemented hardening baseline:
+
+* GitHub Actions CI for API, AI service, and web build/test jobs
+* Rate limiting for expensive search and chat endpoints
+* Configurable CORS, HSTS, and baseline security headers
+* Pagination for unbounded folder and chat-history listings
+* Public API endpoint reference in [API Reference](docs/api-reference.md)
+* Security review of implemented auth, drive, search, and chat endpoints
+
+Remaining future hardening:
+
+* End-to-end test coverage across full browser workflows
+* Further performance optimization under production load
 
 ---
 

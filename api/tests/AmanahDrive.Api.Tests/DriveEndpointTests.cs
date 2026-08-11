@@ -30,7 +30,12 @@ public sealed class DriveEndpointTests : IAsyncLifetime
             _postgres.GetConnectionString(),
             _storageRoot,
             maxFileSizeBytes: 64,
-            allowedContentTypes: ["text/plain"]);
+            allowedContentTypes: ["text/plain"],
+            settings: new Dictionary<string, string?>
+            {
+                ["Drive:DefaultPageSize"] = "2",
+                ["Drive:MaxPageSize"] = "3"
+            });
         await _factory.ResetDatabaseAsync();
     }
 
@@ -82,6 +87,41 @@ public sealed class DriveEndpointTests : IAsyncLifetime
 
         var actualBytes = await downloadResponse.Content.ReadAsByteArrayAsync();
         Assert.Equal(expectedBytes, actualBytes);
+    }
+
+    [Fact]
+    public async Task FolderList_UsesPaginationDefaultsAndPageNavigation()
+    {
+        var client = await CreateAuthorizedClientAsync();
+        foreach (var name in new[] { "Alpha", "Bravo", "Charlie", "Delta", "Echo" })
+        {
+            await CreateFolderAsync(client, name);
+        }
+
+        var firstPage = await GetFolderContentsAsync(client);
+        Assert.Equal(1, firstPage.Page);
+        Assert.Equal(2, firstPage.PageSize);
+        Assert.Equal(["Alpha", "Bravo"], firstPage.Folders.Select(folder => folder.Name));
+
+        var secondPage = await GetFolderContentsAsync(client, "/drive/folders?page=2&pageSize=2");
+        Assert.Equal(2, secondPage.Page);
+        Assert.Equal(2, secondPage.PageSize);
+        Assert.Equal(["Charlie", "Delta"], secondPage.Folders.Select(folder => folder.Name));
+    }
+
+    [Fact]
+    public async Task FolderList_ClampsPageSizeToConfiguredMaximum()
+    {
+        var client = await CreateAuthorizedClientAsync();
+        foreach (var name in new[] { "Alpha", "Bravo", "Charlie", "Delta" })
+        {
+            await CreateFolderAsync(client, name);
+        }
+
+        var response = await GetFolderContentsAsync(client, "/drive/folders?pageSize=99");
+
+        Assert.Equal(3, response.PageSize);
+        Assert.Equal(["Alpha", "Bravo", "Charlie"], response.Folders.Select(folder => folder.Name));
     }
 
     [Fact]
@@ -175,6 +215,11 @@ public sealed class DriveEndpointTests : IAsyncLifetime
     private static async Task<FolderContentsDto> GetFolderContentsAsync(HttpClient client, Guid? parentFolderId = null)
     {
         var url = parentFolderId is null ? "/drive/folders" : $"/drive/folders?parentFolderId={parentFolderId}";
+        return await GetFolderContentsAsync(client, url);
+    }
+
+    private static async Task<FolderContentsDto> GetFolderContentsAsync(HttpClient client, string url)
+    {
         var response = await client.GetAsync(url);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -218,5 +263,5 @@ public sealed class DriveEndpointTests : IAsyncLifetime
 
     private sealed record FileDto(Guid Id, Guid? FolderId, string OriginalFileName, string ContentType, long SizeBytes, string ChecksumSha256);
 
-    private sealed record FolderContentsDto(Guid? ParentFolderId, IReadOnlyCollection<FolderDto> Folders, IReadOnlyCollection<FileDto> Files);
+    private sealed record FolderContentsDto(Guid? ParentFolderId, int Page, int PageSize, IReadOnlyCollection<FolderDto> Folders, IReadOnlyCollection<FileDto> Files);
 }

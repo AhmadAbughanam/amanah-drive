@@ -175,7 +175,7 @@ Response `200`:
 ```json
 {
   "answer": "The lease allows renewal under the conditions listed in the cited chunks.",
-  "model": "HuggingFaceH4/zephyr-7b-beta",
+  "model": "openai/gpt-oss-20b",
   "citations": [
     {
       "reference": "chunk-id-or-api-reference",
