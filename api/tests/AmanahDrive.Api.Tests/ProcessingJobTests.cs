@@ -195,5 +195,8 @@ public sealed class ProcessingJobTests : IAsyncLifetime
 
         public Task<EmbedResponse> EmbedAsync(IReadOnlyCollection<string> texts, CancellationToken cancellationToken) =>
             Task.FromResult(new EmbedResponse("fake", 384, texts.Select((_, index) => Enumerable.Repeat((float)index, 384).ToArray()).ToList()));
+
+        public Task<RagAnswerResponse> AnswerAsync(RagAnswerRequest request, CancellationToken cancellationToken) =>
+            Task.FromResult(new RagAnswerResponse("unused", "fake", []));
     }
 }

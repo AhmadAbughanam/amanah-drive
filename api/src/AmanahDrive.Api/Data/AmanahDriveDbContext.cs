@@ -17,6 +17,10 @@ public sealed class AmanahDriveDbContext(DbContextOptions<AmanahDriveDbContext> 
 
     public DbSet<DocumentChunk> DocumentChunks => Set<DocumentChunk>();
 
+    public DbSet<Conversation> Conversations => Set<Conversation>();
+
+    public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasPostgresExtension("vector");
@@ -123,6 +127,31 @@ public sealed class AmanahDriveDbContext(DbContextOptions<AmanahDriveDbContext> 
             entity.HasOne(chunk => chunk.FileItem)
                 .WithMany(file => file.DocumentChunks)
                 .HasForeignKey(chunk => chunk.FileItemId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Conversation>(entity =>
+        {
+            entity.ToTable("conversations");
+            entity.HasKey(conversation => conversation.Id);
+            entity.HasIndex(conversation => conversation.UserId);
+            entity.HasOne(conversation => conversation.User)
+                .WithMany(user => user.Conversations)
+                .HasForeignKey(conversation => conversation.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ChatMessage>(entity =>
+        {
+            entity.ToTable("chat_messages");
+            entity.HasKey(message => message.Id);
+            entity.Property(message => message.Role).HasMaxLength(32).IsRequired();
+            entity.Property(message => message.Content).IsRequired();
+            entity.Property(message => message.CitationsJson).HasColumnType("jsonb");
+            entity.HasIndex(message => message.ConversationId);
+            entity.HasOne(message => message.Conversation)
+                .WithMany(conversation => conversation.Messages)
+                .HasForeignKey(message => message.ConversationId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

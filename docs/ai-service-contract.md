@@ -14,7 +14,7 @@ The token is configured through environment variables on both services. Requests
 
 ## Version
 
-This is the Phase 3 V1 contract. Breaking request or response shape changes require a new versioned route in a later phase.
+This is the Phase 4 V1 contract. Breaking request or response shape changes require a new versioned route in a later phase.
 
 ## Embedding Model
 
@@ -23,6 +23,16 @@ Model: `sentence-transformers/all-MiniLM-L6-v2`
 Vector dimension: `384`
 
 The API stores embeddings in PostgreSQL `pgvector` columns with type `vector(384)`.
+
+## Generation Model
+
+Provider: Hugging Face Inference API
+
+Endpoint: `https://router.huggingface.co/v1/chat/completions`
+
+Default model: `openai/gpt-oss-20b`
+
+The Hugging Face API token is configured through `HF_API_TOKEN`. The model can be overridden through `HF_MODEL`.
 
 ## `POST /extract`
 
@@ -129,12 +139,65 @@ Error responses:
 * `400` for empty input.
 * `401` for missing or invalid service token.
 
-## Future Endpoint
+## `POST /rag/answer`
 
-`POST /rag/query` remains future Phase 4 work. It is intentionally not implemented in Phase 3.
+Generates a grounded answer from chunks already retrieved by the API. The AI service does not perform vector search or access PostgreSQL.
+
+Request:
+
+```json
+{
+  "question": "What does the lease say about renewal?",
+  "chunks": [
+    {
+      "reference": "chunk-id-or-api-reference",
+      "fileName": "lease.pdf",
+      "text": "The tenant may renew the lease..."
+    }
+  ],
+  "history": [
+    {
+      "role": "user",
+      "content": "What is this document about?"
+    },
+    {
+      "role": "assistant",
+      "content": "It describes a lease agreement."
+    }
+  ]
+}
+```
+
+`history` is optional and contains recent prior conversation turns selected by the API.
+
+Response `200`:
+
+```json
+{
+  "answer": "The lease allows renewal under the conditions listed in the cited chunks.",
+  "model": "HuggingFaceH4/zephyr-7b-beta",
+  "citations": [
+    {
+      "reference": "chunk-id-or-api-reference",
+      "fileName": "lease.pdf",
+      "snippet": "The tenant may renew the lease..."
+    }
+  ]
+}
+```
+
+Citation granularity in V1 is chunk-level. The service may cite every provided chunk it used; it is not required to return inline character spans.
+
+Error responses:
+
+* `400` for an empty question or invalid input.
+* `401` for missing or invalid service token.
+* `502` when Hugging Face returns an upstream error or an invalid response.
+* `503` when `HF_API_TOKEN` is not configured.
+* `504` when the Hugging Face request times out.
 
 ## Rules
 
 * The API owns authentication and authorization; the AI service trusts requests only from the API through the shared service token.
 * The AI service is stateless with respect to business data. It does not maintain file metadata, processing jobs, vectors, or chat history.
-* The API stores metadata, processing jobs, chunks, and embeddings in PostgreSQL with `pgvector`.
+* The API stores metadata, processing jobs, chunks, embeddings, conversations, and chat messages in PostgreSQL with `pgvector`.

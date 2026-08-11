@@ -5,6 +5,7 @@ using AmanahDrive.Api.Data;
 using AmanahDrive.Api.Endpoints;
 using AmanahDrive.Api.Options;
 using AmanahDrive.Api.Processing;
+using AmanahDrive.Api.Search;
 using AmanahDrive.Api.Storage;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http.Features;
@@ -51,6 +52,11 @@ builder.Services.AddOptions<AiServiceOptions>()
     .ValidateOnStart();
 
 var aiServiceOptions = builder.Configuration.GetSection(AiServiceOptions.SectionName).Get<AiServiceOptions>() ?? new AiServiceOptions();
+
+builder.Services.AddOptions<SearchOptions>()
+    .Bind(builder.Configuration.GetSection(SearchOptions.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
 
 builder.WebHost.ConfigureKestrel(options =>
 {
@@ -100,6 +106,7 @@ builder.Services.AddScoped<IPasswordHasher, Argon2idPasswordHasher>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IFileStorage, LocalFileStorage>();
+builder.Services.AddScoped<ISemanticSearchService, SemanticSearchService>();
 builder.Services.AddScoped<ProcessingJobRunner>();
 builder.Services.AddHttpClient<IAiProcessingClient, AiProcessingClient>(client =>
 {
@@ -141,6 +148,7 @@ app.UseAuthorization();
 app.MapHealthChecks("/health");
 app.MapAuthEndpoints();
 app.MapDriveEndpoints();
+app.MapSearchChatEndpoints();
 
 app.Run();
 

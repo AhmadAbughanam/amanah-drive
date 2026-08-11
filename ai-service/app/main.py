@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.routers import chunk, embed, extract, health
+from app.routers import chunk, embed, extract, health, rag
 
 
 def create_app() -> FastAPI:
@@ -9,6 +9,7 @@ def create_app() -> FastAPI:
     app.include_router(extract.router)
     app.include_router(chunk.router)
     app.include_router(embed.router)
+    app.include_router(rag.router)
     return app
 
 

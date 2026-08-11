@@ -23,4 +23,6 @@ public sealed class AdminUser
     public ICollection<Folder> Folders { get; set; } = [];
 
     public ICollection<FileItem> Files { get; set; } = [];
+
+    public ICollection<Conversation> Conversations { get; set; } = [];
 }

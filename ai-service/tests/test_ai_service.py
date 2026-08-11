@@ -2,8 +2,10 @@ import os
 
 from fastapi.testclient import TestClient
 
-from app.config import EMBEDDING_DIMENSION
+from app.config import EMBEDDING_DIMENSION, HF_DEFAULT_MODEL
 from app.main import app
+from app.schemas import RagAnswerResponse, RagCitation
+from app.services.rag import HuggingFaceUpstreamError, build_grounded_prompt
 
 TOKEN = "tests-only-service-token"
 
@@ -21,9 +23,15 @@ class FakeEmbeddingArray:
         return self._values
 
 
-def client() -> TestClient:
+def client(rag_answer_generator=None) -> TestClient:
     os.environ["AI_SERVICE_TOKEN"] = TOKEN
     app.state.embedding_model = FakeEmbedding()
+    if rag_answer_generator is None:
+        if hasattr(app.state, "rag_answer_generator"):
+            delattr(app.state, "rag_answer_generator")
+    else:
+        app.state.rag_answer_generator = rag_answer_generator
+
     return TestClient(app)
 
 
@@ -101,6 +109,75 @@ def test_embed_returns_expected_shape():
     assert body["dimension"] == EMBEDDING_DIMENSION
     assert len(body["embeddings"]) == 2
     assert len(body["embeddings"][0]) == EMBEDDING_DIMENSION
+
+
+def test_rag_prompt_includes_question_and_chunks():
+    prompt = build_grounded_prompt(rag_request())
+
+    assert "What is the renewal rule?" in prompt
+    assert "[chunk-1] File: lease.pdf" in prompt
+    assert "The lease renews yearly." in prompt
+    assert "[chunk-2] File: policy.md" in prompt
+    assert "Approval is required." in prompt
+
+
+def test_rag_answer_with_stubbed_llm_returns_expected_shape():
+    def generator(payload):
+        return RagAnswerResponse(
+            answer="The lease renews yearly. [chunk-1]",
+            model=HF_DEFAULT_MODEL,
+            citations=[
+                RagCitation(reference=payload.chunks[0].reference, fileName=payload.chunks[0].fileName, snippet=payload.chunks[0].text)
+            ],
+        )
+
+    response = client(generator).post(
+        "/rag/answer",
+        headers=headers(),
+        json=rag_request_json(),
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["answer"] == "The lease renews yearly. [chunk-1]"
+    assert body["model"] == HF_DEFAULT_MODEL
+    assert body["citations"] == [
+        {"reference": "chunk-1", "fileName": "lease.pdf", "snippet": "The lease renews yearly."}
+    ]
+
+
+def test_rag_answer_with_upstream_failure_returns_clean_error():
+    def generator(_payload):
+        raise HuggingFaceUpstreamError("Hugging Face returned 503: overloaded")
+
+    response = client(generator).post(
+        "/rag/answer",
+        headers=headers(),
+        json=rag_request_json(),
+    )
+
+    assert response.status_code == 502
+    assert response.json()["detail"] == "Hugging Face returned 503: overloaded"
+
+
+def rag_request_json() -> dict:
+    return {
+        "question": "What is the renewal rule?",
+        "chunks": [
+            {"reference": "chunk-1", "fileName": "lease.pdf", "text": "The lease renews yearly."},
+            {"reference": "chunk-2", "fileName": "policy.md", "text": "Approval is required."},
+        ],
+        "history": [
+            {"role": "user", "content": "What document is this?"},
+            {"role": "assistant", "content": "It is a lease."},
+        ],
+    }
+
+
+def rag_request():
+    from app.schemas import RagAnswerRequest
+
+    return RagAnswerRequest(**rag_request_json())
 
 
 def pdf_bytes() -> bytes:

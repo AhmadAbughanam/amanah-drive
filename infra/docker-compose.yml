@@ -43,6 +43,8 @@ services:
       dockerfile: Dockerfile
     environment:
       AI_SERVICE_TOKEN: ${AI_SERVICE_TOKEN:?AI_SERVICE_TOKEN is required}
+      HF_API_TOKEN: ${HF_API_TOKEN:?HF_API_TOKEN is required}
+      HF_MODEL: ${HF_MODEL:-openai/gpt-oss-20b}
     ports:
       - "${AI_SERVICE_PORT:-8000}:8000"
 

@@ -66,6 +66,20 @@ public sealed class AiProcessingClient(HttpClient httpClient, IOptions<AiService
         return await ReadJsonAsync<EmbedResponse>(response, cancellationToken);
     }
 
+    public async Task<RagAnswerResponse> AnswerAsync(RagAnswerRequest requestBody, CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/rag/answer")
+        {
+            Content = JsonContent.Create(requestBody, options: JsonOptions)
+        };
+
+        AddServiceToken(request);
+        using var response = await httpClient.SendAsync(request, cancellationToken);
+        await EnsureSuccessAsync(response, cancellationToken);
+
+        return await ReadJsonAsync<RagAnswerResponse>(response, cancellationToken);
+    }
+
     private void AddServiceToken(HttpRequestMessage request) =>
         request.Headers.Add("X-Service-Token", _options.ServiceToken);
 
