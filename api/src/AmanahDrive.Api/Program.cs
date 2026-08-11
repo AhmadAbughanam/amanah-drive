@@ -74,6 +74,12 @@ builder.Services.AddRateLimiter(options =>
 
 var app = builder.Build();
 
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<AmanahDriveDbContext>();
+    await dbContext.Database.MigrateAsync();
+}
+
 app.UseSerilogRequestLogging();
 app.UseRateLimiter();
 app.UseAuthentication();

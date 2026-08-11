@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using AmanahDrive.Api.Data;
 using AmanahDrive.Api.Models;
 using AmanahDrive.Api.Options;
@@ -18,7 +20,7 @@ public sealed class AuthService(
     public async Task<AuthResult> RegisterAsync(string email, string password, string? bootstrapToken, string? ipAddress, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(_options.BootstrapToken) ||
-            !string.Equals(_options.BootstrapToken, bootstrapToken, StringComparison.Ordinal))
+            !IsValidBootstrapToken(_options.BootstrapToken, bootstrapToken))
         {
             return AuthResult.Forbidden("Bootstrap registration is disabled or token is invalid.");
         }
@@ -163,4 +165,17 @@ public sealed class AuthService(
     }
 
     private static string NormalizeEmail(string email) => email.Trim().ToUpperInvariant();
+
+    private static bool IsValidBootstrapToken(string expectedToken, string? providedToken)
+    {
+        if (providedToken is null)
+        {
+            return false;
+        }
+
+        var expectedHash = SHA256.HashData(Encoding.UTF8.GetBytes(expectedToken));
+        var providedHash = SHA256.HashData(Encoding.UTF8.GetBytes(providedToken));
+
+        return CryptographicOperations.FixedTimeEquals(expectedHash, providedHash);
+    }
 }

@@ -52,6 +52,30 @@ public sealed class AuthEndpointTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Register_AfterRepeatedInvalidBootstrapAttempts_IsRateLimited()
+    {
+        var client = _factory.CreateClient();
+
+        HttpResponseMessage response = null!;
+        for (var attempt = 0; attempt < 21; attempt++)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/auth/register")
+            {
+                Content = JsonContent.Create(new
+                {
+                    Email = $"admin-{attempt}@example.com",
+                    Password = TestUsers.Password
+                })
+            };
+            request.Headers.Add("X-Bootstrap-Token", "wrong-bootstrap-token");
+
+            response = await client.SendAsync(request);
+        }
+
+        Assert.Equal((HttpStatusCode)429, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Login_WithInvalidPassword_ReturnsUnauthorized()
     {
         var client = _factory.CreateClient();

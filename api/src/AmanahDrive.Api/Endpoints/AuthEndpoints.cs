@@ -31,7 +31,7 @@ public static class AuthEndpoints
                 cancellationToken);
 
             return ToHttpResult(result, httpContext);
-        });
+        }).RequireRateLimiting("login");
 
         group.MapPost("/login", async (
             LoginRequest request,
