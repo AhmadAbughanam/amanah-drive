@@ -195,7 +195,11 @@ public sealed class AuthEndpointTests : IAsyncLifetime
     private sealed record AuthResponseDto(string AccessToken);
 }
 
-internal sealed class AmanahDriveApiFactory(string connectionString) : WebApplicationFactory<Program>
+internal sealed class AmanahDriveApiFactory(
+    string connectionString,
+    string? storageRoot = null,
+    long? maxFileSizeBytes = null,
+    string[]? allowedContentTypes = null) : WebApplicationFactory<Program>
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -206,6 +210,24 @@ internal sealed class AmanahDriveApiFactory(string connectionString) : WebApplic
         builder.UseSetting("Auth:JwtSigningKey", "tests-only-signing-key-with-at-least-32-chars");
         builder.UseSetting("Auth:BootstrapToken", TestUsers.BootstrapToken);
         builder.UseSetting("Auth:SecureCookies", "false");
+
+        if (storageRoot is not null)
+        {
+            builder.UseSetting("Drive:StorageRoot", storageRoot);
+        }
+
+        if (maxFileSizeBytes is not null)
+        {
+            builder.UseSetting("Drive:MaxFileSizeBytes", maxFileSizeBytes.Value.ToString());
+        }
+
+        if (allowedContentTypes is not null)
+        {
+            for (var index = 0; index < allowedContentTypes.Length; index++)
+            {
+                builder.UseSetting($"Drive:AllowedContentTypes:{index}", allowedContentTypes[index]);
+            }
+        }
     }
 
     public async Task ResetDatabaseAsync()

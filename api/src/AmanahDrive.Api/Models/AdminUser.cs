@@ -19,4 +19,8 @@ public sealed class AdminUser
     public DateTimeOffset UpdatedAt { get; set; }
 
     public ICollection<RefreshToken> RefreshTokens { get; set; } = [];
+
+    public ICollection<Folder> Folders { get; set; } = [];
+
+    public ICollection<FileItem> Files { get; set; } = [];
 }

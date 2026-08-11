@@ -3,7 +3,9 @@ using AmanahDrive.Api.Auth;
 using AmanahDrive.Api.Data;
 using AmanahDrive.Api.Endpoints;
 using AmanahDrive.Api.Options;
+using AmanahDrive.Api.Storage;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
@@ -24,6 +26,25 @@ builder.Services.AddOptions<AuthOptions>()
     .ValidateDataAnnotations()
     .Validate(options => options.JwtSigningKey.Length >= 32, "Auth:JwtSigningKey must be at least 32 characters.")
     .ValidateOnStart();
+
+builder.Services.AddOptions<DriveOptions>()
+    .Bind(builder.Configuration.GetSection(DriveOptions.SectionName))
+    .ValidateDataAnnotations()
+    .Validate(options => options.MaxFileSizeBytes > 0, "Drive:MaxFileSizeBytes must be greater than zero.")
+    .Validate(options => options.AllowedContentTypes.Length > 0, "Drive:AllowedContentTypes must contain at least one content type.")
+    .ValidateOnStart();
+
+var driveOptions = builder.Configuration.GetSection(DriveOptions.SectionName).Get<DriveOptions>() ?? new DriveOptions();
+
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.Limits.MaxRequestBodySize = driveOptions.MaxFileSizeBytes + 1024 * 1024;
+});
+
+builder.Services.Configure<FormOptions>(options =>
+{
+    options.MultipartBodyLengthLimit = driveOptions.MaxFileSizeBytes + 1024 * 1024;
+});
 
 var connectionString = builder.Configuration.GetConnectionString("Default")
     ?? builder.Configuration["POSTGRES_CONNECTION_STRING"]
@@ -57,6 +78,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IPasswordHasher, Argon2idPasswordHasher>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IFileStorage, LocalFileStorage>();
 
 builder.Services.AddRateLimiter(options =>
 {
@@ -87,6 +109,7 @@ app.UseAuthorization();
 
 app.MapHealthChecks("/health");
 app.MapAuthEndpoints();
+app.MapDriveEndpoints();
 
 app.Run();
 
