@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
+import { AuthProvider } from "./auth-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Amanah Drive",
-  description: "Amanah Drive web shell",
+  title: "Ahmad Abughanam | Amanah Drive",
+  description: "Portfolio and Amanah Drive file management shell",
 };
 
 export default function RootLayout({
@@ -13,7 +14,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <AuthProvider>{children}</AuthProvider>
+      </body>
     </html>
   );
 }
