@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AmanahDrive.Api/AmanahDrive.Api.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AmanahDrive.Api.Tests/AmanahDrive.Api.Tests.csproj" />
+  </Folder>
+</Solution>

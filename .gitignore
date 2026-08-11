@@ -1,11 +1,23 @@
 # Node
 node_modules/
 .next/
+**/node_modules/
+**/.next/
 
 # Python
 __pycache__/
 .venv/
 venv/
+**/__pycache__/
+**/.pytest_cache/
+
+# .NET
+bin/
+obj/
+**/bin/
+**/obj/
+*.user
+*.suo
 
 # Go
 bin/
@@ -13,12 +25,16 @@ bin/
 # Env and secrets
 .env
 .env.*
+!.env.example
 
 # OS / editor
 .DS_Store
 Thumbs.db
 .idea/
 .vscode/
+**/.vs/
+**/.idea/
+**/.vscode/
 
 # Logs
 *.log

@@ -1,0 +1,33 @@
+@AmanahDrive.Api_HostAddress = http://localhost:5260
+@BootstrapToken = replace-with-bootstrap-token
+
+GET {{AmanahDrive.Api_HostAddress}}/health
+
+###
+
+POST {{AmanahDrive.Api_HostAddress}}/auth/register
+Content-Type: application/json
+X-Bootstrap-Token: {{BootstrapToken}}
+
+{
+  "email": "admin@example.com",
+  "password": "replace-with-a-long-admin-password"
+}
+
+###
+
+POST {{AmanahDrive.Api_HostAddress}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "replace-with-a-long-admin-password"
+}
+
+###
+
+POST {{AmanahDrive.Api_HostAddress}}/auth/refresh
+
+###
+
+POST {{AmanahDrive.Api_HostAddress}}/auth/logout
