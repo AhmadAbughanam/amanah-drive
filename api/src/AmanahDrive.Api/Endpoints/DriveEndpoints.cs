@@ -43,7 +43,7 @@ public static class DriveEndpoints
             var files = await dbContext.FileItems
                 .Where(file => file.UserId == userId && file.FolderId == parentFolderId)
                 .OrderBy(file => file.OriginalFileName)
-                .Select(file => new FileItemResponse(file.Id, file.FolderId, file.OriginalFileName, file.ContentType, file.SizeBytes, file.ChecksumSha256, file.CreatedAt, file.UpdatedAt))
+                .Select(file => new FileItemResponse(file.Id, file.FolderId, file.OriginalFileName, file.ContentType, file.SizeBytes, file.ChecksumSha256, file.ProcessingJob == null ? null : file.ProcessingJob.Id, file.CreatedAt, file.UpdatedAt))
                 .ToListAsync(cancellationToken);
 
             return Results.Ok(new FolderContentsResponse(parentFolderId, folders, files));
@@ -242,9 +242,19 @@ public static class DriveEndpoints
             };
 
             await dbContext.FileItems.AddAsync(fileItem, cancellationToken);
+            var processingJob = new ProcessingJob
+            {
+                Id = Guid.NewGuid(),
+                FileItemId = fileItem.Id,
+                Status = ProcessingJobStatus.Pending,
+                CreatedAt = now,
+                UpdatedAt = now
+            };
+
+            await dbContext.ProcessingJobs.AddAsync(processingJob, cancellationToken);
             await dbContext.SaveChangesAsync(cancellationToken);
 
-            return Results.Created($"/drive/files/{fileItem.Id}", new FileItemResponse(fileItem.Id, fileItem.FolderId, fileItem.OriginalFileName, fileItem.ContentType, fileItem.SizeBytes, fileItem.ChecksumSha256, fileItem.CreatedAt, fileItem.UpdatedAt));
+            return Results.Created($"/drive/files/{fileItem.Id}", new FileItemResponse(fileItem.Id, fileItem.FolderId, fileItem.OriginalFileName, fileItem.ContentType, fileItem.SizeBytes, fileItem.ChecksumSha256, processingJob.Id, fileItem.CreatedAt, fileItem.UpdatedAt));
         }).DisableAntiforgery();
 
         group.MapGet("/files/{fileId:guid}/download", async (
@@ -310,7 +320,7 @@ public static class DriveEndpoints
             fileItem.UpdatedAt = DateTimeOffset.UtcNow;
             await dbContext.SaveChangesAsync(cancellationToken);
 
-            return Results.Ok(new FileItemResponse(fileItem.Id, fileItem.FolderId, fileItem.OriginalFileName, fileItem.ContentType, fileItem.SizeBytes, fileItem.ChecksumSha256, fileItem.CreatedAt, fileItem.UpdatedAt));
+            return Results.Ok(new FileItemResponse(fileItem.Id, fileItem.FolderId, fileItem.OriginalFileName, fileItem.ContentType, fileItem.SizeBytes, fileItem.ChecksumSha256, fileItem.ProcessingJob?.Id, fileItem.CreatedAt, fileItem.UpdatedAt));
         });
 
         group.MapPatch("/files/{fileId:guid}/move", async (
@@ -346,7 +356,7 @@ public static class DriveEndpoints
             fileItem.UpdatedAt = DateTimeOffset.UtcNow;
             await dbContext.SaveChangesAsync(cancellationToken);
 
-            return Results.Ok(new FileItemResponse(fileItem.Id, fileItem.FolderId, fileItem.OriginalFileName, fileItem.ContentType, fileItem.SizeBytes, fileItem.ChecksumSha256, fileItem.CreatedAt, fileItem.UpdatedAt));
+            return Results.Ok(new FileItemResponse(fileItem.Id, fileItem.FolderId, fileItem.OriginalFileName, fileItem.ContentType, fileItem.SizeBytes, fileItem.ChecksumSha256, fileItem.ProcessingJob?.Id, fileItem.CreatedAt, fileItem.UpdatedAt));
         });
 
         group.MapDelete("/files/{fileId:guid}", async (
@@ -485,6 +495,6 @@ public sealed record MoveFileRequest(Guid? FolderId);
 
 public sealed record FolderResponse(Guid Id, string Name, Guid? ParentFolderId, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
 
-public sealed record FileItemResponse(Guid Id, Guid? FolderId, string OriginalFileName, string ContentType, long SizeBytes, string ChecksumSha256, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
+public sealed record FileItemResponse(Guid Id, Guid? FolderId, string OriginalFileName, string ContentType, long SizeBytes, string ChecksumSha256, Guid? ProcessingJobId, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
 
 public sealed record FolderContentsResponse(Guid? ParentFolderId, IReadOnlyCollection<FolderResponse> Folders, IReadOnlyCollection<FileItemResponse> Files);

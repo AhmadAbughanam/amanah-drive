@@ -26,6 +26,9 @@ services:
       Auth__JwtSigningKey: ${AUTH_JWT_SIGNING_KEY:?AUTH_JWT_SIGNING_KEY is required}
       Auth__BootstrapToken: ${AUTH_BOOTSTRAP_TOKEN:?AUTH_BOOTSTRAP_TOKEN is required}
       Auth__SecureCookies: ${AUTH_SECURE_COOKIES:-true}
+      AiService__BaseUrl: ${AI_SERVICE_BASE_URL:-http://ai-service:8000}
+      AiService__ServiceToken: ${AI_SERVICE_TOKEN:?AI_SERVICE_TOKEN is required}
+      AiService__WorkerEnabled: "true"
     ports:
       - "${API_HTTP_PORT:-8080}:8080"
     depends_on:
@@ -38,6 +41,8 @@ services:
     build:
       context: ../ai-service
       dockerfile: Dockerfile
+    environment:
+      AI_SERVICE_TOKEN: ${AI_SERVICE_TOKEN:?AI_SERVICE_TOKEN is required}
     ports:
       - "${AI_SERVICE_PORT:-8000}:8000"
 

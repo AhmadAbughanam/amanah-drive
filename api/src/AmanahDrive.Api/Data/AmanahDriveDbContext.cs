@@ -13,6 +13,10 @@ public sealed class AmanahDriveDbContext(DbContextOptions<AmanahDriveDbContext> 
 
     public DbSet<FileItem> FileItems => Set<FileItem>();
 
+    public DbSet<ProcessingJob> ProcessingJobs => Set<ProcessingJob>();
+
+    public DbSet<DocumentChunk> DocumentChunks => Set<DocumentChunk>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.HasPostgresExtension("vector");
@@ -88,6 +92,37 @@ public sealed class AmanahDriveDbContext(DbContextOptions<AmanahDriveDbContext> 
             entity.HasOne(file => file.Folder)
                 .WithMany(folder => folder.Files)
                 .HasForeignKey(file => file.FolderId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ProcessingJob>(entity =>
+        {
+            entity.ToTable("processing_jobs");
+            entity.HasKey(job => job.Id);
+            entity.Property(job => job.Status)
+                .HasConversion<string>()
+                .HasMaxLength(32)
+                .IsRequired();
+            entity.Property(job => job.ErrorMessage).HasMaxLength(2048);
+            entity.HasIndex(job => job.FileItemId).IsUnique();
+            entity.HasIndex(job => job.Status);
+            entity.HasOne(job => job.FileItem)
+                .WithOne(file => file.ProcessingJob)
+                .HasForeignKey<ProcessingJob>(job => job.FileItemId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<DocumentChunk>(entity =>
+        {
+            entity.ToTable("document_chunks");
+            entity.HasKey(chunk => chunk.Id);
+            entity.Property(chunk => chunk.Text).IsRequired();
+            entity.Property(chunk => chunk.Embedding).HasColumnType("vector(384)").IsRequired();
+            entity.HasIndex(chunk => chunk.FileItemId);
+            entity.HasIndex(chunk => new { chunk.FileItemId, chunk.ChunkIndex }).IsUnique();
+            entity.HasOne(chunk => chunk.FileItem)
+                .WithMany(file => file.DocumentChunks)
+                .HasForeignKey(chunk => chunk.FileItemId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

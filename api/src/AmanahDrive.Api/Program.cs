@@ -1,13 +1,18 @@
 using System.Threading.RateLimiting;
+using AmanahDrive.Api.Ai;
 using AmanahDrive.Api.Auth;
 using AmanahDrive.Api.Data;
 using AmanahDrive.Api.Endpoints;
 using AmanahDrive.Api.Options;
+using AmanahDrive.Api.Processing;
 using AmanahDrive.Api.Storage;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Npgsql;
+using Pgvector;
+using Pgvector.EntityFrameworkCore;
 using Serilog;
 using System.Text;
 
@@ -36,6 +41,17 @@ builder.Services.AddOptions<DriveOptions>()
 
 var driveOptions = builder.Configuration.GetSection(DriveOptions.SectionName).Get<DriveOptions>() ?? new DriveOptions();
 
+builder.Services.AddOptions<AiServiceOptions>()
+    .Bind(builder.Configuration.GetSection(AiServiceOptions.SectionName))
+    .ValidateDataAnnotations()
+    .Validate(options => options.ServiceToken.Length >= 16, "AiService:ServiceToken must be at least 16 characters.")
+    .Validate(options => options.ChunkSize > 0, "AiService:ChunkSize must be greater than zero.")
+    .Validate(options => options.ChunkOverlap >= 0 && options.ChunkOverlap < options.ChunkSize, "AiService:ChunkOverlap must be smaller than ChunkSize.")
+    .Validate(options => options.WorkerPollSeconds > 0, "AiService:WorkerPollSeconds must be greater than zero.")
+    .ValidateOnStart();
+
+var aiServiceOptions = builder.Configuration.GetSection(AiServiceOptions.SectionName).Get<AiServiceOptions>() ?? new AiServiceOptions();
+
 builder.WebHost.ConfigureKestrel(options =>
 {
     options.Limits.MaxRequestBodySize = driveOptions.MaxFileSizeBytes + 1024 * 1024;
@@ -50,8 +66,13 @@ var connectionString = builder.Configuration.GetConnectionString("Default")
     ?? builder.Configuration["POSTGRES_CONNECTION_STRING"]
     ?? throw new InvalidOperationException("Database connection string is not configured.");
 
+var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
+dataSourceBuilder.UseVector();
+var dataSource = dataSourceBuilder.Build();
+builder.Services.AddSingleton(dataSource);
+
 builder.Services.AddDbContext<AmanahDriveDbContext>(options =>
-    options.UseNpgsql(connectionString));
+    options.UseNpgsql(dataSource, npgsqlOptions => npgsqlOptions.UseVector()));
 
 var authOptions = builder.Configuration.GetSection(AuthOptions.SectionName).Get<AuthOptions>()
     ?? throw new InvalidOperationException("Auth configuration is not configured.");
@@ -79,6 +100,16 @@ builder.Services.AddScoped<IPasswordHasher, Argon2idPasswordHasher>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IFileStorage, LocalFileStorage>();
+builder.Services.AddScoped<ProcessingJobRunner>();
+builder.Services.AddHttpClient<IAiProcessingClient, AiProcessingClient>(client =>
+{
+    client.BaseAddress = new Uri(aiServiceOptions.BaseUrl);
+});
+
+if (aiServiceOptions.WorkerEnabled)
+{
+    builder.Services.AddHostedService<DocumentProcessingWorker>();
+}
 
 builder.Services.AddRateLimiter(options =>
 {

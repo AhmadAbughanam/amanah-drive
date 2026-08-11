@@ -12,6 +12,10 @@ public sealed class FileItem
 
     public Folder? Folder { get; set; }
 
+    public ProcessingJob? ProcessingJob { get; set; }
+
+    public ICollection<DocumentChunk> DocumentChunks { get; set; } = [];
+
     public required string OriginalFileName { get; set; }
 
     public required string StorageKey { get; set; }

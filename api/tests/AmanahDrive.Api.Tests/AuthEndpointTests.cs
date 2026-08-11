@@ -199,7 +199,8 @@ internal sealed class AmanahDriveApiFactory(
     string connectionString,
     string? storageRoot = null,
     long? maxFileSizeBytes = null,
-    string[]? allowedContentTypes = null) : WebApplicationFactory<Program>
+    string[]? allowedContentTypes = null,
+    Action<IServiceCollection>? configureServices = null) : WebApplicationFactory<Program>
 {
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -210,6 +211,9 @@ internal sealed class AmanahDriveApiFactory(
         builder.UseSetting("Auth:JwtSigningKey", "tests-only-signing-key-with-at-least-32-chars");
         builder.UseSetting("Auth:BootstrapToken", TestUsers.BootstrapToken);
         builder.UseSetting("Auth:SecureCookies", "false");
+        builder.UseSetting("AiService:BaseUrl", "http://ai-service.test");
+        builder.UseSetting("AiService:ServiceToken", "tests-only-ai-service-token");
+        builder.UseSetting("AiService:WorkerEnabled", "false");
 
         if (storageRoot is not null)
         {
@@ -227,6 +231,11 @@ internal sealed class AmanahDriveApiFactory(
             {
                 builder.UseSetting($"Drive:AllowedContentTypes:{index}", allowedContentTypes[index]);
             }
+        }
+
+        if (configureServices is not null)
+        {
+            builder.ConfigureServices(configureServices);
         }
     }
 
