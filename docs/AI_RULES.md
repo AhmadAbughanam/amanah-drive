@@ -1,6 +1,6 @@
 # AI Rules
 
-These rules are the shared source of truth for Codex, Claude Code, and Gemini when working on Amanah Drive.
+These rules are the shared source of truth for Codex and Claude Code when working on Amanah Drive.
 
 ## Project Source Of Truth
 
@@ -101,25 +101,15 @@ Codex primary responsibilities:
 - repetitive coding work
 - integrating confirmed review findings
 
-Gemini primary responsibilities:
-
-- external documentation research
-- API verification
-- SDK/platform research
-- alternative approaches
-- second-opinion technical analysis
-
 For significant features:
 
 1. Claude analyzes the repository and proposed change.
 2. Claude produces an implementation plan without modifying code.
-3. Gemini may verify external APIs, SDKs, documentation, or platform assumptions when relevant.
-4. Codex implements the approved plan.
-5. Claude independently reviews the resulting changes.
-6. Gemini may independently verify external integration assumptions.
-7. Codex applies confirmed review findings.
-8. The human developer reviews the final Git diff.
-9. The human developer decides whether to commit or merge.
+3. Codex implements the approved plan.
+4. Claude independently reviews the resulting changes.
+5. Codex applies confirmed review findings.
+6. The human developer reviews the final Git diff.
+7. The human developer decides whether to commit or merge.
 
 Agents must not assume that another agent's conclusions are correct. Reviews should be independent.
 

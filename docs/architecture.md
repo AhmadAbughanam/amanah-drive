@@ -13,7 +13,12 @@ This is a short navigation document for agents. The full project plan and archit
 
 ## Repository Layout
 
-The current README defines the services and architecture but does not lock in directory names yet. Follow existing repository structure as it is introduced.
+* `api/` — ASP.NET Core REST API (authentication, file service, metadata, orchestration)
+* `ai-service/` — Python FastAPI service (extraction, embeddings, retrieval, RAG)
+* `web/` — Next.js dashboard
+* `infra/` — Docker Compose, Nginx, and other deployment config
+
+Each service owns its own dependency manifest and does not reach into another service's directory. New top-level directories should map to one of these four areas; do not introduce a fifth without updating this file.
 
 ## Boundaries
 

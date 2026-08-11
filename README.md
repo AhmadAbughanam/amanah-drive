@@ -300,11 +300,13 @@ Key principles:
 ## Phase 1 — Foundation
 
 * Project setup
+* Repository layout locked in (see [Repository Layout](docs/architecture.md#repository-layout))
 * Docker environment
 * PostgreSQL
 * Configuration system
 * Logging
 * Authentication
+* Auth tests: login, refresh rotation, lockout, token reuse detection
 
 ---
 
@@ -316,6 +318,7 @@ Key principles:
 * Rename
 * Delete
 * Filesystem storage
+* Drive tests: upload/download round-trip, path traversal, MIME/size validation
 
 ---
 
@@ -326,21 +329,23 @@ Key principles:
 * Chunk generation
 * Embeddings
 * Vector indexing
+* AI service contract defined (see [AI Service Contract](docs/ai-service-contract.md))
+* Processing tests: chunking correctness, embedding pipeline, job retry/idempotency
 
 ---
 
 ## Phase 4 — Search & Chat
 
 * Semantic search
-* AI chat
-* Source citations
-* Conversation history
+* AI chat v1: single-turn retrieval with source citations (MVP cut-line — demoable here)
+* AI chat v2: multi-turn conversation history
+* Search/chat tests: retrieval relevance, citation correctness
 
 ---
 
-## Phase 5 — Production Polish
+## Phase 5 — Hardening & Performance
 
-* Testing
+* End-to-end and CI test coverage across all phases
 * CI/CD
 * Documentation
 * Performance optimization
