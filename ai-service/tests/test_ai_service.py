@@ -2,7 +2,8 @@ import os
 
 from fastapi.testclient import TestClient
 
-from app.main import EMBEDDING_DIMENSION, app
+from app.config import EMBEDDING_DIMENSION
+from app.main import app
 
 TOKEN = "tests-only-service-token"
 
