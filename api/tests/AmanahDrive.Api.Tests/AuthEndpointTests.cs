@@ -1,6 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
-using AmanahDrive.Api.Data;
+using AmanahDrive.Api.Shared.Infrastructure.Data;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
