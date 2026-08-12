@@ -42,7 +42,7 @@ export default function Home() {
     <main className="min-h-screen bg-[#080808] px-3 py-7 text-[#0b0b0b] md:px-8 md:py-10">
       <div className="mx-auto max-w-[430px] md:max-w-[1280px]">
         <div className="overflow-hidden rounded-[48px] border-[9px] border-[#151515] bg-[#090909] shadow-[0_18px_60px_rgba(0,0,0,0.65)] md:rounded-[18px] md:border-0">
-          <section className="relative min-h-[700px] overflow-hidden bg-[#f7f7f5] px-9 pt-10 md:min-h-[780px] md:px-24 md:pt-12">
+          <section className="relative flex min-h-[700px] flex-col overflow-hidden bg-[#f7f7f5] px-9 pt-10 md:block md:min-h-[780px] md:px-24 md:pt-12">
             <header className="relative z-20 flex items-center justify-between">
               <a href="#about" className="font-serif text-[46px] leading-none text-black md:text-[54px]" aria-label="Ahmad Abughanam">
                 AA
@@ -96,7 +96,7 @@ export default function Home() {
               width={900}
               height={1100}
               priority
-              className="absolute bottom-0 right-[-42px] z-0 h-[320px] w-[310px] object-cover object-[54%_44%] grayscale md:right-[-20px] md:h-[620px] md:w-[560px] md:object-[50%_48%]"
+              className="relative z-0 mt-10 ml-auto h-[300px] w-[290px] object-cover object-[54%_44%] grayscale md:absolute md:right-[-20px] md:bottom-0 md:mt-0 md:h-[620px] md:w-[560px] md:object-[50%_48%]"
             />
           </section>
 
