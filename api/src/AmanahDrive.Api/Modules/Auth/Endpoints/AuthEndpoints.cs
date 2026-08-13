@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using AmanahDrive.Api.Modules.Auth.Options;
 using AmanahDrive.Api.Shared.Infrastructure.Http;
 using Microsoft.Extensions.Options;
+using Microsoft.OpenApi.Models;
 
 namespace AmanahDrive.Api.Modules.Auth.Endpoints;
 
@@ -10,6 +11,8 @@ public static class AuthEndpoints
     public static RouteGroupBuilder MapAuthEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/auth");
+
+        group.WithTags("Auth");
 
         group.MapPost("/register", async (
             RegisterRequest request,
@@ -31,7 +34,25 @@ public static class AuthEndpoints
                 cancellationToken);
 
             return ToHttpResult(result, httpContext);
-        }).RequireRateLimiting("login");
+        })
+            .RequireRateLimiting("login")
+            .WithSummary("Bootstrap the single admin account.")
+            .WithDescription("Creates the one admin account when the configured X-Bootstrap-Token header is valid.")
+            .WithOpenApi(operation =>
+            {
+                operation.Parameters.Add(new OpenApiParameter
+                {
+                    Name = "X-Bootstrap-Token",
+                    In = ParameterLocation.Header,
+                    Required = true,
+                    Description = "Bootstrap token configured outside source control."
+                });
+                return operation;
+            })
+            .Produces<AuthResponse>(StatusCodes.Status200OK)
+            .Produces<ErrorResponse>(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesValidationProblem();
 
         group.MapPost("/login", async (
             LoginRequest request,
@@ -52,7 +73,14 @@ public static class AuthEndpoints
                 cancellationToken);
 
             return ToHttpResult(result, httpContext);
-        }).RequireRateLimiting("login");
+        })
+            .RequireRateLimiting("login")
+            .WithSummary("Sign in as the admin user.")
+            .WithDescription("Returns a JWT access token and sets the refresh token as an HTTP-only cookie.")
+            .Produces<AuthResponse>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status423Locked)
+            .ProducesValidationProblem();
 
         group.MapPost("/refresh", async (
             HttpContext httpContext,
@@ -66,7 +94,10 @@ public static class AuthEndpoints
                 cancellationToken);
 
             return ToHttpResult(result, httpContext);
-        });
+        })
+            .WithSummary("Rotate the refresh token and issue a new access token.")
+            .Produces<AuthResponse>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized);
 
         group.MapPost("/logout", async (
             HttpContext httpContext,
@@ -81,7 +112,9 @@ public static class AuthEndpoints
 
             DeleteRefreshCookie(httpContext, options.Value);
             return Results.NoContent();
-        });
+        })
+            .WithSummary("Revoke the current refresh token and clear the refresh cookie.")
+            .Produces(StatusCodes.Status204NoContent);
 
         return group;
     }

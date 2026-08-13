@@ -18,6 +18,7 @@ public static class DriveEndpoints
     public static RouteGroupBuilder MapDriveEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/drive").RequireAuthorization();
+        group.WithTags("Drive");
 
         group.MapGet("/folders", async (
             Guid? parentFolderId,
@@ -60,7 +61,11 @@ public static class DriveEndpoints
                 .ToListAsync(cancellationToken);
 
             return Results.Ok(new FolderContentsResponse(parentFolderId, normalizedPage, normalizedPageSize, folders, files));
-        });
+        })
+            .WithSummary("List folders and files in a folder.")
+            .Produces<FolderContentsResponse>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status404NotFound);
 
         group.MapPost("/folders", async (
             CreateFolderRequest request,
@@ -111,7 +116,13 @@ public static class DriveEndpoints
             await dbContext.SaveChangesAsync(cancellationToken);
 
             return Results.Created($"/drive/folders/{folder.Id}", new FolderResponse(folder.Id, folder.Name, folder.ParentFolderId, folder.CreatedAt, folder.UpdatedAt));
-        });
+        })
+            .WithSummary("Create a folder.")
+            .Produces<FolderResponse>(StatusCodes.Status201Created)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces<ErrorResponse>(StatusCodes.Status409Conflict)
+            .ProducesValidationProblem();
 
         group.MapPatch("/folders/{folderId:guid}/rename", async (
             Guid folderId,
@@ -154,7 +165,13 @@ public static class DriveEndpoints
             await dbContext.SaveChangesAsync(cancellationToken);
 
             return Results.Ok(new FolderResponse(folder.Id, folder.Name, folder.ParentFolderId, folder.CreatedAt, folder.UpdatedAt));
-        });
+        })
+            .WithSummary("Rename a folder.")
+            .Produces<FolderResponse>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces<ErrorResponse>(StatusCodes.Status409Conflict)
+            .ProducesValidationProblem();
 
         group.MapDelete("/folders/{folderId:guid}", async (
             Guid folderId,
@@ -189,7 +206,11 @@ public static class DriveEndpoints
             await dbContext.SaveChangesAsync(cancellationToken);
 
             return Results.NoContent();
-        });
+        })
+            .WithSummary("Delete a folder and its descendants.")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status404NotFound);
 
         group.MapPost("/files/upload", async (
             [FromForm] IFormFile file,
@@ -268,7 +289,16 @@ public static class DriveEndpoints
             await dbContext.SaveChangesAsync(cancellationToken);
 
             return Results.Created($"/drive/files/{fileItem.Id}", new FileItemResponse(fileItem.Id, fileItem.FolderId, fileItem.OriginalFileName, fileItem.ContentType, fileItem.SizeBytes, fileItem.ChecksumSha256, processingJob.Id, fileItem.CreatedAt, fileItem.UpdatedAt));
-        }).DisableAntiforgery();
+        })
+            .DisableAntiforgery()
+            .WithSummary("Upload a file and create a processing job.")
+            .Accepts<IFormFile>("multipart/form-data")
+            .Produces<FileItemResponse>(StatusCodes.Status201Created)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status413PayloadTooLarge)
+            .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces<ErrorResponse>(StatusCodes.Status409Conflict);
 
         group.MapGet("/files/{fileId:guid}/download", async (
             Guid fileId,
@@ -291,7 +321,11 @@ public static class DriveEndpoints
 
             var stream = await storage.OpenReadAsync(fileItem.StorageKey, cancellationToken);
             return Results.File(stream, fileItem.ContentType, fileItem.OriginalFileName);
-        });
+        })
+            .WithSummary("Download a stored file.")
+            .Produces(StatusCodes.Status200OK, contentType: "application/octet-stream")
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status404NotFound);
 
         group.MapPatch("/files/{fileId:guid}/rename", async (
             Guid fileId,
@@ -334,7 +368,13 @@ public static class DriveEndpoints
             await dbContext.SaveChangesAsync(cancellationToken);
 
             return Results.Ok(new FileItemResponse(fileItem.Id, fileItem.FolderId, fileItem.OriginalFileName, fileItem.ContentType, fileItem.SizeBytes, fileItem.ChecksumSha256, fileItem.ProcessingJob?.Id, fileItem.CreatedAt, fileItem.UpdatedAt));
-        });
+        })
+            .WithSummary("Rename a file.")
+            .Produces<FileItemResponse>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces<ErrorResponse>(StatusCodes.Status409Conflict)
+            .ProducesValidationProblem();
 
         group.MapPatch("/files/{fileId:guid}/move", async (
             Guid fileId,
@@ -370,7 +410,12 @@ public static class DriveEndpoints
             await dbContext.SaveChangesAsync(cancellationToken);
 
             return Results.Ok(new FileItemResponse(fileItem.Id, fileItem.FolderId, fileItem.OriginalFileName, fileItem.ContentType, fileItem.SizeBytes, fileItem.ChecksumSha256, fileItem.ProcessingJob?.Id, fileItem.CreatedAt, fileItem.UpdatedAt));
-        });
+        })
+            .WithSummary("Move a file to another folder or the root.")
+            .Produces<FileItemResponse>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces<ErrorResponse>(StatusCodes.Status409Conflict);
 
         group.MapDelete("/files/{fileId:guid}", async (
             Guid fileId,
@@ -396,7 +441,11 @@ public static class DriveEndpoints
             await dbContext.SaveChangesAsync(cancellationToken);
 
             return Results.NoContent();
-        });
+        })
+            .WithSummary("Delete a file, processing job, and chunks.")
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status404NotFound);
 
         return group;
     }

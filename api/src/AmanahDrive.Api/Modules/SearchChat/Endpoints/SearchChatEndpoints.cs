@@ -20,9 +20,35 @@ public static class SearchChatEndpoints
 
     public static IEndpointRouteBuilder MapSearchChatEndpoints(this IEndpointRouteBuilder app)
     {
-        app.MapGet("/search", SearchAsync).RequireAuthorization().RequireRateLimiting("ai");
-        app.MapPost("/chat", ChatAsync).RequireAuthorization().RequireRateLimiting("ai");
-        app.MapGet("/chat/{conversationId:guid}", GetChatHistoryAsync).RequireAuthorization();
+        app.MapGet("/search", SearchAsync)
+            .RequireAuthorization()
+            .RequireRateLimiting("ai")
+            .WithTags("Search & Chat")
+            .WithSummary("Run semantic search over processed document chunks.")
+            .Produces<SearchResponse>(StatusCodes.Status200OK)
+            .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status502BadGateway);
+
+        app.MapPost("/chat", ChatAsync)
+            .RequireAuthorization()
+            .RequireRateLimiting("ai")
+            .WithTags("Search & Chat")
+            .WithSummary("Ask a grounded AI question over retrieved document chunks.")
+            .Produces<ChatResponse>(StatusCodes.Status200OK)
+            .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status502BadGateway)
+            .ProducesValidationProblem();
+
+        app.MapGet("/chat/{conversationId:guid}", GetChatHistoryAsync)
+            .RequireAuthorization()
+            .WithTags("Search & Chat")
+            .WithSummary("Return paginated chat history for a conversation.")
+            .Produces<ChatHistoryResponse>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status404NotFound);
         return app;
     }
 
