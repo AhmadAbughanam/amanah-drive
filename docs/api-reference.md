@@ -4,7 +4,9 @@ This is a scannable reference for the public ASP.NET Core API endpoints implemen
 
 | Method | Path | Auth | Purpose |
 | --- | --- | --- | --- |
-| GET | `/health` | No | Service health probe. |
+| GET | `/health/live` | No | Liveness probe; returns whether the API process is alive without dependency checks. |
+| GET | `/health/ready` | No | Readiness probe; checks PostgreSQL reachability before reporting ready. |
+| GET | `/health` | No | Backward-compatible alias for `/health/ready`. |
 | POST | `/auth/register` | Bootstrap token header | Create the single admin account during bootstrap. |
 | POST | `/auth/login` | No | Exchange admin credentials for a JWT access token and refresh cookie. |
 | POST | `/auth/refresh` | Refresh cookie | Rotate the refresh token and issue a new access token. |

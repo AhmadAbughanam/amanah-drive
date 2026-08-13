@@ -54,16 +54,31 @@ if (openApiEnabled)
         .EnablePersistentAuthentication()).AllowAnonymous();
 }
 
-app.MapGet("/health", async (HealthCheckService healthCheckService, CancellationToken cancellationToken) =>
+static async Task<IResult> ReadinessAsync(HealthCheckService healthCheckService, CancellationToken cancellationToken)
 {
-    var report = await healthCheckService.CheckHealthAsync(cancellationToken);
+    var report = await healthCheckService.CheckHealthAsync(
+        registration => registration.Tags.Contains("ready"),
+        cancellationToken);
     var response = new HealthResponse(report.Status.ToString());
     return report.Status == HealthStatus.Healthy
         ? Results.Ok(response)
         : Results.Json(response, statusCode: StatusCodes.Status503ServiceUnavailable);
-})
+}
+
+app.MapGet("/health/live", () => Results.Ok(new HealthResponse(HealthStatus.Healthy.ToString())))
     .WithTags("Health")
-    .WithSummary("Return API health status.")
+    .WithSummary("Return process liveness status.")
+    .Produces<HealthResponse>(StatusCodes.Status200OK);
+
+app.MapGet("/health/ready", ReadinessAsync)
+    .WithTags("Health")
+    .WithSummary("Return dependency readiness status.")
+    .Produces<HealthResponse>(StatusCodes.Status200OK)
+    .Produces<HealthResponse>(StatusCodes.Status503ServiceUnavailable);
+
+app.MapGet("/health", ReadinessAsync)
+    .WithTags("Health")
+    .WithSummary("Readiness alias kept for backward compatibility.")
     .Produces<HealthResponse>(StatusCodes.Status200OK)
     .Produces<HealthResponse>(StatusCodes.Status503ServiceUnavailable);
 app.MapAuthModule();

@@ -1,3 +1,4 @@
+using System.Data;
 using AmanahDrive.Api.Shared.Infrastructure.Ai;
 using AmanahDrive.Api.Shared.Infrastructure.Data;
 using AmanahDrive.Api.Modules.Drive.Storage;
@@ -20,14 +21,19 @@ public sealed class ProcessingJobRunner(
 
     public async Task<bool> ProcessNextPendingJobAsync(CancellationToken cancellationToken)
     {
+        var jobId = await ClaimNextPendingJobAsync(cancellationToken);
+        if (jobId is null)
+        {
+            return false;
+        }
+
         var job = await dbContext.ProcessingJobs
             .Include(job => job.FileItem)
-            .Where(job => job.Status == ProcessingJobStatus.Pending)
-            .OrderBy(job => job.CreatedAt)
-            .FirstOrDefaultAsync(cancellationToken);
+            .SingleOrDefaultAsync(job => job.Id == jobId.Value, cancellationToken);
 
         if (job is null)
         {
+            logger.LogWarning("Claimed processing job {JobId} was not found after claim", jobId);
             return false;
         }
 
@@ -35,13 +41,60 @@ public sealed class ProcessingJobRunner(
         return true;
     }
 
+    private async Task<Guid?> ClaimNextPendingJobAsync(CancellationToken cancellationToken)
+    {
+        var connection = dbContext.Database.GetDbConnection();
+        var shouldCloseConnection = connection.State != ConnectionState.Open;
+        if (shouldCloseConnection)
+        {
+            await connection.OpenAsync(cancellationToken);
+        }
+
+        try
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText = """
+                UPDATE processing_jobs
+                SET "Status" = @processingStatus,
+                    "StartedAt" = @now,
+                    "UpdatedAt" = @now
+                WHERE "Id" = (
+                    SELECT "Id"
+                    FROM processing_jobs
+                    WHERE "Status" = @pendingStatus
+                    ORDER BY "CreatedAt"
+                    LIMIT 1
+                    FOR UPDATE SKIP LOCKED
+                )
+                RETURNING "Id";
+                """;
+
+            AddParameter(command, "processingStatus", ProcessingJobStatus.Processing.ToString());
+            AddParameter(command, "pendingStatus", ProcessingJobStatus.Pending.ToString());
+            AddParameter(command, "now", DateTimeOffset.UtcNow);
+
+            var result = await command.ExecuteScalarAsync(cancellationToken);
+            return result is Guid jobId ? jobId : null;
+        }
+        finally
+        {
+            if (shouldCloseConnection)
+            {
+                await connection.CloseAsync();
+            }
+        }
+    }
+
+    private static void AddParameter(System.Data.Common.DbCommand command, string name, object value)
+    {
+        var parameter = command.CreateParameter();
+        parameter.ParameterName = name;
+        parameter.Value = value;
+        command.Parameters.Add(parameter);
+    }
+
     private async Task ProcessJobAsync(ProcessingJob job, CancellationToken cancellationToken)
     {
-        job.Status = ProcessingJobStatus.Processing;
-        job.StartedAt = DateTimeOffset.UtcNow;
-        job.UpdatedAt = DateTimeOffset.UtcNow;
-        await dbContext.SaveChangesAsync(cancellationToken);
-
         try
         {
             await using var fileStream = await storage.OpenReadAsync(job.FileItem.StorageKey, cancellationToken);

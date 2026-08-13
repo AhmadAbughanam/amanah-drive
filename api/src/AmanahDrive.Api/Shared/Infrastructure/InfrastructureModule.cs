@@ -3,6 +3,7 @@ using AmanahDrive.Api.Modules.Auth.Options;
 using AmanahDrive.Api.Shared.Infrastructure.Ai;
 using AmanahDrive.Api.Shared.Infrastructure.Cors;
 using AmanahDrive.Api.Shared.Infrastructure.Data;
+using AmanahDrive.Api.Shared.Infrastructure.Health;
 using AmanahDrive.Api.Shared.Infrastructure.Security;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -87,7 +88,8 @@ public static class InfrastructureModule
         });
 
         services.AddAuthorization();
-        services.AddHealthChecks();
+        services.AddHealthChecks()
+            .AddCheck<PostgresHealthCheck>("postgres", tags: ["ready"]);
         services.AddHsts(options =>
         {
             options.MaxAge = TimeSpan.FromDays(365);

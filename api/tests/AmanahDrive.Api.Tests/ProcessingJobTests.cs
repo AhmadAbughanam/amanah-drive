@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
@@ -122,6 +123,50 @@ public sealed class ProcessingJobTests : IAsyncLifetime
         Assert.Equal(0, chunkCount);
     }
 
+    [Fact]
+    public async Task Worker_WhenCalledConcurrently_ClaimsEachPendingJobOnlyOnce()
+    {
+        var client = await CreateAuthorizedClientAsync();
+        const int jobCount = 8;
+        var expectedFileNames = new List<string>();
+        for (var index = 0; index < jobCount; index++)
+        {
+            var fileName = $"processing-{index}.txt";
+            expectedFileNames.Add(fileName);
+            await UploadTextFileAsync(client, fileName, $"hello processing {index}");
+        }
+
+        _aiClient.ExtractDelay = TimeSpan.FromMilliseconds(75);
+        var start = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var tasks = Enumerable.Range(0, jobCount * 2)
+            .Select(async _ =>
+            {
+                await start.Task;
+                using var scope = _factory.Services.CreateScope();
+                var runner = scope.ServiceProvider.GetRequiredService<ProcessingJobRunner>();
+                return await runner.ProcessNextPendingJobAsync(CancellationToken.None);
+            })
+            .ToArray();
+
+        start.SetResult();
+        var processedResults = await Task.WhenAll(tasks);
+
+        using var verificationScope = _factory.Services.CreateScope();
+        var dbContext = verificationScope.ServiceProvider.GetRequiredService<AmanahDriveDbContext>();
+        var jobs = await dbContext.ProcessingJobs.ToListAsync();
+        var chunkCount = await dbContext.DocumentChunks.CountAsync();
+
+        Assert.Equal(jobCount, processedResults.Count(processed => processed));
+        Assert.All(jobs, job => Assert.Equal(ProcessingJobStatus.Completed, job.Status));
+        Assert.Equal(jobCount * 2, chunkCount);
+        Assert.Equal(jobCount, _aiClient.ExtractCalls.Values.Sum());
+        foreach (var fileName in expectedFileNames)
+        {
+            Assert.True(_aiClient.ExtractCalls.TryGetValue(fileName, out var calls), $"Missing extraction call for {fileName}.");
+            Assert.Equal(1, calls);
+        }
+    }
+
     private async Task<HttpClient> CreateAuthorizedClientAsync()
     {
         var client = _factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
@@ -149,12 +194,15 @@ public sealed class ProcessingJobTests : IAsyncLifetime
         return authResponse.AccessToken;
     }
 
-    private static async Task<FileDto> UploadTextFileAsync(HttpClient client)
+    private static async Task<FileDto> UploadTextFileAsync(
+        HttpClient client,
+        string fileName = "processing.txt",
+        string text = "hello processing")
     {
         using var form = new MultipartFormDataContent();
-        var fileContent = new ByteArrayContent("hello processing"u8.ToArray());
+        var fileContent = new ByteArrayContent(Encoding.UTF8.GetBytes(text));
         fileContent.Headers.ContentType = new MediaTypeHeaderValue("text/plain");
-        form.Add(fileContent, "file", "processing.txt");
+        form.Add(fileContent, "file", fileName);
 
         var response = await client.PostAsync("/drive/files/upload", form);
 
@@ -175,16 +223,26 @@ public sealed class ProcessingJobTests : IAsyncLifetime
 
     private sealed class FakeAiProcessingClient : IAiProcessingClient
     {
+        public ConcurrentDictionary<string, int> ExtractCalls { get; } = new(StringComparer.Ordinal);
+
         public bool ShouldFailExtract { get; set; }
 
-        public Task<ExtractResponse> ExtractAsync(string fileName, string contentType, Stream fileStream, CancellationToken cancellationToken)
+        public TimeSpan ExtractDelay { get; set; }
+
+        public async Task<ExtractResponse> ExtractAsync(string fileName, string contentType, Stream fileStream, CancellationToken cancellationToken)
         {
+            ExtractCalls.AddOrUpdate(fileName, 1, (_, calls) => calls + 1);
+            if (ExtractDelay > TimeSpan.Zero)
+            {
+                await Task.Delay(ExtractDelay, cancellationToken);
+            }
+
             if (ShouldFailExtract)
             {
                 throw new AiServiceException("extract failed");
             }
 
-            return Task.FromResult(new ExtractResponse("alpha beta gamma", contentType, 16));
+            return new ExtractResponse("alpha beta gamma", contentType, 16);
         }
 
         public Task<ChunkResponse> ChunkAsync(string text, int chunkSize, int overlap, CancellationToken cancellationToken) =>
