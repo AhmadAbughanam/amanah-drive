@@ -378,6 +378,7 @@ Potential future features include:
 * End-to-end encryption
 * Mobile application
 * Real-time synchronization
+* Horizontal scaling and observability hardening: externalized file storage (S3/R2/MinIO) behind the existing `IFileStorage` abstraction, OpenTelemetry logs/metrics/traces, liveness vs. readiness health probes, a separately-deployable processing worker, moving DB migrations out of API startup, distributed rate limiting, and a load balancer in front of multiple stateless API replicas — pursued only once there's a concrete need (real multi-user load), not preemptively for a single-user V1
 
 ---
 

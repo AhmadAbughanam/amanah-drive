@@ -1,5 +1,6 @@
 import os
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.config import EMBEDDING_DIMENSION, HF_DEFAULT_MODEL
@@ -109,6 +110,32 @@ def test_embed_returns_expected_shape():
     assert body["dimension"] == EMBEDDING_DIMENSION
     assert len(body["embeddings"]) == 2
     assert len(body["embeddings"][0]) == EMBEDDING_DIMENSION
+
+
+@pytest.mark.real_model
+@pytest.mark.skipif(os.environ.get("RUN_REAL_EMBED_SMOKE") != "1", reason="set RUN_REAL_EMBED_SMOKE=1 to load the real embedding model")
+def test_embed_real_model_smoke():
+    os.environ["AI_SERVICE_TOKEN"] = TOKEN
+    if hasattr(app.state, "embedding_model"):
+        delattr(app.state, "embedding_model")
+
+    try:
+        response = TestClient(app).post(
+            "/embed",
+            headers=headers(),
+            json={"texts": ["real model smoke test", "second embedding"]},
+        )
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["model"] == "sentence-transformers/all-MiniLM-L6-v2"
+        assert body["dimension"] == EMBEDDING_DIMENSION
+        assert len(body["embeddings"]) == 2
+        assert len(body["embeddings"][0]) == EMBEDDING_DIMENSION
+        assert all(isinstance(value, float) for value in body["embeddings"][0][:8])
+    finally:
+        if hasattr(app.state, "embedding_model"):
+            delattr(app.state, "embedding_model")
 
 
 def test_rag_prompt_includes_question_and_chunks():

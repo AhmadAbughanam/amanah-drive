@@ -48,7 +48,7 @@ Agents must never automatically:
 - commit secrets
 - perform destructive Git operations
 
-Inspect `git status` and `git diff` when useful. Do not create commits unless the human developer explicitly asks for one.
+Inspect `git status` and `git diff` when useful. Agents may commit completed, working task scope to the working branch with a clear commit message describing what changed. Do not commit partial or broken work — a commit should represent a coherent, buildable state. Never push to `main` without explicit approval.
 
 ## Sensitive And Destructive Operations
 
