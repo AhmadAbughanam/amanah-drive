@@ -90,3 +90,10 @@
 - Replaced internal task handoff documents with this changelog.
 - Updated README, architecture, API reference, AI service contract, and ADR index to match the implemented system.
 - Added ADR 0007 for the OpenAPI, health-probe, and job-claiming decisions.
+- Duplicated the system architecture, document processing, and RAG chat flow diagrams into `docs/architecture.md` so the reference is self-contained.
+
+### Phase 13 - Drive Dashboard Redesign
+
+- Rebuilt the authenticated `/drive` dashboard (file management and Search & Chat views) to match a supplied visual design, replacing the interim styling carried over from Phase 6.
+- Kept all existing behavior unchanged: folder/file CRUD, upload validation, pagination, semantic search, chat with citations, and conversation state.
+- Extended the same visual language to mobile with stacked panels rather than shrinking the desktop layout.
