@@ -475,7 +475,7 @@ function FilesView({
         </div>
       ) : null}
 
-      <div className="grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
+      <div className="grid gap-5 xl:grid-cols-[300px_minmax(0,1fr)] 2xl:grid-cols-[360px_minmax(0,1fr)]">
         <aside className={`${panelClass} p-5 sm:p-6`}>
           <p className={labelClass}>Create new</p>
           <div className="mt-5 rounded-[10px] border border-black/10 bg-white/45 p-4">
@@ -579,7 +579,7 @@ function FilesView({
             </div>
           </div>
 
-          <div className="hidden grid-cols-[minmax(220px,1fr)_100px_100px_180px_310px] border-b border-black/10 px-7 py-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-black/50 xl:grid">
+          <div className="hidden border-b border-black/10 px-7 py-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-black/50 xl:grid xl:grid-cols-[minmax(160px,1fr)_70px_75px_130px_300px] xl:gap-3 2xl:grid-cols-[minmax(220px,1fr)_100px_100px_180px_310px] 2xl:gap-4">
             <span>Name</span>
             <span>Type</span>
             <span>Size</span>
@@ -592,7 +592,7 @@ function FilesView({
           ) : (
             <div className="min-h-[420px] divide-y divide-black/10">
               {contents?.folders.map((folder) => (
-                <div key={folder.id} className="grid gap-4 px-5 py-5 sm:px-7 xl:grid-cols-[minmax(220px,1fr)_100px_100px_180px_310px] xl:items-center">
+                <div key={folder.id} className="grid gap-4 px-5 py-5 sm:px-7 xl:grid-cols-[minmax(160px,1fr)_70px_75px_130px_300px] xl:items-center xl:gap-3 2xl:grid-cols-[minmax(220px,1fr)_100px_100px_180px_310px] 2xl:gap-4">
                   <button className="flex min-w-0 items-center gap-4 text-left" onClick={() => onEnterFolder(folder)} type="button">
                     <span className="grid h-14 w-14 shrink-0 place-items-center rounded-[10px] border border-black/10 bg-white/55">
                       <FolderGlyph />
@@ -617,7 +617,7 @@ function FilesView({
               ))}
 
               {contents?.files.map((file) => (
-                <div key={file.id} className="grid gap-4 px-5 py-5 sm:px-7 xl:grid-cols-[minmax(220px,1fr)_100px_100px_180px_310px] xl:items-center">
+                <div key={file.id} className="grid gap-4 px-5 py-5 sm:px-7 xl:grid-cols-[minmax(160px,1fr)_70px_75px_130px_300px] xl:items-center xl:gap-3 2xl:grid-cols-[minmax(220px,1fr)_100px_100px_180px_310px] 2xl:gap-4">
                   <div className="flex min-w-0 items-center gap-4">
                     <span className="grid h-14 w-14 shrink-0 place-items-center rounded-[10px] border border-black/10 bg-white/55">
                       <DocumentGlyph />
