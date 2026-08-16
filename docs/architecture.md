@@ -1,6 +1,6 @@
 # Architecture Reference
 
-This is the repository architecture reference for Amanah Drive. The README provides the project overview; this document focuses on repository layout and service boundaries.
+This is the repository architecture reference for Amanah Drive. The README provides the project overview; this document focuses on repository layout, service boundaries, and the architecture diagrams.
 
 ## Stack
 
@@ -10,6 +10,92 @@ This is the repository architecture reference for Amanah Drive. The README provi
 - Database: PostgreSQL with `pgvector`
 - V1 file storage: local filesystem on the VPS behind a storage abstraction
 - Deployment and infrastructure: Docker, Docker Compose, Nginx, and GitHub Actions
+
+## Diagrams
+
+These are the same diagrams shown in [README.md](../README.md), duplicated here so this reference is self-contained for anyone landing on this file directly.
+
+### System Architecture
+
+```mermaid
+flowchart TB
+    Web["Next.js Web App"]
+
+    subgraph API["ASP.NET Core API - modular monolith"]
+        Auth["Auth module"]
+        Drive["Drive module"]
+        Processing["Processing module"]
+        SearchChat["SearchChat module"]
+    end
+
+    AI["Python FastAPI AI Service"]
+    HF["Hugging Face Inference API"]
+    PG[("PostgreSQL + pgvector")]
+    FS[("Local filesystem storage")]
+
+    Web -- "JWT + refresh cookie" --> Auth
+    Web --> Drive
+    Web --> SearchChat
+
+    Auth --> PG
+    Drive --> PG
+    Drive --> FS
+    Processing --> PG
+    Processing -- "extract / chunk / embed" --> AI
+    SearchChat --> PG
+    SearchChat -- "embed query, rag/answer" --> AI
+    AI -- "grounded generation" --> HF
+```
+
+### Document Processing Pipeline
+
+Uploads return after file metadata and a pending job are saved. A background worker claims jobs atomically and performs extraction, chunking, embedding, and vector persistence.
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant D as Drive module
+    participant DB as PostgreSQL
+    participant W as Processing worker
+    participant AI as AI service
+
+    U->>D: POST /drive/files/upload
+    D->>DB: Save file metadata + ProcessingJob (Pending)
+    D-->>U: 201 Created
+
+    loop Background polling
+        W->>DB: Claim next Pending job
+        W->>AI: POST /extract
+        W->>AI: POST /chunk
+        W->>AI: POST /embed
+        W->>DB: Save DocumentChunk rows, mark Completed
+    end
+```
+
+### RAG Chat Flow
+
+Retrieval stays in the API. The AI service receives the already-retrieved chunks and generates a grounded answer with citations.
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant SC as SearchChat module
+    participant DB as PostgreSQL (pgvector)
+    participant AI as AI service
+    participant HF as Hugging Face
+
+    U->>SC: POST /chat { question }
+    SC->>AI: POST /embed { question }
+    AI-->>SC: query embedding
+    SC->>DB: cosine similarity, top K
+    DB-->>SC: retrieved chunks
+    SC->>AI: POST /rag/answer { question, chunks, history }
+    AI->>HF: chat completion
+    HF-->>AI: generated answer
+    AI-->>SC: answer + citations
+    SC->>DB: persist user and assistant messages
+    SC-->>U: answer + citations
+```
 
 ## Repository Layout
 
