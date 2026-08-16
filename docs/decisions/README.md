@@ -9,3 +9,4 @@ Short records of significant, deliberate engineering decisions on Amanah Drive �
 - [0005 — Hugging Face Inference API for RAG Generation](0005-hugging-face-for-rag-generation.md)
 - [0006 — Deferring Horizontal Scaling and Observability Investment](0006-deferring-horizontal-scaling-investment.md)
 - [0007 — API Documentation and Probe Hardening](0007-api-documentation-and-probe-hardening.md)
+- [0008 — File-Based Operational Logging](0008-file-based-operational-logging.md)

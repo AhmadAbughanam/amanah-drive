@@ -26,6 +26,7 @@ flowchart TB
         Drive["Drive module"]
         Processing["Processing module"]
         SearchChat["SearchChat module"]
+        Admin["Admin module"]
     end
 
     AI["Python FastAPI AI Service"]
@@ -36,6 +37,7 @@ flowchart TB
     Web -- "JWT + refresh cookie" --> Auth
     Web --> Drive
     Web --> SearchChat
+    Web --> Admin
 
     Auth --> PG
     Drive --> PG
@@ -123,7 +125,8 @@ The API is a modular monolith: one deployable ASP.NET Core service, one physical
 - `Modules/Drive` owns folders, file metadata, drive endpoints, storage abstraction, drive options, and drive entity mappings.
 - `Modules/Processing` owns processing jobs, document chunks, the background worker, and chunk retrieval over `pgvector`.
 - `Modules/SearchChat` owns search/chat endpoints, conversations, chat messages, and semantic search orchestration.
-- `Shared/Infrastructure` owns cross-cutting infrastructure: DbContext, migrations, external AI HTTP client, CORS, security headers, and host-level wiring.
+- `Modules/Admin` owns authenticated operational views, currently the read-only persisted-log endpoint and file reader.
+- `Shared/Infrastructure` owns cross-cutting infrastructure: DbContext, migrations, external AI HTTP client, CORS, security headers, file-logging configuration, and host-level wiring.
 
 Modules communicate through DI interfaces or plain IDs/DTOs, not direct cross-module data access from feature services. For example, SearchChat asks Processing's `IChunkSearchRepository` for retrieved chunks instead of querying `DocumentChunk` directly.
 

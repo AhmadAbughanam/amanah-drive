@@ -97,3 +97,11 @@
 - Rebuilt the authenticated `/drive` dashboard (file management and Search & Chat views) to match a supplied visual design, replacing the interim styling carried over from Phase 6.
 - Kept all existing behavior unchanged: folder/file CRUD, upload validation, pagination, semantic search, chat with citations, and conversation state.
 - Extended the same visual language to mobile with stacked panels rather than shrinking the desktop layout.
+
+### Phase 14 - Durable Logging and Admin Viewer
+
+- Added daily and size-based rolling API log files in compact JSON format while retaining console logging.
+- Added bounded retention and a dedicated Docker volume so logs survive API container recreation.
+- Added the authenticated `/admin/logs` endpoint with level, text, and pagination filters.
+- Added a Logs view to the authenticated dashboard with loading, empty, error, filtering, and pagination states.
+- Recorded the deliberate file-based logging decision in ADR 0008 while keeping external observability infrastructure deferred.

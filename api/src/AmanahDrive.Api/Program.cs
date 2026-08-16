@@ -1,27 +1,42 @@
+using AmanahDrive.Api.Modules.Admin;
 using AmanahDrive.Api.Modules.Auth;
 using AmanahDrive.Api.Modules.Drive;
 using AmanahDrive.Api.Modules.Processing;
 using AmanahDrive.Api.Modules.SearchChat;
 using AmanahDrive.Api.Shared.Infrastructure;
+using AmanahDrive.Api.Shared.Infrastructure.Logging;
 using AmanahDrive.Api.Shared.Infrastructure.OpenApi;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Serilog;
+using Serilog.Formatting.Compact;
 using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
+var fileLoggingOptions = builder.Configuration.GetSection(FileLoggingOptions.SectionName).Get<FileLoggingOptions>()
+    ?? new FileLoggingOptions();
 
 builder.Host.UseSerilog((context, loggerConfiguration) =>
 {
     loggerConfiguration
         .ReadFrom.Configuration(context.Configuration)
         .Enrich.FromLogContext()
-        .WriteTo.Console();
+        .WriteTo.Console()
+        .WriteTo.File(
+            new CompactJsonFormatter(),
+            fileLoggingOptions.GetRollingFilePath(),
+            rollingInterval: RollingInterval.Day,
+            retainedFileCountLimit: fileLoggingOptions.RetainedFileCountLimit,
+            fileSizeLimitBytes: fileLoggingOptions.FileSizeLimitBytes,
+            rollOnFileSizeLimit: true,
+            shared: true,
+            flushToDiskInterval: TimeSpan.FromSeconds(1));
 });
 
 builder.WebHost.ConfigureDriveHost(builder.Configuration);
 
 builder.Services
     .AddInfrastructure(builder.Configuration, builder.Environment)
+    .AddAdminModule(builder.Configuration)
     .AddAuthModule(builder.Configuration)
     .AddDriveModule(builder.Configuration)
     .AddProcessingModule(builder.Configuration)
@@ -81,6 +96,7 @@ app.MapGet("/health", ReadinessAsync)
     .WithSummary("Readiness alias kept for backward compatibility.")
     .Produces<HealthResponse>(StatusCodes.Status200OK)
     .Produces<HealthResponse>(StatusCodes.Status503ServiceUnavailable);
+app.MapAdminModule();
 app.MapAuthModule();
 app.MapDriveModule();
 app.MapProcessingModule();

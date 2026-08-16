@@ -32,6 +32,11 @@ services:
       AiService__BaseUrl: ${AI_SERVICE_BASE_URL:-http://ai-service:8000}
       AiService__ServiceToken: ${AI_SERVICE_TOKEN:?AI_SERVICE_TOKEN is required}
       AiService__WorkerEnabled: "true"
+      LoggingFiles__DirectoryPath: /var/log/amanah-drive
+      LoggingFiles__RetainedFileCountLimit: ${API_LOG_RETENTION_FILES:-14}
+      LoggingFiles__FileSizeLimitBytes: ${API_LOG_FILE_SIZE_LIMIT_BYTES:-26214400}
+    volumes:
+      - api_logs:/var/log/amanah-drive
     ports:
       - "${API_HTTP_PORT:-8080}:8080"
     depends_on:
@@ -68,3 +73,4 @@ services:
 
 volumes:
   postgres_data:
+  api_logs:

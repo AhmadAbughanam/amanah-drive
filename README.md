@@ -28,10 +28,11 @@ The search and chat screenshot was taken against the implemented embedding and g
 - Docker Compose environment for PostgreSQL, API, AI service, and web app.
 - CI jobs for API, AI service, and web build/test checks.
 - Interactive OpenAPI documentation for the API at `/docs` when enabled.
+- Durable rolling API logs and an authenticated in-app log viewer.
 
 ## Architecture
 
-The ASP.NET Core API is a modular monolith: one deployable service, one PostgreSQL database, and vertical modules for `Auth`, `Drive`, `Processing`, and `SearchChat`. Modules communicate through explicit interfaces rather than direct cross-module data access. The Python FastAPI AI service is a separate stateless service for extraction, chunking, embeddings, and grounded answer generation.
+The ASP.NET Core API is a modular monolith: one deployable service, one PostgreSQL database, and vertical modules for `Auth`, `Drive`, `Processing`, `SearchChat`, and `Admin`. Modules communicate through explicit interfaces rather than direct cross-module data access. The Python FastAPI AI service is a separate stateless service for extraction, chunking, embeddings, and grounded answer generation.
 
 See [Architecture Reference](docs/architecture.md) and [Architecture Decision Records](docs/decisions/README.md) for the detailed boundaries and tradeoffs.
 
@@ -44,6 +45,7 @@ flowchart TB
         Drive["Drive module"]
         Processing["Processing module"]
         SearchChat["SearchChat module"]
+        Admin["Admin module"]
     end
 
     AI["Python FastAPI AI Service"]
@@ -54,6 +56,7 @@ flowchart TB
     Web -- "JWT + refresh cookie" --> Auth
     Web --> Drive
     Web --> SearchChat
+    Web --> Admin
 
     Auth --> PG
     Drive --> PG
@@ -133,6 +136,7 @@ sequenceDiagram
 - PostgreSQL with `pgvector`
 - JWT bearer authentication
 - Serilog structured logging
+- Compact-JSON rolling file sink with bounded retention
 - Microsoft.AspNetCore.OpenApi document generation
 - Scalar interactive API documentation at `/docs`
 
@@ -147,6 +151,7 @@ sequenceDiagram
 
 - Docker and Docker Compose
 - PostgreSQL named volume
+- API log named volume
 - Nginx config placeholder
 - GitHub Actions CI
 
@@ -263,6 +268,13 @@ CSRF posture in V1: application mutations require a bearer access token, while r
 - Added PostgreSQL readiness check.
 - Reworked job claiming with `FOR UPDATE SKIP LOCKED`.
 - Added a real PostgreSQL concurrency test proving jobs are not claimed twice.
+
+### Phase 14 - Durable Logging and Admin Viewer
+
+- Added compact-JSON daily and size-based rolling API logs with bounded retention.
+- Persisted API logs in a dedicated Docker named volume.
+- Added an authenticated, filtered, paginated admin log endpoint and dashboard view.
+- Kept external log aggregation and tracing deferred until operational scale requires them.
 
 ## Future Improvements
 

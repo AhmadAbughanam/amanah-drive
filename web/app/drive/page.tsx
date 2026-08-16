@@ -4,11 +4,12 @@ import type { ChangeEvent, FormEvent } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch, apiJson, errorMessage } from "@/lib/api";
-import type { ChatCitation, ChatResponse, FileItem, Folder, FolderContents, SearchResponse, SearchResult } from "@/lib/types";
+import type { AdminLogResponse, ChatCitation, ChatResponse, FileItem, Folder, FolderContents, SearchResponse, SearchResult } from "@/lib/types";
 import { useAuth } from "../auth-provider";
 
 type Breadcrumb = { id: string | null; name: string };
-type AppView = "files" | "knowledge";
+type AppView = "files" | "knowledge" | "logs";
+type LogFilters = { level: string; search: string };
 type ChatEntry = {
   id: string;
   role: "user" | "assistant";
@@ -51,6 +52,13 @@ export default function DrivePage() {
   const [chatEntries, setChatEntries] = useState<ChatEntry[]>([]);
   const [chatLoading, setChatLoading] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
+  const [logs, setLogs] = useState<AdminLogResponse | null>(null);
+  const [logFilters, setLogFilters] = useState<LogFilters>({ level: "", search: "" });
+  const [appliedLogFilters, setAppliedLogFilters] = useState<LogFilters>({ level: "", search: "" });
+  const [logPage, setLogPage] = useState(1);
+  const [logLoading, setLogLoading] = useState(false);
+  const [logError, setLogError] = useState<string | null>(null);
+  const [logRefreshKey, setLogRefreshKey] = useState(0);
 
   const folderQuery = useMemo(() => {
     const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
@@ -73,6 +81,25 @@ export default function DrivePage() {
     }
   }, [folderQuery]);
 
+  const loadLogs = useCallback(async () => {
+    setLogLoading(true);
+    setLogError(null);
+    try {
+      const params = new URLSearchParams({ page: String(logPage), pageSize: "25" });
+      if (appliedLogFilters.level) {
+        params.set("level", appliedLogFilters.level);
+      }
+      if (appliedLogFilters.search) {
+        params.set("search", appliedLogFilters.search);
+      }
+      setLogs(await apiJson<AdminLogResponse>(`/admin/logs?${params}`));
+    } catch (err) {
+      setLogError(err instanceof Error ? err.message : "Unable to load system logs.");
+    } finally {
+      setLogLoading(false);
+    }
+  }, [appliedLogFilters, logPage]);
+
   useEffect(() => {
     let cancelled = false;
     ensureSession().then((ok) => {
@@ -90,6 +117,12 @@ export default function DrivePage() {
       void loadContents();
     }
   }, [loadContents, status]);
+
+  useEffect(() => {
+    if (status === "authenticated" && activeView === "logs") {
+      void loadLogs();
+    }
+  }, [activeView, loadLogs, logRefreshKey, status]);
 
   function enterFolder(folder: Folder) {
     setCurrentFolderId(folder.id);
@@ -317,6 +350,16 @@ export default function DrivePage() {
     setChatError(null);
   }
 
+  function applyLogFilters(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setLogPage(1);
+    setAppliedLogFilters({
+      level: logFilters.level,
+      search: logFilters.search.trim(),
+    });
+    setLogRefreshKey((value) => value + 1);
+  }
+
   if (status === "checking" || (status === "anonymous" && !contents)) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#080808] px-6 text-[#f8f7f2]">
@@ -337,7 +380,7 @@ export default function DrivePage() {
               </div>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between lg:justify-end">
-              <nav className="grid grid-cols-2 rounded-[10px] border border-black/12 bg-white/35 p-1 sm:min-w-[300px]" aria-label="Drive sections">
+              <nav className="grid grid-cols-3 rounded-[10px] border border-black/12 bg-white/35 p-1 sm:min-w-[430px]" aria-label="Drive sections">
                 <button
                   className={`rounded-[8px] px-4 py-3 text-sm transition ${activeView === "files" ? "bg-black text-white shadow-[0_10px_22px_rgba(0,0,0,0.20)]" : "text-black/70 hover:text-black"}`}
                   type="button"
@@ -351,6 +394,13 @@ export default function DrivePage() {
                   onClick={() => setActiveView("knowledge")}
                 >
                   Search & Chat
+                </button>
+                <button
+                  className={`rounded-[8px] px-4 py-3 text-sm transition ${activeView === "logs" ? "bg-black text-white shadow-[0_10px_22px_rgba(0,0,0,0.20)]" : "text-black/70 hover:text-black"}`}
+                  type="button"
+                  onClick={() => setActiveView("logs")}
+                >
+                  Logs
                 </button>
               </nav>
               <button className="rounded-[10px] border border-black/12 bg-white/35 px-5 py-3 text-sm text-black transition hover:border-black/35 hover:bg-white" onClick={signOut} type="button">
@@ -385,7 +435,7 @@ export default function DrivePage() {
             onUploadFile={uploadFile}
             onNewFolderNameChange={setNewFolderName}
           />
-        ) : (
+        ) : activeView === "knowledge" ? (
           <KnowledgeView
             chatEntries={chatEntries}
             chatError={chatError}
@@ -404,6 +454,16 @@ export default function DrivePage() {
             onNewConversation={startNewConversation}
             onSearch={runSearch}
             onSearchQueryChange={setSearchQuery}
+          />
+        ) : (
+          <LogsView
+            error={logError}
+            filters={logFilters}
+            isLoading={logLoading}
+            logs={logs}
+            onApplyFilters={applyLogFilters}
+            onFiltersChange={setLogFilters}
+            onPageChange={setLogPage}
           />
         )}
       </div>
@@ -886,6 +946,125 @@ function KnowledgeView({
   );
 }
 
+function LogsView({
+  error,
+  filters,
+  isLoading,
+  logs,
+  onApplyFilters,
+  onFiltersChange,
+  onPageChange,
+}: {
+  error: string | null;
+  filters: LogFilters;
+  isLoading: boolean;
+  logs: AdminLogResponse | null;
+  onApplyFilters: (event: FormEvent<HTMLFormElement>) => void;
+  onFiltersChange: (filters: LogFilters) => void;
+  onPageChange: (page: number) => void;
+}) {
+  return (
+    <section className="px-5 py-7 sm:px-8 lg:px-9">
+      <div className="mb-8">
+        <p className={labelClass}>Administration</p>
+        <h2 className="mt-3 font-serif text-4xl font-normal leading-tight text-black sm:text-5xl">System logs</h2>
+        <p className="mt-2 text-base text-black/55">Inspect recent API activity and failures from persisted structured logs.</p>
+      </div>
+
+      <div className={`${panelClass} overflow-hidden`}>
+        <form className="grid gap-4 border-b border-black/10 p-5 sm:grid-cols-[180px_minmax(0,1fr)_auto] sm:items-end sm:p-6" onSubmit={onApplyFilters}>
+          <label className="block">
+            <span className={labelClass}>Log level</span>
+            <select
+              className={`${fieldClass} mt-2`}
+              value={filters.level}
+              onChange={(event) => onFiltersChange({ ...filters, level: event.target.value })}
+            >
+              <option value="">All levels</option>
+              <option value="Information">Information</option>
+              <option value="Warning">Warning</option>
+              <option value="Error">Error</option>
+              <option value="Fatal">Fatal</option>
+              <option value="Debug">Debug</option>
+              <option value="Verbose">Verbose</option>
+            </select>
+          </label>
+          <label className="block">
+            <span className={labelClass}>Search logs</span>
+            <input
+              className={`${fieldClass} mt-2`}
+              value={filters.search}
+              onChange={(event) => onFiltersChange({ ...filters, search: event.target.value })}
+              placeholder="Message, path, status, source..."
+            />
+          </label>
+          <button className={primaryButtonClass} disabled={isLoading} type="submit">
+            Apply filters
+          </button>
+        </form>
+
+        {error ? (
+          <div className="m-5 rounded-[10px] border border-red-900/25 bg-red-50 px-4 py-3 text-sm text-red-800 sm:m-6" role="alert">
+            {error}
+          </div>
+        ) : null}
+
+        <div className="min-h-[470px] divide-y divide-black/10">
+          {isLoading && !logs ? <p className="p-6 text-sm text-black/55">Loading persisted logs...</p> : null}
+          {!isLoading && logs?.entries.length === 0 ? <p className="p-6 text-sm text-black/55">No log entries match these filters.</p> : null}
+          {logs?.entries.map((entry, index) => (
+            <article className="grid gap-4 px-5 py-5 sm:px-6 lg:grid-cols-[170px_minmax(0,1fr)]" key={`${entry.timestamp}-${index}`}>
+              <div>
+                <span className={`inline-flex rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${logLevelClass(entry.level)}`}>
+                  {entry.level}
+                </span>
+                <time className="mt-3 block text-xs leading-5 text-black/45" dateTime={entry.timestamp}>
+                  {formatDate(entry.timestamp)}
+                </time>
+              </div>
+              <div className="min-w-0">
+                <p className="break-words font-mono text-sm leading-6 text-black">{entry.message}</p>
+                {Object.keys(entry.properties).length > 0 ? (
+                  <pre className="mt-3 overflow-x-auto rounded-[8px] border border-black/8 bg-black/[0.03] p-3 text-xs leading-5 text-black/55">
+                    {JSON.stringify(entry.properties, null, 2)}
+                  </pre>
+                ) : null}
+                {entry.exception ? (
+                  <pre className="mt-3 overflow-x-auto whitespace-pre-wrap rounded-[8px] border border-red-900/20 bg-red-50 p-3 text-xs leading-5 text-red-900">
+                    {entry.exception}
+                  </pre>
+                ) : null}
+              </div>
+            </article>
+          ))}
+        </div>
+
+        <div className="flex items-center justify-between gap-4 border-t border-black/10 px-5 py-5 text-sm text-black/55 sm:px-6">
+          <span>Page {logs?.page ?? 1}</span>
+          <div className="flex items-center gap-2">
+            <button
+              className={secondaryButtonClass}
+              disabled={isLoading || (logs?.page ?? 1) <= 1}
+              onClick={() => onPageChange(Math.max(1, (logs?.page ?? 1) - 1))}
+              type="button"
+            >
+              Previous
+            </button>
+            <button
+              className={secondaryButtonClass}
+              disabled={isLoading || !logs?.hasMore}
+              onClick={() => onPageChange((logs?.page ?? 1) + 1)}
+              type="button"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function FileMoveControl({
   file,
   folders,
@@ -1045,4 +1224,19 @@ function formatDate(value: string) {
     hour: "numeric",
     minute: "2-digit",
   }).format(date);
+}
+
+function logLevelClass(level: string) {
+  switch (level.toLowerCase()) {
+    case "fatal":
+    case "error":
+      return "border-red-900/20 bg-red-50 text-red-800";
+    case "warning":
+      return "border-amber-900/20 bg-amber-50 text-amber-900";
+    case "debug":
+    case "verbose":
+      return "border-black/10 bg-black/[0.03] text-black/55";
+    default:
+      return "border-emerald-900/20 bg-emerald-50 text-emerald-900";
+  }
 }

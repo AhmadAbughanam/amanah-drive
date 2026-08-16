@@ -11,6 +11,7 @@ The browsable OpenAPI/Scalar UI is available at `/docs` in Development, or when 
 | GET | `/health/live` | No | Liveness probe; returns whether the API process is alive without dependency checks. |
 | GET | `/health/ready` | No | Readiness probe; checks PostgreSQL reachability before reporting ready. |
 | GET | `/health` | No | Backward-compatible alias for `/health/ready`. |
+| GET | `/admin/logs` | Bearer JWT | Return recent persisted API logs with optional `level`, `search`, `page`, and `pageSize` filters. |
 | POST | `/auth/register` | Bootstrap token header | Create the single admin account during bootstrap. |
 | POST | `/auth/login` | No | Exchange admin credentials for a JWT access token and refresh cookie. |
 | POST | `/auth/refresh` | Refresh cookie | Rotate the refresh token and issue a new access token. |

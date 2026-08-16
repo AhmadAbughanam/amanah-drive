@@ -25,6 +25,33 @@ test("valid login reaches drive", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Documents" })).toBeVisible();
 });
 
+test("authenticated admin log viewer renders persisted entries", async ({ page }) => {
+  await mockApi(page, {
+    loginSucceeds: true,
+    adminLogs: {
+      page: 1,
+      pageSize: 25,
+      hasMore: false,
+      entries: [
+        {
+          timestamp: "2026-08-16T10:01:00Z",
+          level: "Warning",
+          message: "Document processing job {JobId} failed",
+          exception: null,
+          properties: { JobId: "job-123" },
+        },
+      ],
+    },
+  });
+
+  await signIn(page);
+  await page.getByRole("button", { name: "Logs" }).click();
+
+  await expect(page.getByRole("heading", { name: "System logs" })).toBeVisible();
+  await expect(page.getByText("Document processing job {JobId} failed")).toBeVisible();
+  await expect(page.getByText("job-123")).toBeVisible();
+});
+
 test("search results render in the authenticated app", async ({ page }) => {
   await mockApi(page, {
     loginSucceeds: true,
@@ -151,6 +178,18 @@ async function mockApi(
       }>;
     };
     chatStatus?: number;
+    adminLogs?: {
+      page: number;
+      pageSize: number;
+      hasMore: boolean;
+      entries: Array<{
+        timestamp: string;
+        level: string;
+        message: string;
+        exception: string | null;
+        properties: Record<string, unknown>;
+      }>;
+    };
   },
 ) {
   await page.route(`${apiBaseUrl}/auth/login`, async (route) => {
@@ -204,6 +243,18 @@ async function mockApi(
             updatedAt: "2026-08-11T00:00:00Z",
           },
         ],
+      },
+    });
+  });
+
+  await page.route(`${apiBaseUrl}/admin/logs**`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      json: options.adminLogs ?? {
+        page: 1,
+        pageSize: 25,
+        hasMore: false,
+        entries: [],
       },
     });
   });

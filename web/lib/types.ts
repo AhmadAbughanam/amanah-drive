@@ -73,6 +73,21 @@ export type ChatHistoryResponse = {
   messages: ChatMessageResponse[];
 };
 
+export type AdminLogEntry = {
+  timestamp: string;
+  level: string;
+  message: string;
+  exception: string | null;
+  properties: Record<string, unknown>;
+};
+
+export type AdminLogResponse = {
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
+  entries: AdminLogEntry[];
+};
+
 export type ApiErrorBody = {
   message?: string;
   title?: string;
