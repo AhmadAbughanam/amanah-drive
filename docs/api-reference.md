@@ -1,6 +1,10 @@
 # API Reference
 
-This is a scannable reference for the public ASP.NET Core API endpoints implemented so far. The internal AI service contract is documented separately in [AI Service Contract](ai-service-contract.md).
+This is a scannable reference for the public ASP.NET Core API endpoints. The internal AI service contract is documented separately in [AI Service Contract](ai-service-contract.md).
+
+The browsable OpenAPI/Scalar UI is available at `/docs` in Development, or when `OpenApi:Enabled=true` is configured. The generated OpenAPI JSON is available at `/openapi/v1.json` under the same condition and should be treated as the most current schema-level reference.
+
+`/health` remains as a backward-compatible readiness alias because Docker Compose and older smoke checks originally used it.
 
 | Method | Path | Auth | Purpose |
 | --- | --- | --- | --- |

@@ -1,11 +1,11 @@
 # Architecture Reference
 
-This is a short navigation document for agents. The full project plan and architectural source of truth is [README.md](../README.md).
+This is the repository architecture reference for Amanah Drive. The README provides the project overview; this document focuses on repository layout and service boundaries.
 
 ## Stack
 
 - Backend API: ASP.NET Core REST API with JWT authentication
-- AI service: Python FastAPI with LangChain, Sentence Transformers, and a RAG pipeline
+- AI service: Python FastAPI with Sentence Transformers for local embeddings and the Hugging Face Inference API for grounded RAG generation
 - Web dashboard: Next.js, TypeScript, and Tailwind CSS
 - Database: PostgreSQL with `pgvector`
 - V1 file storage: local filesystem on the VPS behind a storage abstraction
@@ -13,18 +13,18 @@ This is a short navigation document for agents. The full project plan and archit
 
 ## Repository Layout
 
-* `api/` — ASP.NET Core REST API (authentication, file service, metadata, orchestration)
-* `ai-service/` — Python FastAPI service (extraction, embeddings, retrieval, RAG)
-* `web/` — Next.js dashboard
-* `infra/` — Docker Compose, Nginx, and other deployment config
+* `api/` — ASP.NET Core REST API (authentication, drive behavior, metadata, retrieval, orchestration)
+* `ai-service/` — Python FastAPI service (extraction, chunking, embeddings, grounded answer generation)
+* `web/` — Next.js portfolio, login, and authenticated dashboard
+* `infra/` — Docker Compose, Nginx, and deployment configuration
 
 Each service owns its own dependency manifest and does not reach into another service's directory. New top-level directories should map to one of these four areas; do not introduce a fifth without updating this file.
 
 ## Boundaries
 
-- The ASP.NET Core REST API owns authentication, file service behavior, metadata access, and orchestration.
-- The Python FastAPI AI service owns extraction, embedding generation, retrieval, summaries, and RAG behavior.
-- The Next.js app owns the user dashboard.
+- The ASP.NET Core REST API owns authentication, drive behavior, metadata access, retrieval (pgvector similarity search), chat persistence, and orchestration.
+- The Python FastAPI AI service owns extraction, embedding generation, and grounded answer generation. It is stateless with respect to business data and has no database access — see [ADR 0002](decisions/0002-stateless-ai-service-boundary.md).
+- The Next.js app owns the portfolio landing page, login flow, and authenticated dashboard.
 - V1 raw file storage is local filesystem storage on the VPS.
 - Metadata, processing jobs, embeddings, chat history, and sessions belong in PostgreSQL and `pgvector`.
 - Cloudflare R2, S3, and MinIO are future storage-provider options behind the storage abstraction.
@@ -43,4 +43,6 @@ Modules communicate through DI interfaces or plain IDs/DTOs, not direct cross-mo
 
 Future split candidates are Auth/User, Drive/File metadata, Processing worker, Search/Chat, AI service, and Web frontend. That split is not happening now; revisit it only with a concrete reason such as independent scaling, deployment ownership, heavy processing load, or separate data ownership.
 
-Do not invent architecture beyond the README. Update this file only when it remains a short navigation aid.
+See [Architecture Decision Records](decisions/README.md) for the reasoning behind these boundaries and other significant decisions.
+
+Keep this file focused on layout and boundaries. Larger tradeoffs belong in the ADRs.

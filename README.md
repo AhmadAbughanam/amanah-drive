@@ -1,391 +1,286 @@
 # Amanah Drive
 
-> **A secure AI-powered personal knowledge drive built with modern backend engineering practices.**
-
-Amanah Drive is a self-hosted intelligent document management system designed for a **single user**. It combines secure file storage, semantic search, and Retrieval-Augmented Generation (RAG) to transform a personal document collection into a searchable knowledge base.
-
-This project is intentionally focused on demonstrating **software engineering quality** rather than implementing every possible feature. Every architectural decision prioritizes clean design, security, maintainability, and scalability.
-
----
-
-# Project Goals
-
-The primary goal of Amanah Drive is to showcase professional backend engineering skills through a real-world application.
-
-The project focuses on:
-
-* Secure authentication and authorization
-* Clean software architecture
-* Modern API design
-* AI integration
-* Background processing
-* Containerized deployment
-* Database design
-* Security best practices
-* Scalable system design
-
-Although V1 is built for a single user, the architecture is designed so that cloud storage, multiple users, and additional services can be added later with minimal changes.
-
----
-
-# Core Features (V1)
-
-## Secure Authentication
-
-* Single administrator account
-* Argon2id password hashing
-* JWT authentication
-* Refresh token rotation
-* HTTP-only secure cookies
-* Rate limiting
-* Account lockout after repeated failed logins
-* Session management
-* CSRF protection where applicable
-
----
-
-## Personal Drive
-
-* Folder management
-* File upload
-* File download
-* Rename
-* Move
-* Delete
-* File metadata
-* File previews (future)
-* Local filesystem storage
-
----
-
-## AI Knowledge Engine
-
-Automatically process uploaded documents.
-
-Pipeline:
-
-Upload
-
-↓
-
-Text Extraction
-
-↓
-
-Chunking
-
-↓
-
-Embedding Generation
-
-↓
-
-Vector Storage
-
-↓
-
-Semantic Search
-
-↓
-
-AI Chat
-
-Supported initially:
-
-* PDF
-* Markdown
-* Plain Text
-
-Additional document formats will be added later.
-
----
-
-## Semantic Search
-
-Instead of searching filenames:
-
-> contract_final_v3.pdf
-
-Users can search naturally:
-
-> "employment agreement"
-
-The system retrieves the most relevant document sections using vector similarity search.
-
----
-
-## AI Chat
-
-Chat with your documents using Retrieval-Augmented Generation (RAG).
-
-Features:
-
-* Context-aware answers
-* Source citations
-* Conversation history
-* Retrieval from vector database
-* Grounded responses
-
----
-
-## Background Processing
-
-Document processing runs asynchronously.
-
-Upload
-
-↓
-
-Processing Job Created
-
-↓
-
-Worker
-
-↓
-
-Extract Text
-
-↓
-
-Generate Embeddings
-
-↓
-
-Completed
-
-This keeps uploads responsive while supporting larger files.
-
----
-
-# Technology Stack
-
-## Frontend
-
-* Next.js
-* TypeScript
-* Tailwind CSS
-
----
-
-## Backend
-
-* ASP.NET Core
-* REST API
-* JWT Authentication
-
----
-
-## AI Service
-
-* Python
-* FastAPI
-* LangChain
-* Sentence Transformers
-* RAG Pipeline
-
----
-
-## Database
-
-PostgreSQL
-
-Extensions:
-
-* pgvector
-
-Stores:
-
-* File metadata
-* Processing jobs
-* Embeddings
-* Chat history
-* Sessions
-
----
-
-## Storage
-
-### V1
-
-Local filesystem on VPS.
-
-A storage abstraction layer is implemented from the beginning so the storage backend can be replaced without affecting business logic.
-
-Future storage providers:
-
-* Cloudflare R2
-* Amazon S3
-* MinIO
-
----
-
-## Infrastructure
-
-* Docker
-* Docker Compose
-* Nginx
-* GitHub Actions (CI)
-
----
-
-# Project Architecture
-
-```text
-                   Next.js Frontend
-                          │
-                          ▼
-                ASP.NET Core REST API
-                          │
-        ┌─────────────────┼─────────────────┐
-        │                 │                 │
-        ▼                 ▼                 ▼
- Authentication      File Service      AI Service
-        │                 │                 │
-        ▼                 ▼                 ▼
- PostgreSQL      Local Filesystem      FastAPI
-        │                                   │
-        └───────────────┬───────────────────┘
-                        ▼
-                  pgvector Database
+Amanah Drive is a self-hosted personal knowledge drive for one administrator. It combines secure file storage, semantic search, and Retrieval-Augmented Generation (RAG) over uploaded PDF, Markdown, and plain-text documents.
+
+The project is intentionally scoped as a single-admin V1. The backend is structured for maintainability and future extraction, but it remains a single deployable modular monolith until there is a concrete reason to split it.
+
+## Screenshots
+
+| Portfolio landing | Login |
+| --- | --- |
+| ![Portfolio landing page](docs/screenshots/portfolio-landing.png) | ![Login page](docs/screenshots/login.png) |
+
+| File management | Semantic search and RAG chat |
+| --- | --- |
+| ![Drive file management shell](docs/screenshots/drive-files.png) | ![Semantic search and AI chat with citations](docs/screenshots/drive-search-chat.png) |
+
+The search and chat screenshot was taken against the implemented embedding and generation pipeline, not a mocked UI.
+
+## Built Scope
+
+- Single-admin authentication with JWT access tokens and refresh-token rotation.
+- Folder and file management backed by local filesystem storage.
+- Asynchronous document processing: extraction, chunking, embedding, and pgvector storage.
+- Semantic search over stored document chunks.
+- RAG chat with citations and persisted conversation history.
+- Authenticated Next.js dashboard for file management, search, and chat.
+- Portfolio landing page and login flow.
+- Docker Compose environment for PostgreSQL, API, AI service, and web app.
+- CI jobs for API, AI service, and web build/test checks.
+- Interactive OpenAPI documentation for the API at `/docs` when enabled.
+
+## Architecture
+
+The ASP.NET Core API is a modular monolith: one deployable service, one PostgreSQL database, and vertical modules for `Auth`, `Drive`, `Processing`, and `SearchChat`. Modules communicate through explicit interfaces rather than direct cross-module data access. The Python FastAPI AI service is a separate stateless service for extraction, chunking, embeddings, and grounded answer generation.
+
+See [Architecture Reference](docs/architecture.md) and [Architecture Decision Records](docs/decisions/README.md) for the detailed boundaries and tradeoffs.
+
+```mermaid
+flowchart TB
+    Web["Next.js Web App"]
+
+    subgraph API["ASP.NET Core API - modular monolith"]
+        Auth["Auth module"]
+        Drive["Drive module"]
+        Processing["Processing module"]
+        SearchChat["SearchChat module"]
+    end
+
+    AI["Python FastAPI AI Service"]
+    HF["Hugging Face Inference API"]
+    PG[("PostgreSQL + pgvector")]
+    FS[("Local filesystem storage")]
+
+    Web -- "JWT + refresh cookie" --> Auth
+    Web --> Drive
+    Web --> SearchChat
+
+    Auth --> PG
+    Drive --> PG
+    Drive --> FS
+    Processing --> PG
+    Processing -- "extract / chunk / embed" --> AI
+    SearchChat --> PG
+    SearchChat -- "embed query, rag/answer" --> AI
+    AI -- "grounded generation" --> HF
 ```
 
----
+### Document Processing Pipeline
 
-# Security
+Uploads return after file metadata and a pending job are saved. A background worker claims jobs atomically and performs extraction, chunking, embedding, and vector persistence.
 
-Security is a first-class design goal.
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant D as Drive module
+    participant DB as PostgreSQL
+    participant W as Processing worker
+    participant AI as AI service
 
-Implemented practices include:
+    U->>D: POST /drive/files/upload
+    D->>DB: Save file metadata + ProcessingJob (Pending)
+    D-->>U: 201 Created
 
-* Argon2id password hashing
-* JWT authentication
-* Refresh token rotation
-* HTTP-only cookies
-* Secure cookie configuration
-* Rate limiting
-* Request validation
-* MIME type validation
-* File size limits
-* Path traversal prevention
-* Structured logging
-* Environment-based configuration
-* Secret management
-* Secure error handling
+    loop Background polling
+        W->>DB: Claim next Pending job
+        W->>AI: POST /extract
+        W->>AI: POST /chunk
+        W->>AI: POST /embed
+        W->>DB: Save DocumentChunk rows, mark Completed
+    end
+```
 
----
+### RAG Chat Flow
 
-# Engineering Principles
+Retrieval stays in the API. The AI service receives the already-retrieved chunks and generates a grounded answer with citations.
 
-This project emphasizes engineering quality over feature quantity.
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant SC as SearchChat module
+    participant DB as PostgreSQL (pgvector)
+    participant AI as AI service
+    participant HF as Hugging Face
 
-Key principles:
+    U->>SC: POST /chat { question }
+    SC->>AI: POST /embed { question }
+    AI-->>SC: query embedding
+    SC->>DB: cosine similarity, top K
+    DB-->>SC: retrieved chunks
+    SC->>AI: POST /rag/answer { question, chunks, history }
+    AI->>HF: chat completion
+    HF-->>AI: generated answer
+    AI-->>SC: answer + citations
+    SC->>DB: persist user and assistant messages
+    SC-->>U: answer + citations
+```
 
-* Clean Architecture
-* Dependency Injection
-* Repository Pattern
-* Storage Abstraction
-* Separation of Concerns
-* SOLID Principles
-* Structured Logging
-* Configuration via Environment Variables
-* RESTful API Design
-* Background Workers
-* Modular Services
+## Technology Stack
 
----
+### Web
 
-# Roadmap
+- Next.js App Router
+- React
+- TypeScript
+- Tailwind CSS
+- Playwright tests with mocked API routes
 
-## Phase 1 — Foundation
+### API
 
-* Project setup
-* Repository layout locked in (see [Repository Layout](docs/architecture.md#repository-layout))
-* Docker environment
-* PostgreSQL
-* Configuration system
-* Logging
-* Authentication
-* Auth tests: login, refresh rotation, lockout, token reuse detection
+- ASP.NET Core 9
+- Minimal APIs
+- EF Core and Npgsql
+- PostgreSQL with `pgvector`
+- JWT bearer authentication
+- Serilog structured logging
+- Microsoft.AspNetCore.OpenApi document generation
+- Scalar interactive API documentation at `/docs`
 
----
+### AI Service
 
-## Phase 2 — Secure Drive
+- Python FastAPI
+- pypdf for PDF extraction
+- Sentence Transformers with `sentence-transformers/all-MiniLM-L6-v2` embeddings
+- Hugging Face Inference API for grounded generation
 
-* Folder management
-* Upload
-* Download
-* Rename
-* Delete
-* Filesystem storage
-* Drive tests: upload/download round-trip, path traversal, MIME/size validation
+### Infrastructure
 
----
+- Docker and Docker Compose
+- PostgreSQL named volume
+- Nginx config placeholder
+- GitHub Actions CI
 
-## Phase 3 — AI Processing
+## Security
 
-* PDF extraction
-* Markdown support
-* Chunk generation
-* Embeddings
-* Vector indexing
-* AI service contract defined (see [AI Service Contract](docs/ai-service-contract.md))
-* Processing tests: chunking correctness, embedding pipeline, job retry/idempotency
+Implemented controls:
 
----
+- One-time admin bootstrap endpoint protected by `X-Bootstrap-Token`.
+- Argon2id password hashing.
+- JWT bearer access tokens.
+- Refresh-token rotation with reuse detection.
+- HttpOnly, Secure, SameSite=Strict refresh cookie.
+- Login and bootstrap rate limiting.
+- Rate limiting on search and chat.
+- Account lockout after repeated failed login attempts.
+- Constant-time comparison for bootstrap-token and password-hash checks.
+- Explicit CORS allow-list with credentials support; wildcard origins are rejected.
+- HSTS outside Development and Testing.
+- `X-Content-Type-Options`, `X-Frame-Options`, and Content Security Policy headers.
+- MIME allow-list, file size limits, and path traversal protection for uploads and storage.
+- Environment-based configuration for secrets and service tokens.
 
-## Phase 4 — Search & Chat
+CSRF posture in V1: application mutations require a bearer access token, while refresh/logout use a SameSite=Strict HttpOnly cookie. There is no separate anti-forgery token implementation because the browser-facing write endpoints are not authenticated by cookie alone.
 
-* Semantic search
-* AI chat v1: single-turn retrieval with source citations (MVP cut-line — demoable here)
-* AI chat v2: multi-turn conversation history
-* Search/chat tests: retrieval relevance, citation correctness
+## Engineering Principles
 
----
+- Modular monolith first; microservices only with a concrete scaling or ownership reason.
+- Vertical module ownership for endpoints, services, models, options, and EF configurations.
+- Cross-module calls through explicit DI interfaces and DTOs.
+- Storage abstraction (`IFileStorage`) so local disk can be replaced later.
+- Stateless AI service boundary with no database access.
+- Environment-variable based configuration for deploy-time values.
+- Structured logging and request logging.
+- Background processing with atomic PostgreSQL job claiming.
+- Per-phase API, AI service, and web tests.
 
-## Phase 5 — Hardening & Performance
+## Roadmap
 
-Implemented hardening baseline:
+### Phase 1 - Foundation
 
-* GitHub Actions CI for API, AI service, and web build/test jobs
-* Rate limiting for expensive search and chat endpoints
-* Configurable CORS, HSTS, and baseline security headers
-* Pagination for unbounded folder and chat-history listings
-* Public API endpoint reference in [API Reference](docs/api-reference.md)
-* Security review of implemented auth, drive, search, and chat endpoints
+- Repository layout and Docker environment.
+- PostgreSQL with pgvector.
+- ASP.NET Core API foundation.
+- Single-admin auth, refresh-token rotation, login lockout, and bootstrap flow.
+- Auth integration tests.
 
-Remaining future hardening:
+### Phase 2 - Secure Drive
 
-* End-to-end test coverage across full browser workflows
-* Further performance optimization under production load
+- Folder and file entities.
+- Local filesystem storage behind `IFileStorage`.
+- Folder CRUD and file upload/download/rename/move/delete endpoints.
+- MIME, size, and path traversal checks.
+- Drive integration tests.
 
----
+### Phase 3 - AI Processing
 
-# Future Improvements
+- AI service contract for `/extract`, `/chunk`, and `/embed`.
+- FastAPI extraction, chunking, and embedding endpoints.
+- Processing jobs and document chunks stored in PostgreSQL with pgvector.
+- Background worker for asynchronous document processing.
+- API and AI service processing tests.
 
-The architecture is intentionally designed to support future expansion.
+### Phase 4 - Search and Chat
 
-Potential future features include:
+- API-side pgvector semantic search.
+- AI service `/rag/answer` endpoint backed by Hugging Face.
+- Chat endpoint with citations.
+- Conversation and message persistence.
+- Search/chat tests for retrieval, citations, and history.
 
-* Cloudflare R2 storage
-* Multi-user support
-* File sharing
-* Role-based access control
-* OCR
-* Additional document formats
-* Image understanding
-* Local LLM support
-* End-to-end encryption
-* Mobile application
-* Real-time synchronization
-* Horizontal scaling and observability hardening: externalized file storage (S3/R2/MinIO) behind the existing `IFileStorage` abstraction, OpenTelemetry logs/metrics/traces, liveness vs. readiness health probes, a separately-deployable processing worker, moving DB migrations out of API startup, distributed rate limiting, and a load balancer in front of multiple stateless API replicas — pursued only once there's a concrete need (real multi-user load), not preemptively for a single-user V1
+### Phase 5 - Hardening and Performance
 
----
+- GitHub Actions CI for API, AI service, and web.
+- Rate limiting for expensive search and chat endpoints.
+- Configurable CORS and security headers.
+- Pagination for folder listing and chat history.
+- Static API endpoint reference in [API Reference](docs/api-reference.md).
 
-# Why This Project?
+### Phase 6 - Web Frontend
 
-Amanah Drive is more than a file manager.
+- Portfolio landing page built from the provided CV.
+- Login flow using in-memory access tokens and refresh cookies.
+- Authenticated drive shell for folder and file management.
+- Landing and login restyling into a shared monochrome design system.
 
-It demonstrates the ability to design and build a production-inspired software system using modern backend engineering practices, AI integration, secure authentication, asynchronous processing, containerized deployment, and scalable architecture.
+### Phase 7 - Modular Monolith Refactor
 
-The objective is to build a system that is small enough to complete independently while reflecting the design principles and implementation quality expected in professional software engineering.
+- API reorganized into `Modules/Auth`, `Modules/Drive`, `Modules/Processing`, and `Modules/SearchChat`.
+- Shared infrastructure moved under `Shared/Infrastructure`.
+- SearchChat depends on Processing through `IChunkSearchRepository` instead of direct chunk queries.
+
+### Phase 8 - Embedding Runtime Fix
+
+- Pinned embedding runtime dependencies.
+- Added a real-model smoke test path for Sentence Transformers startup.
+- Verified real 384-dimension embeddings from the rebuilt AI service container.
+
+### Phase 9 - Search and Chat UI
+
+- Authenticated dashboard tab for semantic search.
+- Chat UI with citations and conversation follow-ups.
+- Playwright coverage for search results, empty state, chat success, and chat failure.
+
+### Phase 10 - OpenAPI Documentation
+
+- Built-in OpenAPI document generation.
+- Scalar UI at `/docs` with JWT bearer authentication support.
+- Documentation enabled in Development or through explicit `OpenApi:Enabled` configuration.
+
+### Phase 11 - Health Probes and Job Claiming
+
+- Split health checks into `/health/live` and `/health/ready`.
+- Kept `/health` as a readiness alias for compatibility.
+- Added PostgreSQL readiness check.
+- Reworked job claiming with `FOR UPDATE SKIP LOCKED`.
+- Added a real PostgreSQL concurrency test proving jobs are not claimed twice.
+
+## Future Improvements
+
+- Object storage implementation for S3, Cloudflare R2, or MinIO behind `IFileStorage`.
+- Multi-user support, roles, and per-user sharing.
+- File previews.
+- OCR and additional document formats.
+- Local LLM support.
+- End-to-end encryption.
+- Mobile app.
+- Real-time synchronization.
+- Separately deployable processing worker when background load justifies it.
+- Broader observability and scaling work: OpenTelemetry, Prometheus/Grafana, distributed rate limiting, load testing, and multiple stateless API replicas behind a load balancer.
+
+## References
+
+- [Architecture Reference](docs/architecture.md)
+- [API Reference](docs/api-reference.md)
+- [AI Service Contract](docs/ai-service-contract.md)
+- [Architecture Decision Records](docs/decisions/README.md)
+- [Changelog](CHANGELOG.md)

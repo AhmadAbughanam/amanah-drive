@@ -14,7 +14,17 @@ The token is configured through environment variables on both services. Requests
 
 ## Version
 
-This is the Phase 4 V1 contract. Breaking request or response shape changes require a new versioned route in a later phase.
+This is the V1 contract implemented by the API and AI service. Breaking request or response shape changes require a new versioned route.
+
+## Health
+
+`GET /health` is unauthenticated and returns:
+
+```json
+{
+  "status": "ok"
+}
+```
 
 ## Embedding Model
 
