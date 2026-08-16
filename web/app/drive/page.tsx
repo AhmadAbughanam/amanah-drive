@@ -16,11 +16,16 @@ type ChatEntry = {
   citations?: ChatCitation[];
 };
 
-const panelClass = "rounded-[28px] border border-black/10 bg-[#f8f7f2] shadow-[0_24px_80px_rgba(0,0,0,0.16)]";
-const labelClass = "text-[11px] font-semibold uppercase tracking-[0.22em] text-black/60";
-const inputClass = "w-full rounded-none border-0 border-b border-black/25 bg-transparent px-0 py-3 text-sm text-black outline-none placeholder:text-black/35 focus:border-black";
-const primaryButtonClass = "rounded-full bg-black px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-[#f8f7f2] transition hover:bg-black/80 disabled:cursor-not-allowed disabled:bg-black/35";
-const secondaryButtonClass = "rounded-full border border-black/20 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-black transition hover:border-black disabled:cursor-not-allowed disabled:opacity-40";
+const labelClass = "text-[11px] font-semibold uppercase tracking-[0.22em] text-black/50";
+const fieldClass =
+  "w-full rounded-[14px] border border-black/12 bg-white/65 px-4 py-3 text-sm text-black outline-none placeholder:text-black/35 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] transition focus:border-black/45";
+const primaryButtonClass =
+  "rounded-[14px] bg-black px-5 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-white shadow-[0_10px_22px_rgba(0,0,0,0.18)] transition hover:bg-black/80 disabled:cursor-not-allowed disabled:bg-black/35";
+const secondaryButtonClass =
+  "rounded-[14px] border border-black/12 bg-white/55 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-black transition hover:border-black/35 hover:bg-white disabled:cursor-not-allowed disabled:opacity-40";
+const iconButtonClass =
+  "grid h-11 w-11 place-items-center rounded-[11px] border border-black/12 bg-white/55 text-black transition hover:border-black/35 hover:bg-white disabled:cursor-not-allowed disabled:opacity-40";
+const panelClass = "rounded-[10px] border border-black/10 bg-white/35";
 
 export default function DrivePage() {
   const router = useRouter();
@@ -321,33 +326,35 @@ export default function DrivePage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#080808] px-4 py-4 text-black sm:px-6 sm:py-6">
-      <div className={`${panelClass} mx-auto min-h-[calc(100vh-2rem)] max-w-7xl overflow-hidden sm:min-h-[calc(100vh-3rem)]`}>
-        <header className="border-b border-black/10 px-6 py-6 md:px-10">
-          <div className="flex flex-wrap items-center justify-between gap-5">
-            <div>
-              <p className={labelClass}>Amanah Drive</p>
-              <h1 className="mt-2 font-serif text-3xl font-normal tracking-normal text-black">File management</h1>
+    <main className="min-h-screen bg-[#080808] px-3 py-3 text-black sm:px-6 sm:py-6">
+      <div className="mx-auto min-h-[calc(100vh-1.5rem)] max-w-[1500px] overflow-hidden rounded-[22px] border border-white/10 bg-[#f8f7f2] shadow-[0_34px_120px_rgba(0,0,0,0.55)] sm:min-h-[calc(100vh-3rem)] sm:rounded-[28px]">
+        <header className="border-b border-black/10 px-5 py-5 sm:px-8 lg:px-9">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-4">
+              <ShieldMark />
+              <div>
+                <p className="text-[13px] font-bold uppercase tracking-[0.34em] text-black">Amanah Drive</p>
+              </div>
             </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <nav className="flex rounded-full border border-black/15 p-1" aria-label="Drive sections">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between lg:justify-end">
+              <nav className="grid grid-cols-2 rounded-[10px] border border-black/12 bg-white/35 p-1 sm:min-w-[300px]" aria-label="Drive sections">
                 <button
-                  className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition ${activeView === "files" ? "bg-black text-[#f8f7f2]" : "text-black/55 hover:text-black"}`}
+                  className={`rounded-[8px] px-4 py-3 text-sm transition ${activeView === "files" ? "bg-black text-white shadow-[0_10px_22px_rgba(0,0,0,0.20)]" : "text-black/70 hover:text-black"}`}
                   type="button"
                   onClick={() => setActiveView("files")}
                 >
                   Files
                 </button>
                 <button
-                  className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition ${activeView === "knowledge" ? "bg-black text-[#f8f7f2]" : "text-black/55 hover:text-black"}`}
+                  className={`rounded-[8px] px-4 py-3 text-sm transition ${activeView === "knowledge" ? "bg-black text-white shadow-[0_10px_22px_rgba(0,0,0,0.20)]" : "text-black/70 hover:text-black"}`}
                   type="button"
                   onClick={() => setActiveView("knowledge")}
                 >
                   Search & Chat
                 </button>
               </nav>
-              <button className={secondaryButtonClass} onClick={signOut} type="button">
-                Logout
+              <button className="rounded-[10px] border border-black/12 bg-white/35 px-5 py-3 text-sm text-black transition hover:border-black/35 hover:bg-white" onClick={signOut} type="button">
+                Logout <span aria-hidden="true" className="ml-2">[-&gt;</span>
               </button>
             </div>
           </div>
@@ -451,140 +458,225 @@ function FilesView({
   onRenameFolder: (folder: Folder) => Promise<void>;
   onUploadFile: (event: ChangeEvent<HTMLInputElement>) => Promise<void>;
 }) {
+  const totalItems = (contents?.folders.length ?? 0) + (contents?.files.length ?? 0);
+  const firstItem = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const lastItem = (currentPage - 1) * pageSize + totalItems;
+
   return (
-    <section className="px-6 py-7 md:px-10 md:py-10">
-      <div className="mb-6 flex flex-wrap items-center gap-2 text-sm">
-        {breadcrumbs.map((item, index) => (
-          <button
-            key={`${item.id ?? "root"}-${index}`}
-            className="border-b border-transparent px-1 py-1 text-black/65 transition hover:border-black hover:text-black"
-            onClick={() => onGoToBreadcrumb(index)}
-            type="button"
-          >
-            {item.name}
-          </button>
-        ))}
+    <section className="px-5 py-7 sm:px-8 lg:px-9">
+      <div className="mb-8">
+        <h2 className="font-serif text-4xl font-normal leading-tight text-black sm:text-5xl">File management</h2>
+        <p className="mt-2 text-base text-black/55">Organize, manage, and access your secure files.</p>
       </div>
 
       {error ? (
-        <div className="mb-6 border border-red-900/25 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
+        <div className="mb-6 rounded-[10px] border border-red-900/25 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
           {error}
         </div>
       ) : null}
 
-      <div className="grid gap-6 lg:grid-cols-[340px_1fr]">
-        <aside className="space-y-6">
-          <div className="border border-black/10 bg-white/55 p-5">
-            <h2 className="font-serif text-2xl font-normal">Create folder</h2>
-            <div className="mt-5 flex gap-3">
-              <input
-                aria-label="Folder name"
-                className={inputClass}
-                value={newFolderName}
-                onChange={(event) => onNewFolderNameChange(event.target.value)}
-                placeholder="Folder name"
-              />
-              <button className={primaryButtonClass} onClick={onCreateFolder} disabled={isWorking} type="button">
-                Add
-              </button>
+      <div className="grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
+        <aside className={`${panelClass} p-5 sm:p-6`}>
+          <p className={labelClass}>Create new</p>
+          <div className="mt-5 rounded-[10px] border border-black/10 bg-white/45 p-4">
+            <div className="flex gap-4">
+              <div className="grid h-14 w-14 shrink-0 place-items-center rounded-full border border-black/8 bg-black/[0.03]">
+                <FolderGlyph />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold">New Folder</h3>
+                <p className="mt-1 text-sm leading-5 text-black/55">Create a new folder in your drive.</p>
+              </div>
             </div>
+            <input
+              aria-label="Folder name"
+              className={`${fieldClass} mt-5`}
+              value={newFolderName}
+              onChange={(event) => onNewFolderNameChange(event.target.value)}
+              placeholder="Folder name"
+            />
+            <button className={`${primaryButtonClass} mt-3 w-full normal-case tracking-normal`} onClick={onCreateFolder} disabled={isWorking} type="button">
+              Create Folder
+            </button>
           </div>
 
-          <div className="border border-black/10 bg-white/55 p-5">
-            <h2 className="font-serif text-2xl font-normal">Upload file</h2>
-            <p className="mt-3 text-sm leading-6 text-black/60">Supported: PDF, Markdown, and plain text.</p>
-            <input
-              className="mt-5 block w-full text-sm text-black/70 file:mr-3 file:rounded-full file:border-0 file:bg-black file:px-4 file:py-2 file:text-xs file:font-semibold file:uppercase file:tracking-[0.16em] file:text-[#f8f7f2] hover:file:bg-black/80"
-              type="file"
-              accept=".pdf,.md,.txt,application/pdf,text/markdown,text/plain"
-              onChange={onUploadFile}
-              disabled={isWorking}
-            />
+          <div className="my-5 flex items-center gap-4">
+            <div className="h-px flex-1 bg-black/10" />
+            <span className="text-xs uppercase tracking-[0.22em] text-black/45">Or</span>
+            <div className="h-px flex-1 bg-black/10" />
+          </div>
+
+          <p className={labelClass}>Upload files</p>
+          <div className="mt-5 rounded-[10px] border border-black/10 bg-white/45 p-4">
+            <div className="flex gap-4">
+              <div className="grid h-14 w-14 shrink-0 place-items-center rounded-full border border-black/8 bg-black/[0.03]">
+                <UploadGlyph />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold">Upload Files</h3>
+                <p className="mt-1 text-sm leading-5 text-black/55">Add files to your drive. Supported formats below.</p>
+              </div>
+            </div>
+            <label className="mt-5 flex min-h-[136px] cursor-pointer flex-col items-center justify-center rounded-[10px] border border-dashed border-black/22 bg-white/30 px-4 text-center text-sm text-black/55 transition hover:border-black/45 hover:bg-white/60">
+              <DocumentGlyph />
+              <span className="mt-3">Drag and drop files here or click to browse</span>
+              <input
+                className="sr-only"
+                type="file"
+                accept=".pdf,.md,.txt,application/pdf,text/markdown,text/plain"
+                onChange={onUploadFile}
+                disabled={isWorking}
+              />
+            </label>
+            <label className={`${secondaryButtonClass} mt-4 block cursor-pointer text-center normal-case tracking-normal`}>
+              Choose Files
+              <input
+                className="sr-only"
+                type="file"
+                accept=".pdf,.md,.txt,application/pdf,text/markdown,text/plain"
+                onChange={onUploadFile}
+                disabled={isWorking}
+              />
+            </label>
+          </div>
+
+          <div className="mt-5 flex gap-3 rounded-[9px] border border-black/10 bg-white/45 p-4">
+            <InfoGlyph />
+            <p className="text-sm leading-5 text-black/60">
+              <span className="block font-semibold text-black">Supported formats</span>
+              PDF, Markdown, and plain text.
+            </p>
           </div>
         </aside>
 
-        <section className="border border-black/10 bg-white/55">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-black/10 px-5 py-4">
-            <p className={labelClass}>Contents</p>
-            <div className="flex items-center gap-3 text-sm text-black/60">
-              <button className={secondaryButtonClass} disabled={currentPage <= 1 || isLoading} onClick={() => onPageChange((value) => Math.max(1, value - 1))} type="button">
-                Previous
-              </button>
-              <span>Page {contents?.page ?? currentPage}</span>
-              <button
-                className={secondaryButtonClass}
-                disabled={isLoading || ((contents?.folders.length ?? 0) + (contents?.files.length ?? 0) < pageSize)}
-                onClick={() => onPageChange((value) => value + 1)}
-                type="button"
-              >
-                Next
-              </button>
+        <section className={`${panelClass} overflow-hidden`}>
+          <div className="flex flex-col gap-5 border-b border-black/10 px-5 py-5 sm:px-7 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className={labelClass}>Your files</p>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                {breadcrumbs.map((item, index) => (
+                  <button
+                    key={`${item.id ?? "root"}-${index}`}
+                    className="text-base text-black transition hover:text-black/55"
+                    onClick={() => onGoToBreadcrumb(index)}
+                    type="button"
+                  >
+                    {item.name}
+                    {index < breadcrumbs.length - 1 ? <span className="ml-2 text-black/35">/</span> : null}
+                  </button>
+                ))}
+              </div>
             </div>
+            <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto">
+              <div className="flex min-w-0 flex-1 items-center gap-2 rounded-[12px] border border-black/12 bg-white/55 px-4 py-3 text-sm text-black/40 lg:w-[270px]">
+                <SearchGlyph />
+                <span>Search files...</span>
+              </div>
+              <div className="grid grid-cols-2 gap-1 rounded-[12px] border border-black/12 bg-white/55 p-1">
+                <span className="grid h-10 w-10 place-items-center rounded-[9px] bg-white text-black" aria-hidden="true">=</span>
+                <span className="grid h-10 w-10 place-items-center text-black/55" aria-hidden="true">#</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="hidden grid-cols-[minmax(220px,1fr)_100px_100px_180px_310px] border-b border-black/10 px-7 py-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-black/50 xl:grid">
+            <span>Name</span>
+            <span>Type</span>
+            <span>Size</span>
+            <span>Modified</span>
+            <span>Actions</span>
           </div>
 
           {isLoading ? (
             <div className="p-8 text-sm text-black/60">Loading drive contents...</div>
           ) : (
-            <div className="divide-y divide-black/10">
+            <div className="min-h-[420px] divide-y divide-black/10">
               {contents?.folders.map((folder) => (
-                <div key={folder.id} className="grid gap-3 px-5 py-4 md:grid-cols-[1fr_auto] md:items-center">
-                  <button className="text-left font-serif text-2xl font-normal text-black transition hover:text-black/65" onClick={() => onEnterFolder(folder)} type="button">
-                    {folder.name}
+                <div key={folder.id} className="grid gap-4 px-5 py-5 sm:px-7 xl:grid-cols-[minmax(220px,1fr)_100px_100px_180px_310px] xl:items-center">
+                  <button className="flex min-w-0 items-center gap-4 text-left" onClick={() => onEnterFolder(folder)} type="button">
+                    <span className="grid h-14 w-14 shrink-0 place-items-center rounded-[10px] border border-black/10 bg-white/55">
+                      <FolderGlyph />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate font-semibold text-black">{folder.name}</span>
+                      <span className="mt-1 block text-sm text-black/50" aria-hidden="true">Folder</span>
+                    </span>
                   </button>
+                  <span className="text-sm text-black/60 xl:block">Folder</span>
+                  <span className="text-sm text-black/60">--</span>
+                  <span className="text-sm leading-5 text-black/60">{formatDate(folder.updatedAt)}</span>
                   <div className="flex flex-wrap gap-2">
-                    <button className={secondaryButtonClass} onClick={() => onRenameFolder(folder)} type="button">
-                      Rename
+                    <button className={iconButtonClass} onClick={() => onRenameFolder(folder)} type="button" aria-label="Rename folder">
+                      <PencilGlyph />
                     </button>
-                    <button className="rounded-full border border-red-900/25 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-red-800 transition hover:bg-red-50" onClick={() => onDeleteFolder(folder)} type="button">
-                      Delete
+                    <button className={`${iconButtonClass} text-red-700`} onClick={() => onDeleteFolder(folder)} type="button" aria-label="Delete folder">
+                      <TrashGlyph />
                     </button>
                   </div>
                 </div>
               ))}
 
               {contents?.files.map((file) => (
-                <div key={file.id} className="grid gap-4 px-5 py-4 xl:grid-cols-[1fr_auto] xl:items-center">
-                  <div>
-                    <p className="font-serif text-2xl font-normal text-black">{file.originalFileName}</p>
-                    <p className="mt-1 text-xs uppercase tracking-[0.14em] text-black/45">
-                      {file.contentType} / {formatBytes(file.sizeBytes)}
-                    </p>
+                <div key={file.id} className="grid gap-4 px-5 py-5 sm:px-7 xl:grid-cols-[minmax(220px,1fr)_100px_100px_180px_310px] xl:items-center">
+                  <div className="flex min-w-0 items-center gap-4">
+                    <span className="grid h-14 w-14 shrink-0 place-items-center rounded-[10px] border border-black/10 bg-white/55">
+                      <DocumentGlyph />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-black">{file.originalFileName}</p>
+                      <p className="mt-1 text-sm text-black/50">{friendlyContentType(file.contentType)}</p>
+                    </div>
                   </div>
+                  <span className="w-fit rounded-[8px] border border-black/10 bg-white/55 px-3 py-2 text-xs text-black">{fileExtension(file.originalFileName)}</span>
+                  <span className="text-sm text-black/60">{formatBytes(file.sizeBytes)}</span>
+                  <span className="text-sm leading-5 text-black/60">{formatDate(file.updatedAt)}</span>
                   <div className="flex flex-wrap gap-2">
-                    <button className={secondaryButtonClass} onClick={() => onDownloadFile(file)} type="button">
-                      Download
+                    <button className={iconButtonClass} onClick={() => onDownloadFile(file)} type="button" aria-label={`Download ${file.originalFileName}`}>
+                      <DownloadGlyph />
                     </button>
-                    <button className={secondaryButtonClass} onClick={() => onRenameFile(file)} type="button">
-                      Rename
+                    <button className={iconButtonClass} onClick={() => onRenameFile(file)} type="button" aria-label={`Rename ${file.originalFileName}`}>
+                      <PencilGlyph />
                     </button>
-                    <select
-                      aria-label={`Move ${file.originalFileName} to folder`}
-                      className="rounded-full border border-black/20 bg-transparent px-3 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-black"
-                      value={moveTargets[file.id] ?? ""}
-                      onChange={(event) => onMoveTargetChange(file.id, event.target.value)}
-                    >
-                      <option value="">Root</option>
-                      {contents.folders.map((folder) => (
-                        <option key={folder.id} value={folder.id}>
-                          {folder.name}
-                        </option>
-                      ))}
-                    </select>
-                    <button className={secondaryButtonClass} onClick={() => onMoveFile(file)} type="button">
-                      Move
-                    </button>
-                    <button className="rounded-full border border-red-900/25 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-red-800 transition hover:bg-red-50" onClick={() => onDeleteFile(file)} type="button">
-                      Delete
+                    <FileMoveControl
+                      file={file}
+                      folders={contents.folders}
+                      target={moveTargets[file.id] ?? ""}
+                      onMoveTargetChange={onMoveTargetChange}
+                      onMoveFile={onMoveFile}
+                    />
+                    <button className={`${iconButtonClass} text-red-700`} onClick={() => onDeleteFile(file)} type="button" aria-label={`Delete ${file.originalFileName}`}>
+                      <TrashGlyph />
                     </button>
                   </div>
                 </div>
               ))}
 
               {contents && contents.folders.length === 0 && contents.files.length === 0 ? (
-                <div className="p-8 text-sm text-black/60">This folder is empty.</div>
+                <div className="flex min-h-[320px] items-center justify-center p-8 text-center text-sm text-black/60">This folder is empty.</div>
               ) : null}
             </div>
           )}
+
+          <div className="flex flex-col gap-4 border-t border-black/10 px-5 py-5 text-sm text-black/55 sm:flex-row sm:items-center sm:justify-between sm:px-7">
+            <span>
+              Showing {firstItem} to {lastItem} of {totalItems} items
+            </span>
+            <div className="flex items-center gap-2">
+              <button className={iconButtonClass} disabled={currentPage <= 1 || isLoading} onClick={() => onPageChange((value) => Math.max(1, value - 1))} type="button" aria-label="Previous page">
+                &lt;
+              </button>
+              <span className="grid h-11 w-11 place-items-center rounded-[11px] bg-black text-sm font-semibold text-white">{contents?.page ?? currentPage}</span>
+              <button
+                className={iconButtonClass}
+                disabled={isLoading || totalItems < pageSize}
+                onClick={() => onPageChange((value) => value + 1)}
+                type="button"
+                aria-label="Next page"
+              >
+                &gt;
+              </button>
+            </div>
+          </div>
         </section>
       </div>
     </section>
@@ -629,121 +721,289 @@ function KnowledgeView({
   onSearchQueryChange: (value: string) => void;
 }) {
   return (
-    <section className="grid gap-6 px-6 py-7 md:px-10 md:py-10 xl:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)]">
-      <div className="border border-black/10 bg-white/55">
-        <div className="border-b border-black/10 px-5 py-5">
-          <p className={labelClass}>Semantic search</p>
-          <h2 className="mt-2 font-serif text-3xl font-normal">Find document passages</h2>
+    <section className="px-5 py-7 sm:px-8 lg:px-9">
+      <div className="mb-7 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className={labelClass}>Amanah Drive</p>
+          <h2 className="mt-2 font-serif text-4xl font-normal leading-tight text-black sm:text-5xl">Search & Chat</h2>
         </div>
-        <form className="border-b border-black/10 px-5 py-5" onSubmit={onSearch}>
-          <label className={labelClass} htmlFor="search-documents">
-            Search documents
-          </label>
-          <div className="mt-3 flex flex-col gap-3 sm:flex-row">
-            <input
-              id="search-documents"
-              className={inputClass}
-              value={searchQuery}
-              onChange={(event) => onSearchQueryChange(event.target.value)}
-              placeholder="Ask in natural language"
-            />
-            <button className={primaryButtonClass} disabled={searchLoading} type="submit">
-              {searchLoading ? "Searching" : "Search"}
+      </div>
+
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,0.86fr)_minmax(0,1.14fr)]">
+        <section className={`${panelClass} flex min-h-[650px] flex-col p-5 sm:p-6`}>
+          <div>
+            <p className={labelClass}>Semantic search</p>
+            <h3 className="mt-3 font-serif text-3xl font-normal leading-tight text-black">Find document passages</h3>
+          </div>
+
+          <form className="mt-6 rounded-[10px] border border-black/10 bg-white/35 p-4" onSubmit={onSearch}>
+            <label className={labelClass} htmlFor="search-documents">
+              Search documents
+            </label>
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+              <div className="flex min-w-0 flex-1 items-center gap-3 rounded-full border border-black/12 bg-white/65 px-4">
+                <SearchGlyph />
+                <input
+                  id="search-documents"
+                  className="min-h-12 min-w-0 flex-1 bg-transparent text-sm text-black outline-none placeholder:text-black/35"
+                  value={searchQuery}
+                  onChange={(event) => onSearchQueryChange(event.target.value)}
+                  placeholder="what is Amanah Drive"
+                />
+              </div>
+              <button className="rounded-full bg-black px-6 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-black/80 disabled:cursor-not-allowed disabled:bg-black/35" disabled={searchLoading} type="submit">
+                {searchLoading ? "Searching" : "Search"}
+              </button>
+            </div>
+          </form>
+
+          <div className="mt-6 flex items-center justify-between gap-4 text-sm text-black/50">
+            <span>{searchResults.length} result{searchResults.length === 1 ? "" : "s"} found</span>
+            <span>Sorted by relevance</span>
+          </div>
+
+          <div className="mt-6 min-h-[350px] flex-1 space-y-4">
+            {searchError ? (
+              <div className="rounded-[10px] border border-red-900/25 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
+                {searchError}
+              </div>
+            ) : null}
+            {searchLoading ? <p className="text-sm text-black/60">Searching processed document chunks...</p> : null}
+            {!searchLoading && hasSearched && !searchError && searchResults.length === 0 ? <p className="text-sm text-black/60">No matching document sections found.</p> : null}
+            {!searchLoading && !hasSearched ? <p className="text-sm leading-6 text-black/60">Search processed PDFs, Markdown, and text files by meaning, not just filenames.</p> : null}
+            {searchResults.map((result) => (
+              <article key={result.chunkId} className="rounded-[10px] border border-black/10 bg-white/35 p-4 sm:p-5">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex min-w-0 gap-4">
+                    <span className="mt-1 grid h-11 w-11 shrink-0 place-items-center rounded-[9px] border border-black/10 bg-white/55">
+                      <DocumentGlyph />
+                    </span>
+                    <div className="min-w-0">
+                      <h4 className="truncate font-serif text-2xl font-normal">{result.fileName}</h4>
+                      <p className="mt-2 text-xs uppercase tracking-[0.14em] text-black/45">Semantic match</p>
+                    </div>
+                  </div>
+                  <button className="rounded-full border border-black/12 bg-white/35 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-black transition hover:border-black/35" onClick={() => onDownloadSearchResult(result)} type="button">
+                    Download <span aria-hidden="true" className="ml-2">v</span>
+                  </button>
+                </div>
+                <div className="mt-5 flex items-center gap-3">
+                  <span className={labelClass}>Relevance</span>
+                  <span className="h-1.5 flex-1 rounded-full bg-black/8">
+                    <span className="block h-full rounded-full bg-black" style={{ width: `${Math.max(8, Math.min(100, result.score * 100))}%` }} />
+                  </span>
+                  <span className="text-sm text-black/55">{formatScore(result.score)}</span>
+                </div>
+                <p className="mt-5 text-sm leading-7 text-black/65">{result.snippet}</p>
+                <p className="mt-4 text-xs uppercase tracking-[0.14em] text-black/40">Chunk {result.chunkIndex} / Score {formatScore(result.score)}</p>
+              </article>
+            ))}
+          </div>
+
+          <div className="mt-6 flex gap-3 rounded-[10px] border border-black/10 bg-white/35 p-4">
+            <InfoGlyph />
+            <p className="text-sm leading-6 text-black/60">
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-black">Search tips</span>
+              Use natural language to find information in your documents.
+            </p>
+          </div>
+        </section>
+
+        <section className={`${panelClass} flex min-h-[650px] flex-col overflow-hidden`}>
+          <div className="flex flex-col gap-4 border-b border-black/10 p-5 sm:flex-row sm:items-start sm:justify-between sm:p-6">
+            <div>
+              <p className={labelClass}>AI chat</p>
+              <h3 className="mt-3 font-serif text-3xl font-normal leading-tight text-black">Ask your drive</h3>
+              <p className="mt-2 text-sm text-black/50">Get answers from your documents using AI.</p>
+              {conversationId ? <p className="mt-2 text-xs uppercase tracking-[0.14em] text-black/40">Conversation active</p> : null}
+            </div>
+            <button className="rounded-full border border-black/35 bg-white/35 px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-black transition hover:bg-white" onClick={onNewConversation} type="button">
+              New conversation <span aria-hidden="true" className="ml-2">+</span>
             </button>
           </div>
-        </form>
 
-        <div className="min-h-[340px] divide-y divide-black/10">
-          {searchError ? (
-            <div className="m-5 border border-red-900/25 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
-              {searchError}
-            </div>
-          ) : null}
-          {searchLoading ? <p className="p-5 text-sm text-black/60">Searching processed document chunks...</p> : null}
-          {!searchLoading && hasSearched && !searchError && searchResults.length === 0 ? <p className="p-5 text-sm text-black/60">No matching document sections found.</p> : null}
-          {!searchLoading && !hasSearched ? <p className="p-5 text-sm text-black/60">Search processed PDFs, Markdown, and text files by meaning, not just filenames.</p> : null}
-          {searchResults.map((result) => (
-            <article key={result.chunkId} className="px-5 py-5">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="font-serif text-2xl font-normal">{result.fileName}</p>
-                  <p className="mt-1 text-xs uppercase tracking-[0.14em] text-black/45">
-                    Chunk {result.chunkIndex} / Score {formatScore(result.score)}
-                  </p>
-                </div>
-                <button className={secondaryButtonClass} onClick={() => onDownloadSearchResult(result)} type="button">
-                  Download
+          <div className="flex-1 space-y-5 overflow-x-hidden px-5 py-6 sm:px-8">
+            {chatEntries.length === 0 ? (
+              <div className="mx-auto max-w-[620px] rounded-[10px] border border-black/10 bg-white/35 p-5 text-sm leading-6 text-black/60">
+                Ask a question after your files finish processing. Answers stay grounded in retrieved chunks and include source citations when available.
+              </div>
+            ) : null}
+            {chatEntries.map((entry) => (
+              <article key={entry.id} className={entry.role === "user" ? "ml-auto max-w-[760px] rounded-[10px] bg-black px-5 py-4 text-white shadow-[0_18px_35px_rgba(0,0,0,0.18)]" : "mr-auto max-w-[760px] rounded-[10px] border border-black/10 bg-white/45 px-5 py-4"}>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] opacity-65">{entry.role === "user" ? "You" : "Amanah Drive"}</p>
+                <p className="mt-3 whitespace-pre-wrap text-sm leading-7">{entry.content}</p>
+                {entry.citations && entry.citations.length > 0 ? (
+                  <div className="mt-5 space-y-3 border-t border-black/10 pt-4">
+                    <p className={labelClass}>Sources & citations</p>
+                    {entry.citations.map((citation) => (
+                      <div key={`${citation.chunkId}-${citation.fileId ?? "none"}`} className="rounded-[8px] border border-black/10 bg-[#f8f7f2] p-3">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                          <p className="text-sm font-semibold">{citation.fileName}</p>
+                          <button className="text-xs font-semibold uppercase tracking-[0.14em] text-black/60 hover:text-black" onClick={() => onDownloadCitation(citation)} type="button">
+                            Download
+                          </button>
+                        </div>
+                        <p className="mt-2 text-sm leading-6 text-black/60">{citation.snippet}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </article>
+            ))}
+            {chatLoading ? <p className="text-sm text-black/60">Waiting for a grounded answer...</p> : null}
+            {chatError ? (
+              <div className="rounded-[10px] border border-red-900/25 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
+                {chatError}
+              </div>
+            ) : null}
+          </div>
+
+          <form className="border-t border-black/10 p-5 sm:p-6" onSubmit={onAskQuestion}>
+            <label className="sr-only" htmlFor="chat-question">
+              Ask a question
+            </label>
+            <div className="rounded-[22px] border border-black/14 bg-white/55 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
+              <textarea
+                id="chat-question"
+                className="min-h-16 w-full resize-none bg-transparent px-2 py-2 text-sm text-black outline-none placeholder:text-black/35"
+                value={chatQuestion}
+                onChange={(event) => onChatQuestionChange(event.target.value)}
+                placeholder="Ask a follow-up question..."
+              />
+              <div className="flex items-center justify-between">
+                <span className="text-black/45" aria-hidden="true">@</span>
+                <button className="grid h-12 w-12 place-items-center rounded-full bg-black text-white transition hover:bg-black/80 disabled:cursor-not-allowed disabled:bg-black/35" disabled={chatLoading} type="submit">
+                  <span className="sr-only">{chatLoading ? "Thinking" : "Send"}</span>
+                  <SendGlyph />
                 </button>
               </div>
-              <p className="mt-4 text-sm leading-6 text-black/65">{result.snippet}</p>
-            </article>
-          ))}
-        </div>
-      </div>
-
-      <div className="border border-black/10 bg-white/55">
-        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-black/10 px-5 py-5">
-          <div>
-            <p className={labelClass}>AI chat</p>
-            <h2 className="mt-2 font-serif text-3xl font-normal">Ask your drive</h2>
-            {conversationId ? <p className="mt-2 text-xs uppercase tracking-[0.12em] text-black/40">Conversation active</p> : null}
-          </div>
-          <button className={secondaryButtonClass} onClick={onNewConversation} type="button">
-            New conversation
-          </button>
-        </div>
-
-        <div className="min-h-[360px] space-y-4 border-b border-black/10 px-5 py-5">
-          {chatEntries.length === 0 ? <p className="text-sm leading-6 text-black/60">Ask a question after your files finish processing. Answers stay grounded in retrieved chunks and include source citations when available.</p> : null}
-          {chatEntries.map((entry) => (
-            <article key={entry.id} className={entry.role === "user" ? "ml-auto max-w-[88%] border border-black bg-black px-4 py-3 text-[#f8f7f2]" : "max-w-[92%] border border-black/10 bg-[#f8f7f2] px-4 py-4"}>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] opacity-65">{entry.role === "user" ? "You" : "Amanah Drive"}</p>
-              <p className="mt-2 whitespace-pre-wrap text-sm leading-6">{entry.content}</p>
-              {entry.citations && entry.citations.length > 0 ? (
-                <div className="mt-4 space-y-3 border-t border-black/10 pt-4">
-                  <p className={labelClass}>Citations</p>
-                  {entry.citations.map((citation) => (
-                    <div key={`${citation.chunkId}-${citation.fileId ?? "none"}`} className="border border-black/10 bg-white/60 p-3">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <p className="text-sm font-semibold">{citation.fileName}</p>
-                        <button className={secondaryButtonClass} onClick={() => onDownloadCitation(citation)} type="button">
-                          Download
-                        </button>
-                      </div>
-                      <p className="mt-2 text-sm leading-6 text-black/60">{citation.snippet}</p>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-            </article>
-          ))}
-          {chatLoading ? <p className="text-sm text-black/60">Waiting for a grounded answer...</p> : null}
-          {chatError ? (
-            <div className="border border-red-900/25 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
-              {chatError}
             </div>
-          ) : null}
-        </div>
-
-        <form className="px-5 py-5" onSubmit={onAskQuestion}>
-          <label className={labelClass} htmlFor="chat-question">
-            Ask a question
-          </label>
-          <textarea
-            id="chat-question"
-            className={`${inputClass} min-h-28 resize-y`}
-            value={chatQuestion}
-            onChange={(event) => onChatQuestionChange(event.target.value)}
-            placeholder="What does my document say about..."
-          />
-          <div className="mt-4 flex justify-end">
-            <button className={primaryButtonClass} disabled={chatLoading} type="submit">
-              {chatLoading ? "Thinking" : "Send"}
-            </button>
-          </div>
-        </form>
+            <p className="mt-3 text-center text-xs text-black/45">Answers are generated from your documents. Verify important information.</p>
+          </form>
+        </section>
       </div>
     </section>
+  );
+}
+
+function FileMoveControl({
+  file,
+  folders,
+  target,
+  onMoveTargetChange,
+  onMoveFile,
+}: {
+  file: FileItem;
+  folders: Folder[];
+  target: string;
+  onMoveTargetChange: (fileId: string, value: string) => void;
+  onMoveFile: (file: FileItem) => Promise<void>;
+}) {
+  return (
+    <div className="flex rounded-[11px] border border-black/12 bg-white/55">
+      <select
+        aria-label={`Move ${file.originalFileName} to folder`}
+        className="max-w-[92px] rounded-l-[11px] bg-transparent px-2 text-xs text-black outline-none"
+        value={target}
+        onChange={(event) => onMoveTargetChange(file.id, event.target.value)}
+      >
+        <option value="">Root</option>
+        {folders.map((folder) => (
+          <option key={folder.id} value={folder.id}>
+            {folder.name}
+          </option>
+        ))}
+      </select>
+      <button className="grid h-11 w-11 place-items-center border-l border-black/10 text-black transition hover:bg-white" onClick={() => onMoveFile(file)} type="button" aria-label={`Move ${file.originalFileName}`}>
+        <FolderGlyph />
+      </button>
+    </div>
+  );
+}
+
+function ShieldMark() {
+  return (
+    <span className="grid h-9 w-9 place-items-center rounded-[7px] border-2 border-black" aria-hidden="true">
+      <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none">
+        <path d="M12 3l7 2.8v5.4c0 4.4-2.8 7.9-7 9.8-4.2-1.9-7-5.4-7-9.8V5.8L12 3z" stroke="currentColor" strokeWidth="1.8" />
+        <path d="M12 8v7m-3.2-3.2L12 15l4.2-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </span>
+  );
+}
+
+function FolderGlyph() {
+  return (
+    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M3.5 7.5h6l2 2h9v8.8a2.2 2.2 0 0 1-2.2 2.2H5.7a2.2 2.2 0 0 1-2.2-2.2V7.5z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function UploadGlyph() {
+  return (
+    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M5 15v3.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V15" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function DocumentGlyph() {
+  return (
+    <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M7 3.5h6.5L18 8v12.5H7V3.5z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+      <path d="M13.5 3.5V8H18" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function SearchGlyph() {
+  return (
+    <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="m20 20-4.3-4.3m1.3-5.2a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function InfoGlyph() {
+  return (
+    <svg className="mt-0.5 h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18z" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M12 10v6m0-9h.01" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function DownloadGlyph() {
+  return (
+    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M12 4v11m0 0 4-4m-4 4-4-4M5 19h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function PencilGlyph() {
+  return (
+    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+      <path d="m14 8 3 3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function TrashGlyph() {
+  return (
+    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M5 7h14m-9 4v6m4-6v6M8 7l1-3h6l1 3m-9 0 1 13h8l1-13" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function SendGlyph() {
+  return (
+    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="m4 12 16-8-5.5 16-3-6.5L4 12z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+    </svg>
   );
 }
 
@@ -759,4 +1019,30 @@ function formatBytes(bytes: number) {
 
 function formatScore(score: number) {
   return score.toFixed(3);
+}
+
+function fileExtension(fileName: string) {
+  const extension = fileName.split(".").pop();
+  return extension && extension !== fileName ? extension.toLowerCase() : "file";
+}
+
+function friendlyContentType(contentType: string) {
+  if (contentType.includes("/")) {
+    return contentType.split("/").join(" / ").toUpperCase();
+  }
+  return contentType;
+}
+
+function formatDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "Unknown";
+  }
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
 }
