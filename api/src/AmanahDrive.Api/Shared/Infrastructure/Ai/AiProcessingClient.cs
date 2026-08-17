@@ -2,6 +2,8 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
+using Polly.CircuitBreaker;
+using Polly.Timeout;
 
 namespace AmanahDrive.Api.Shared.Infrastructure.Ai;
 
@@ -12,8 +14,11 @@ public sealed class AiProcessingClient(HttpClient httpClient, IOptions<AiService
 
     public async Task<ExtractResponse> ExtractAsync(string fileName, string contentType, Stream fileStream, CancellationToken cancellationToken)
     {
+        using var replayableContent = new MemoryStream();
+        await fileStream.CopyToAsync(replayableContent, cancellationToken);
+
         using var form = new MultipartFormDataContent();
-        using var fileContent = new StreamContent(fileStream);
+        using var fileContent = new ByteArrayContent(replayableContent.ToArray());
         fileContent.Headers.ContentType = new MediaTypeHeaderValue(contentType);
         form.Add(fileContent, "file", fileName);
 
@@ -23,7 +28,7 @@ public sealed class AiProcessingClient(HttpClient httpClient, IOptions<AiService
         };
 
         AddServiceToken(request);
-        using var response = await httpClient.SendAsync(request, cancellationToken);
+        using var response = await SendAsync(request, cancellationToken);
         await EnsureSuccessAsync(response, cancellationToken);
 
         return await ReadJsonAsync<ExtractResponse>(response, cancellationToken);
@@ -42,7 +47,7 @@ public sealed class AiProcessingClient(HttpClient httpClient, IOptions<AiService
         };
 
         AddServiceToken(request);
-        using var response = await httpClient.SendAsync(request, cancellationToken);
+        using var response = await SendAsync(request, cancellationToken);
         await EnsureSuccessAsync(response, cancellationToken);
 
         return await ReadJsonAsync<ChunkResponse>(response, cancellationToken);
@@ -59,7 +64,7 @@ public sealed class AiProcessingClient(HttpClient httpClient, IOptions<AiService
         };
 
         AddServiceToken(request);
-        using var response = await httpClient.SendAsync(request, cancellationToken);
+        using var response = await SendAsync(request, cancellationToken);
         await EnsureSuccessAsync(response, cancellationToken);
 
         return await ReadJsonAsync<EmbedResponse>(response, cancellationToken);
@@ -73,7 +78,7 @@ public sealed class AiProcessingClient(HttpClient httpClient, IOptions<AiService
         };
 
         AddServiceToken(request);
-        using var response = await httpClient.SendAsync(request, cancellationToken);
+        using var response = await SendAsync(request, cancellationToken);
         await EnsureSuccessAsync(response, cancellationToken);
 
         return await ReadJsonAsync<RagAnswerResponse>(response, cancellationToken);
@@ -81,6 +86,26 @@ public sealed class AiProcessingClient(HttpClient httpClient, IOptions<AiService
 
     private void AddServiceToken(HttpRequestMessage request) =>
         request.Headers.Add("X-Service-Token", _options.ServiceToken);
+
+    private async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await httpClient.SendAsync(request, cancellationToken);
+        }
+        catch (BrokenCircuitException exception)
+        {
+            throw new AiServiceException("AI service is temporarily unavailable because the resilience circuit is open.", exception);
+        }
+        catch (TimeoutRejectedException exception)
+        {
+            throw new AiServiceException("AI service request timed out after exhausting its resilience policy.", exception);
+        }
+        catch (HttpRequestException exception)
+        {
+            throw new AiServiceException("AI service request failed after exhausting its resilience policy.", exception);
+        }
+    }
 
     private static async Task EnsureSuccessAsync(HttpResponseMessage response, CancellationToken cancellationToken)
     {
@@ -100,4 +125,15 @@ public sealed class AiProcessingClient(HttpClient httpClient, IOptions<AiService
     }
 }
 
-public sealed class AiServiceException(string message) : Exception(message);
+public sealed class AiServiceException : Exception
+{
+    public AiServiceException(string message)
+        : base(message)
+    {
+    }
+
+    public AiServiceException(string message, Exception innerException)
+        : base(message, innerException)
+    {
+    }
+}

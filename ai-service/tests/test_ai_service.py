@@ -1,12 +1,14 @@
 import os
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
+from tenacity import wait_none
 
 from app.config import EMBEDDING_DIMENSION, HF_DEFAULT_MODEL
 from app.main import app
 from app.schemas import RagAnswerResponse, RagCitation
-from app.services.rag import HuggingFaceUpstreamError, build_grounded_prompt
+from app.services.rag import HuggingFaceUpstreamError, build_grounded_prompt, call_hugging_face
 
 TOKEN = "tests-only-service-token"
 
@@ -185,6 +187,46 @@ def test_rag_answer_with_upstream_failure_returns_clean_error():
 
     assert response.status_code == 502
     assert response.json()["detail"] == "Hugging Face returned 503: overloaded"
+
+
+def test_hugging_face_call_retries_transient_failures_then_succeeds(monkeypatch):
+    monkeypatch.setenv("HF_API_TOKEN", "tests-only-hf-token")
+    attempts = 0
+
+    def fake_post(*_args, **_kwargs):
+        nonlocal attempts
+        attempts += 1
+        if attempts <= 2:
+            request = httpx.Request("POST", "https://huggingface.test/v1/chat/completions")
+            raise httpx.ConnectError("temporary connection failure", request=request)
+        return httpx.Response(
+            200,
+            json={"choices": [{"message": {"content": "Recovered answer"}}]},
+        )
+
+    monkeypatch.setattr("app.services.rag.httpx.post", fake_post)
+
+    answer = call_hugging_face.retry_with(wait=wait_none())("grounded prompt", "test-model")
+
+    assert answer == "Recovered answer"
+    assert attempts == 3
+
+
+def test_hugging_face_call_does_not_retry_non_transient_client_error(monkeypatch):
+    monkeypatch.setenv("HF_API_TOKEN", "tests-only-hf-token")
+    attempts = 0
+
+    def fake_post(*_args, **_kwargs):
+        nonlocal attempts
+        attempts += 1
+        return httpx.Response(400, text="invalid request")
+
+    monkeypatch.setattr("app.services.rag.httpx.post", fake_post)
+
+    with pytest.raises(HuggingFaceUpstreamError, match="returned 400"):
+        call_hugging_face.retry_with(wait=wait_none())("grounded prompt", "test-model")
+
+    assert attempts == 1
 
 
 def rag_request_json() -> dict:

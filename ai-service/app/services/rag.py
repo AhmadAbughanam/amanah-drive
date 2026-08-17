@@ -1,9 +1,18 @@
+import logging
 from typing import Any, List
 
 import httpx
+from tenacity import before_sleep_log, retry, retry_if_exception, stop_after_attempt, wait_exponential_jitter
 
 from app.config import HF_CHAT_COMPLETIONS_URL, HF_REQUEST_TIMEOUT_SECONDS, get_hf_api_token, get_hf_model
 from app.schemas import RagAnswerRequest, RagAnswerResponse, RagCitation
+
+logger = logging.getLogger(__name__)
+
+HF_RETRY_ATTEMPTS = 3
+HF_RETRY_INITIAL_SECONDS = 0.5
+HF_RETRY_MAX_SECONDS = 4.0
+HF_RETRY_JITTER_SECONDS = 0.5
 
 
 class HuggingFaceConfigurationError(RuntimeError):
@@ -11,7 +20,9 @@ class HuggingFaceConfigurationError(RuntimeError):
 
 
 class HuggingFaceUpstreamError(RuntimeError):
-    pass
+    def __init__(self, message: str, *, transient: bool = False):
+        super().__init__(message)
+        self.transient = transient
 
 
 class HuggingFaceTimeoutError(RuntimeError):
@@ -56,6 +67,23 @@ def generate_grounded_answer(payload: RagAnswerRequest, app_state: Any) -> RagAn
     return RagAnswerResponse(answer=answer, model=model, citations=create_citations(payload))
 
 
+def _is_transient_hugging_face_error(exception: BaseException) -> bool:
+    return isinstance(exception, HuggingFaceTimeoutError) or (
+        isinstance(exception, HuggingFaceUpstreamError) and exception.transient
+    )
+
+
+@retry(
+    retry=retry_if_exception(_is_transient_hugging_face_error),
+    stop=stop_after_attempt(HF_RETRY_ATTEMPTS),
+    wait=wait_exponential_jitter(
+        initial=HF_RETRY_INITIAL_SECONDS,
+        max=HF_RETRY_MAX_SECONDS,
+        jitter=HF_RETRY_JITTER_SECONDS,
+    ),
+    before_sleep=before_sleep_log(logger, logging.WARNING),
+    reraise=True,
+)
 def call_hugging_face(prompt: str, model: str) -> str:
     token = get_hf_api_token()
     if not token:
@@ -86,10 +114,14 @@ def call_hugging_face(prompt: str, model: str) -> str:
     except httpx.TimeoutException as exc:
         raise HuggingFaceTimeoutError("Hugging Face request timed out") from exc
     except httpx.RequestError as exc:
-        raise HuggingFaceUpstreamError("Hugging Face request failed") from exc
+        raise HuggingFaceUpstreamError("Hugging Face request failed", transient=True) from exc
 
     if response.status_code >= 400:
-        raise HuggingFaceUpstreamError(f"Hugging Face returned {response.status_code}: {response.text}")
+        transient = response.status_code >= 500 or response.status_code in (408, 429)
+        raise HuggingFaceUpstreamError(
+            f"Hugging Face returned {response.status_code}: {response.text}",
+            transient=transient,
+        )
 
     try:
         body = response.json()

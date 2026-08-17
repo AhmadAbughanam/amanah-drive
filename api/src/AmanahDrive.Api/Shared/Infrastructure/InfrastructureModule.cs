@@ -28,6 +28,13 @@ public static class InfrastructureModule
             .Validate(options => options.ChunkSize > 0, "AiService:ChunkSize must be greater than zero.")
             .Validate(options => options.ChunkOverlap >= 0 && options.ChunkOverlap < options.ChunkSize, "AiService:ChunkOverlap must be smaller than ChunkSize.")
             .Validate(options => options.WorkerPollSeconds > 0, "AiService:WorkerPollSeconds must be greater than zero.")
+            .Validate(options => options.RetryMaxAttempts >= 0, "AiService:RetryMaxAttempts must not be negative.")
+            .Validate(options => options.RetryBaseDelayMilliseconds > 0, "AiService:RetryBaseDelayMilliseconds must be greater than zero.")
+            .Validate(options => options.AttemptTimeoutSeconds > 0, "AiService:AttemptTimeoutSeconds must be greater than zero.")
+            .Validate(options => options.TotalTimeoutSeconds > options.AttemptTimeoutSeconds, "AiService:TotalTimeoutSeconds must exceed AttemptTimeoutSeconds.")
+            .Validate(options => options.CircuitBreakerMinimumThroughput >= 2, "AiService:CircuitBreakerMinimumThroughput must be at least two.")
+            .Validate(options => options.CircuitBreakerSamplingSeconds >= options.AttemptTimeoutSeconds * 2, "AiService:CircuitBreakerSamplingSeconds must be at least twice AttemptTimeoutSeconds.")
+            .Validate(options => options.CircuitBreakerBreakSeconds > 0, "AiService:CircuitBreakerBreakSeconds must be greater than zero.")
             .ValidateOnStart();
 
         services.AddOptions<CorsOptions>()
@@ -100,7 +107,8 @@ public static class InfrastructureModule
         services.AddHttpClient<IAiProcessingClient, AiProcessingClient>(client =>
         {
             client.BaseAddress = new Uri(aiServiceOptions.BaseUrl);
-        });
+            client.Timeout = Timeout.InfiniteTimeSpan;
+        }).AddAiServiceResilience(aiServiceOptions);
 
         return services;
     }
