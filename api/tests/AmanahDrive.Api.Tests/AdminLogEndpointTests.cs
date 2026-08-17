@@ -2,7 +2,11 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using AmanahDrive.Api.Modules.Admin.Activity;
+using AmanahDrive.Api.Modules.Admin.Models;
+using AmanahDrive.Api.Shared.Infrastructure.Data;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
 using Testcontainers.PostgreSql;
 
 namespace AmanahDrive.Api.Tests;
@@ -35,7 +39,9 @@ public sealed class AdminLogEndpointTests : IAsyncLifetime
             {
                 ["LoggingFiles:DirectoryPath"] = _logDirectory,
                 ["LoggingFiles:DefaultPageSize"] = "1",
-                ["LoggingFiles:MaxPageSize"] = "2"
+                ["LoggingFiles:MaxPageSize"] = "2",
+                ["AdminActivity:DefaultPageSize"] = "1",
+                ["AdminActivity:MaxPageSize"] = "2"
             });
         await _factory.ResetDatabaseAsync();
     }
@@ -89,6 +95,63 @@ public sealed class AdminLogEndpointTests : IAsyncLifetime
         Assert.Contains("first", Assert.Single(secondPage.Entries).Message);
     }
 
+    [Fact]
+    public async Task GetActivity_WithoutBearerToken_ReturnsUnauthorized()
+    {
+        var client = _factory.CreateClient();
+
+        var response = await client.GetAsync("/admin/activity");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetActivity_FiltersByTypeAndTextAndPaginatesNewestFirst()
+    {
+        var client = await CreateAuthorizedClientAsync();
+        await SeedActivityAsync();
+
+        var firstResponse = await client.GetAsync("/admin/activity?type=processingcompleted&search=report&page=1&pageSize=1");
+
+        Assert.Equal(HttpStatusCode.OK, firstResponse.StatusCode);
+        var firstPage = await firstResponse.Content.ReadFromJsonAsync<ActivityPageDto>();
+        Assert.NotNull(firstPage);
+        Assert.Equal(1, firstPage.Page);
+        Assert.Equal(1, firstPage.PageSize);
+        Assert.True(firstPage.HasMore);
+        var firstEntry = Assert.Single(firstPage.Entries);
+        Assert.Equal(ActivityTypes.ProcessingCompleted, firstEntry.Type);
+        Assert.Equal("Finished processing report-v2.pdf", firstEntry.Summary);
+
+        var secondResponse = await client.GetAsync("/admin/activity?type=ProcessingCompleted&search=REPORT&page=2&pageSize=1");
+        var secondPage = await secondResponse.Content.ReadFromJsonAsync<ActivityPageDto>();
+        Assert.NotNull(secondPage);
+        Assert.False(secondPage.HasMore);
+        Assert.Equal("Finished processing report-v1.pdf", Assert.Single(secondPage.Entries).Summary);
+    }
+
+    private async Task SeedActivityAsync()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<AmanahDriveDbContext>();
+        var start = new DateTimeOffset(2026, 8, 17, 10, 0, 0, TimeSpan.Zero);
+        await dbContext.ActivityEntries.AddRangeAsync([
+            CreateActivity(ActivityTypes.FileUploaded, "Uploaded report.pdf", start),
+            CreateActivity(ActivityTypes.ProcessingCompleted, "Finished processing report-v1.pdf", start.AddMinutes(1)),
+            CreateActivity(ActivityTypes.ProcessingCompleted, "Finished processing report-v2.pdf", start.AddMinutes(2)),
+            CreateActivity(ActivityTypes.ProcessingFailed, "Failed processing notes.txt", start.AddMinutes(3))
+        ]);
+        await dbContext.SaveChangesAsync();
+    }
+
+    private static ActivityEntry CreateActivity(string type, string summary, DateTimeOffset occurredAt) => new()
+    {
+        Id = Guid.NewGuid(),
+        Type = type,
+        Summary = summary,
+        OccurredAt = occurredAt
+    };
+
     private async Task<HttpClient> CreateAuthorizedClientAsync()
     {
         var client = _factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
@@ -120,4 +183,14 @@ public sealed class AdminLogEndpointTests : IAsyncLifetime
         string Message,
         string? Exception,
         IReadOnlyDictionary<string, JsonElement> Properties);
+
+    private sealed record ActivityPageDto(int Page, int PageSize, bool HasMore, IReadOnlyList<ActivityEntryDto> Entries);
+
+    private sealed record ActivityEntryDto(
+        Guid Id,
+        string Type,
+        string Summary,
+        DateTimeOffset OccurredAt,
+        Guid? FileId,
+        Guid? ConversationId);
 }

@@ -1,5 +1,6 @@
 using System.Text;
 using AmanahDrive.Api.Modules.Auth.Options;
+using AmanahDrive.Api.Shared.DomainEvents;
 using AmanahDrive.Api.Shared.Infrastructure.Ai;
 using AmanahDrive.Api.Shared.Infrastructure.Cors;
 using AmanahDrive.Api.Shared.Infrastructure.Data;
@@ -96,6 +97,7 @@ public static class InfrastructureModule
         });
 
         services.AddAuthorization();
+        services.AddScoped<IDomainEventDispatcher, DomainEventDispatcher>();
         services.AddHealthChecks()
             .AddCheck<PostgresHealthCheck>("postgres", tags: ["ready"]);
         services.AddHsts(options =>

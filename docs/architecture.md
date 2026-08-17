@@ -129,10 +129,13 @@ The API is a modular monolith: one deployable ASP.NET Core service, one physical
 - `Modules/Drive` owns folders, file metadata, drive endpoints, storage abstraction, drive options, and drive entity mappings.
 - `Modules/Processing` owns processing jobs, document chunks, the background worker, and chunk retrieval over `pgvector`.
 - `Modules/SearchChat` owns search/chat endpoints, conversations, chat messages, and semantic search orchestration.
-- `Modules/Admin` owns authenticated operational views, currently the read-only persisted-log endpoint and file reader.
+- `Modules/Admin` owns authenticated operational views, including persisted logs and the activity-feed projection.
+- `Shared/DomainEvents` owns the lightweight in-process dispatcher contracts and failure isolation.
 - `Shared/Infrastructure` owns cross-cutting infrastructure: DbContext, migrations, external AI HTTP client, CORS, security headers, file-logging configuration, OpenTelemetry tracing, and host-level wiring.
 
 Modules communicate through DI interfaces or plain IDs/DTOs, not direct cross-module data access from feature services. For example, SearchChat asks Processing's `IChunkSearchRepository` for retrieved chunks instead of querying `DocumentChunk` directly.
+
+Module-owned domain-event contracts provide optional in-process notifications for the Admin activity feed. Drive, Processing, and SearchChat publish facts only after their direct business work is committed; Admin handlers project those facts into `activity_entries`. The shared dispatcher isolates handler failures, so activity recording cannot become a prerequisite for upload, processing, or chat behavior. These notifications do not replace direct module calls or provide durable cross-process delivery.
 
 Future split candidates are Auth/User, Drive/File metadata, Processing worker, Search/Chat, AI service, and Web frontend. That split is not happening now; revisit it only with a concrete reason such as independent scaling, deployment ownership, heavy processing load, or separate data ownership.
 

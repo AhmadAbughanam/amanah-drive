@@ -4,6 +4,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using AmanahDrive.Api.Modules.Admin.Activity;
 using AmanahDrive.Api.Modules.Processing;
 using AmanahDrive.Api.Modules.Processing.Models;
 using AmanahDrive.Api.Shared.Infrastructure.Ai;
@@ -74,6 +75,9 @@ public sealed class ProcessingJobTests : IAsyncLifetime
 
         Assert.Equal(ProcessingJobStatus.Pending, job.Status);
         Assert.Equal(file.ProcessingJobId, job.Id);
+        var activity = await dbContext.ActivityEntries.SingleAsync(entry => entry.FileId == file.Id);
+        Assert.Equal(ActivityTypes.FileUploaded, activity.Type);
+        Assert.Equal("Uploaded processing.txt", activity.Summary);
     }
 
     [Fact]
@@ -99,6 +103,9 @@ public sealed class ProcessingJobTests : IAsyncLifetime
         Assert.Null(job.ErrorMessage);
         Assert.Equal(2, chunks.Count);
         Assert.All(chunks, chunk => Assert.Equal(384, chunk.Embedding.Memory.Length));
+        var activity = await dbContext.ActivityEntries.SingleAsync(entry =>
+            entry.FileId == file.Id && entry.Type == ActivityTypes.ProcessingCompleted);
+        Assert.Equal("Finished processing processing.txt", activity.Summary);
     }
 
     [Fact]
@@ -121,6 +128,9 @@ public sealed class ProcessingJobTests : IAsyncLifetime
         Assert.Equal(ProcessingJobStatus.Failed, job.Status);
         Assert.Contains("extract failed", job.ErrorMessage);
         Assert.Equal(0, chunkCount);
+        var activity = await dbContext.ActivityEntries.SingleAsync(entry =>
+            entry.FileId == file.Id && entry.Type == ActivityTypes.ProcessingFailed);
+        Assert.Equal("Failed processing processing.txt", activity.Summary);
     }
 
     [Fact]

@@ -4,11 +4,11 @@ import type { ChangeEvent, FormEvent } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch, apiJson, errorMessage } from "@/lib/api";
-import type { AdminLogResponse, ChatCitation, ChatResponse, FileItem, Folder, FolderContents, SearchResponse, SearchResult } from "@/lib/types";
+import type { ActivityResponse, AdminLogResponse, ChatCitation, ChatResponse, FileItem, Folder, FolderContents, SearchResponse, SearchResult } from "@/lib/types";
 import { useAuth } from "../auth-provider";
 
 type Breadcrumb = { id: string | null; name: string };
-type AppView = "files" | "knowledge" | "logs";
+type AppView = "files" | "knowledge" | "activity" | "logs";
 type LogFilters = { level: string; search: string };
 type ChatEntry = {
   id: string;
@@ -52,6 +52,10 @@ export default function DrivePage() {
   const [chatEntries, setChatEntries] = useState<ChatEntry[]>([]);
   const [chatLoading, setChatLoading] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
+  const [activity, setActivity] = useState<ActivityResponse | null>(null);
+  const [activityPage, setActivityPage] = useState(1);
+  const [activityLoading, setActivityLoading] = useState(false);
+  const [activityError, setActivityError] = useState<string | null>(null);
   const [logs, setLogs] = useState<AdminLogResponse | null>(null);
   const [logFilters, setLogFilters] = useState<LogFilters>({ level: "", search: "" });
   const [appliedLogFilters, setAppliedLogFilters] = useState<LogFilters>({ level: "", search: "" });
@@ -100,6 +104,19 @@ export default function DrivePage() {
     }
   }, [appliedLogFilters, logPage]);
 
+  const loadActivity = useCallback(async () => {
+    setActivityLoading(true);
+    setActivityError(null);
+    try {
+      const params = new URLSearchParams({ page: String(activityPage), pageSize: "25" });
+      setActivity(await apiJson<ActivityResponse>(`/admin/activity?${params}`));
+    } catch (err) {
+      setActivityError(err instanceof Error ? err.message : "Unable to load recent activity.");
+    } finally {
+      setActivityLoading(false);
+    }
+  }, [activityPage]);
+
   useEffect(() => {
     let cancelled = false;
     ensureSession().then((ok) => {
@@ -123,6 +140,16 @@ export default function DrivePage() {
       void loadLogs();
     }
   }, [activeView, loadLogs, logRefreshKey, status]);
+
+  useEffect(() => {
+    if (status !== "authenticated" || activeView !== "activity") {
+      return;
+    }
+
+    void loadActivity();
+    const refresh = window.setInterval(() => void loadActivity(), 15_000);
+    return () => window.clearInterval(refresh);
+  }, [activeView, loadActivity, status]);
 
   function enterFolder(folder: Folder) {
     setCurrentFolderId(folder.id);
@@ -380,7 +407,7 @@ export default function DrivePage() {
               </div>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between lg:justify-end">
-              <nav className="grid grid-cols-3 rounded-[10px] border border-black/12 bg-white/35 p-1 sm:min-w-[430px]" aria-label="Drive sections">
+              <nav className="grid grid-cols-2 rounded-[10px] border border-black/12 bg-white/35 p-1 sm:min-w-[440px] sm:grid-cols-4" aria-label="Drive sections">
                 <button
                   className={`rounded-[8px] px-4 py-3 text-sm transition ${activeView === "files" ? "bg-black text-white shadow-[0_10px_22px_rgba(0,0,0,0.20)]" : "text-black/70 hover:text-black"}`}
                   type="button"
@@ -394,6 +421,13 @@ export default function DrivePage() {
                   onClick={() => setActiveView("knowledge")}
                 >
                   Search & Chat
+                </button>
+                <button
+                  className={`rounded-[8px] px-3 py-3 text-sm transition ${activeView === "activity" ? "bg-black text-white shadow-[0_10px_22px_rgba(0,0,0,0.20)]" : "text-black/70 hover:text-black"}`}
+                  type="button"
+                  onClick={() => setActiveView("activity")}
+                >
+                  Activity
                 </button>
                 <button
                   className={`rounded-[8px] px-4 py-3 text-sm transition ${activeView === "logs" ? "bg-black text-white shadow-[0_10px_22px_rgba(0,0,0,0.20)]" : "text-black/70 hover:text-black"}`}
@@ -455,6 +489,14 @@ export default function DrivePage() {
             onSearch={runSearch}
             onSearchQueryChange={setSearchQuery}
           />
+        ) : activeView === "activity" ? (
+          <ActivityView
+            activity={activity}
+            error={activityError}
+            isLoading={activityLoading}
+            onPageChange={setActivityPage}
+            onRefresh={() => void loadActivity()}
+          />
         ) : (
           <LogsView
             error={logError}
@@ -468,6 +510,87 @@ export default function DrivePage() {
         )}
       </div>
     </main>
+  );
+}
+
+function ActivityView({
+  activity,
+  error,
+  isLoading,
+  onPageChange,
+  onRefresh,
+}: {
+  activity: ActivityResponse | null;
+  error: string | null;
+  isLoading: boolean;
+  onPageChange: (page: number) => void;
+  onRefresh: () => void;
+}) {
+  return (
+    <section className="px-5 py-7 sm:px-8 lg:px-9">
+      <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className={labelClass}>Administration</p>
+          <h2 className="mt-3 font-serif text-4xl font-normal leading-tight text-black sm:text-5xl">Activity</h2>
+          <p className="mt-2 text-base text-black/55">Recent uploads, document processing outcomes, and answered questions.</p>
+        </div>
+        <button className={secondaryButtonClass} disabled={isLoading} onClick={onRefresh} type="button">
+          {isLoading ? "Refreshing" : "Refresh"}
+        </button>
+      </div>
+
+      <div className={`${panelClass} overflow-hidden`}>
+        {error ? (
+          <div className="m-5 rounded-[10px] border border-red-900/25 bg-red-50 px-4 py-3 text-sm text-red-800 sm:m-6" role="alert">
+            {error}
+          </div>
+        ) : null}
+
+        <div className="min-h-[470px] divide-y divide-black/10">
+          {isLoading && !activity ? <p className="p-6 text-sm text-black/55">Loading recent activity...</p> : null}
+          {!isLoading && activity?.entries.length === 0 ? <p className="p-6 text-sm text-black/55">No activity has been recorded yet.</p> : null}
+          {activity?.entries.map((entry) => (
+            <article className="grid gap-4 px-5 py-5 sm:grid-cols-[170px_minmax(0,1fr)] sm:px-6" key={entry.id}>
+              <div>
+                <span className={`inline-flex rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${activityTypeClass(entry.type)}`}>
+                  {activityTypeLabel(entry.type)}
+                </span>
+                <time className="mt-3 block text-xs leading-5 text-black/45" dateTime={entry.occurredAt}>
+                  {formatDate(entry.occurredAt)}
+                </time>
+              </div>
+              <div className="min-w-0 sm:pt-1">
+                <p className="break-words font-serif text-xl leading-7 text-black">{entry.summary}</p>
+                {entry.fileId ? <p className="mt-2 break-all text-xs text-black/40">File {entry.fileId}</p> : null}
+                {entry.conversationId ? <p className="mt-2 break-all text-xs text-black/40">Conversation {entry.conversationId}</p> : null}
+              </div>
+            </article>
+          ))}
+        </div>
+
+        <div className="flex items-center justify-between gap-4 border-t border-black/10 px-5 py-5 text-sm text-black/55 sm:px-6">
+          <span>Page {activity?.page ?? 1}</span>
+          <div className="flex items-center gap-2">
+            <button
+              className={secondaryButtonClass}
+              disabled={isLoading || (activity?.page ?? 1) <= 1}
+              onClick={() => onPageChange(Math.max(1, (activity?.page ?? 1) - 1))}
+              type="button"
+            >
+              Previous
+            </button>
+            <button
+              className={secondaryButtonClass}
+              disabled={isLoading || !activity?.hasMore}
+              onClick={() => onPageChange((activity?.page ?? 1) + 1)}
+              type="button"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -1224,6 +1347,34 @@ function formatDate(value: string) {
     hour: "numeric",
     minute: "2-digit",
   }).format(date);
+}
+
+function activityTypeLabel(type: string) {
+  switch (type) {
+    case "FileUploaded":
+      return "Upload";
+    case "ProcessingCompleted":
+      return "Processed";
+    case "ProcessingFailed":
+      return "Failed";
+    case "ChatAnswered":
+      return "Chat";
+    default:
+      return type;
+  }
+}
+
+function activityTypeClass(type: string) {
+  switch (type) {
+    case "ProcessingFailed":
+      return "border-red-900/20 bg-red-50 text-red-800";
+    case "ProcessingCompleted":
+      return "border-emerald-900/20 bg-emerald-50 text-emerald-900";
+    case "ChatAnswered":
+      return "border-black bg-black text-white";
+    default:
+      return "border-black/15 bg-white/65 text-black/65";
+  }
 }
 
 function logLevelClass(level: string) {

@@ -23,12 +23,13 @@ The search and chat screenshot was taken against the implemented embedding and g
 - Asynchronous document processing: extraction, chunking, embedding, and pgvector storage.
 - Semantic search over stored document chunks.
 - RAG chat with citations and persisted conversation history.
-- Authenticated Next.js dashboard for file management, search, and chat.
+- Authenticated Next.js dashboard for file management, search, chat, activity, and logs.
 - Portfolio landing page and login flow.
 - Docker Compose environment for PostgreSQL, API, AI service, and web app.
 - CI jobs for API, AI service, and web build/test checks, dependency audits, and CodeQL analysis.
 - Interactive OpenAPI documentation for the API at `/docs` when enabled.
 - Durable rolling API logs and an authenticated in-app log viewer.
+- Non-critical in-process domain notifications projected into an authenticated activity feed.
 - Connected API-to-AI-service traces in a local in-memory Jaeger instance.
 
 ## Architecture

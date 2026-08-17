@@ -1,3 +1,4 @@
+using AmanahDrive.Api.Modules.Admin.Models;
 using AmanahDrive.Api.Modules.Auth.Models;
 using AmanahDrive.Api.Modules.Drive.Models;
 using AmanahDrive.Api.Modules.Processing.Models;
@@ -8,6 +9,8 @@ namespace AmanahDrive.Api.Shared.Infrastructure.Data;
 
 public sealed class AmanahDriveDbContext(DbContextOptions<AmanahDriveDbContext> options) : DbContext(options)
 {
+    public DbSet<ActivityEntry> ActivityEntries => Set<ActivityEntry>();
+
     public DbSet<AdminUser> AdminUsers => Set<AdminUser>();
 
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();

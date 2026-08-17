@@ -1,5 +1,8 @@
 using AmanahDrive.Api.Modules.Admin.Logging;
+using AmanahDrive.Api.Modules.Admin.Options;
+using AmanahDrive.Api.Shared.Infrastructure.Data;
 using AmanahDrive.Api.Shared.Infrastructure.Logging;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace AmanahDrive.Api.Modules.Admin.Endpoints;
@@ -12,6 +15,13 @@ public static class AdminEndpoints
             .WithTags("Admin")
             .WithSummary("Return recent persisted API log entries.")
             .Produces<LogPage>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .RequireAuthorization();
+
+        app.MapGet("/admin/activity", GetActivityAsync)
+            .WithTags("Admin")
+            .WithSummary("Return recent domain activity entries.")
+            .Produces<ActivityPageResponse>(StatusCodes.Status200OK)
             .Produces(StatusCodes.Status401Unauthorized)
             .RequireAuthorization();
 
@@ -37,4 +47,69 @@ public static class AdminEndpoints
             new LogQuery(level, search, normalizedPage, normalizedPageSize),
             cancellationToken);
     }
+
+    private static async Task<ActivityPageResponse> GetActivityAsync(
+        string? type,
+        string? search,
+        int? page,
+        int? pageSize,
+        AmanahDriveDbContext dbContext,
+        IOptions<ActivityOptions> options,
+        CancellationToken cancellationToken)
+    {
+        var normalizedPage = Math.Max(1, page ?? 1);
+        var normalizedPageSize = Math.Clamp(
+            pageSize ?? options.Value.DefaultPageSize,
+            1,
+            options.Value.MaxPageSize);
+        var skip = (int)Math.Min((long)(normalizedPage - 1) * normalizedPageSize, int.MaxValue);
+
+        var query = dbContext.ActivityEntries.AsNoTracking();
+        if (!string.IsNullOrWhiteSpace(type))
+        {
+            var normalizedType = type.Trim().ToLower();
+            query = query.Where(entry => entry.Type.ToLower() == normalizedType);
+        }
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var normalizedSearch = search.Trim().ToLower();
+            query = query.Where(entry => entry.Summary.ToLower().Contains(normalizedSearch));
+        }
+
+        var entries = await query
+            .OrderByDescending(entry => entry.OccurredAt)
+            .ThenByDescending(entry => entry.Id)
+            .Skip(skip)
+            .Take(normalizedPageSize + 1)
+            .Select(entry => new ActivityEntryResponse(
+                entry.Id,
+                entry.Type,
+                entry.Summary,
+                entry.OccurredAt,
+                entry.FileId,
+                entry.ConversationId))
+            .ToListAsync(cancellationToken);
+        var hasMore = entries.Count > normalizedPageSize;
+
+        return new ActivityPageResponse(
+            normalizedPage,
+            normalizedPageSize,
+            hasMore,
+            entries.Take(normalizedPageSize).ToArray());
+    }
 }
+
+public sealed record ActivityPageResponse(
+    int Page,
+    int PageSize,
+    bool HasMore,
+    IReadOnlyList<ActivityEntryResponse> Entries);
+
+public sealed record ActivityEntryResponse(
+    Guid Id,
+    string Type,
+    string Summary,
+    DateTimeOffset OccurredAt,
+    Guid? FileId,
+    Guid? ConversationId);

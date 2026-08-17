@@ -1,11 +1,13 @@
 using System.ComponentModel.DataAnnotations;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using AmanahDrive.Api.Modules.Drive.Events;
 using AmanahDrive.Api.Modules.Drive.Models;
 using AmanahDrive.Api.Modules.Drive.Options;
 using AmanahDrive.Api.Modules.Drive.Storage;
 using AmanahDrive.Api.Modules.Processing.Models;
 using AmanahDrive.Api.Shared.Infrastructure.Data;
+using AmanahDrive.Api.Shared.DomainEvents;
 using AmanahDrive.Api.Shared.Infrastructure.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -218,6 +220,7 @@ public static class DriveEndpoints
             ClaimsPrincipal user,
             AmanahDriveDbContext dbContext,
             IFileStorage storage,
+            IDomainEventDispatcher eventDispatcher,
             IOptions<DriveOptions> options,
             CancellationToken cancellationToken) =>
         {
@@ -287,6 +290,9 @@ public static class DriveEndpoints
 
             await dbContext.ProcessingJobs.AddAsync(processingJob, cancellationToken);
             await dbContext.SaveChangesAsync(cancellationToken);
+            await eventDispatcher.PublishAsync(
+                new FileUploadedEvent(fileItem.Id, fileItem.OriginalFileName, now),
+                cancellationToken);
 
             return Results.Created($"/drive/files/{fileItem.Id}", new FileItemResponse(fileItem.Id, fileItem.FolderId, fileItem.OriginalFileName, fileItem.ContentType, fileItem.SizeBytes, fileItem.ChecksumSha256, processingJob.Id, fileItem.CreatedAt, fileItem.UpdatedAt));
         })

@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using AmanahDrive.Api.Modules.Admin.Activity;
 using AmanahDrive.Api.Modules.Drive.Models;
 using AmanahDrive.Api.Modules.Processing.Models;
 using AmanahDrive.Api.Shared.Infrastructure.Ai;
@@ -104,6 +105,12 @@ public sealed class SearchChatEndpointTests : IAsyncLifetime
         Assert.Single(body.Citations);
         Assert.Equal(chunks.LeaseChunkId, body.Citations[0].ChunkId);
         Assert.Equal("lease.pdf", body.Citations[0].FileName);
+
+        using var scope = _factory.Services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<AmanahDriveDbContext>();
+        var activity = await dbContext.ActivityEntries.SingleAsync(entry => entry.ConversationId == body.ConversationId);
+        Assert.Equal(ActivityTypes.ChatAnswered, activity.Type);
+        Assert.Equal("Answered: What is the renewal rule?", activity.Summary);
     }
 
     [Fact]

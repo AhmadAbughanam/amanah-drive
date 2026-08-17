@@ -4,11 +4,13 @@ using System.Security.Claims;
 using System.Text.Json;
 using AmanahDrive.Api.Modules.Processing.Search;
 using AmanahDrive.Api.Modules.SearchChat.Models;
+using AmanahDrive.Api.Modules.SearchChat.Events;
 using AmanahDrive.Api.Modules.SearchChat.Options;
 using AmanahDrive.Api.Modules.SearchChat.Search;
 using AmanahDrive.Api.Shared.Infrastructure.Ai;
 using AmanahDrive.Api.Shared.Infrastructure.Data;
 using AmanahDrive.Api.Shared.Infrastructure.Http;
+using AmanahDrive.Api.Shared.DomainEvents;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -91,6 +93,7 @@ public static class SearchChatEndpoints
         AmanahDriveDbContext dbContext,
         ISemanticSearchService searchService,
         IAiProcessingClient aiClient,
+        IDomainEventDispatcher eventDispatcher,
         IOptions<SearchOptions> options,
         CancellationToken cancellationToken)
     {
@@ -176,6 +179,9 @@ public static class SearchChatEndpoints
         conversation.UpdatedAt = assistantMessage.CreatedAt;
         await dbContext.ChatMessages.AddRangeAsync([userMessage, assistantMessage], cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
+        await eventDispatcher.PublishAsync(
+            new ChatAnsweredEvent(conversation.Id, request.Question.Trim(), assistantMessage.CreatedAt),
+            cancellationToken);
 
         return Results.Ok(new ChatResponse(conversation.Id, answer.Answer, citations));
     }

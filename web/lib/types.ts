@@ -88,6 +88,22 @@ export type AdminLogResponse = {
   entries: AdminLogEntry[];
 };
 
+export type ActivityEntry = {
+  id: string;
+  type: string;
+  summary: string;
+  occurredAt: string;
+  fileId: string | null;
+  conversationId: string | null;
+};
+
+export type ActivityResponse = {
+  page: number;
+  pageSize: number;
+  hasMore: boolean;
+  entries: ActivityEntry[];
+};
+
 export type ApiErrorBody = {
   message?: string;
   title?: string;

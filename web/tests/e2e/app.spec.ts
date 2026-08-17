@@ -52,6 +52,34 @@ test("authenticated admin log viewer renders persisted entries", async ({ page }
   await expect(page.getByText("job-123")).toBeVisible();
 });
 
+test("authenticated activity view renders domain entries", async ({ page }) => {
+  await mockApi(page, {
+    loginSucceeds: true,
+    adminActivity: {
+      page: 1,
+      pageSize: 25,
+      hasMore: false,
+      entries: [
+        {
+          id: "55555555-5555-5555-5555-555555555555",
+          type: "ProcessingCompleted",
+          summary: "Finished processing report.pdf",
+          occurredAt: "2026-08-17T10:01:00Z",
+          fileId: "22222222-2222-2222-2222-222222222222",
+          conversationId: null,
+        },
+      ],
+    },
+  });
+
+  await signIn(page);
+  await page.getByRole("button", { name: "Activity" }).click();
+
+  await expect(page.getByRole("heading", { name: "Activity" })).toBeVisible();
+  await expect(page.getByText("Finished processing report.pdf")).toBeVisible();
+  await expect(page.getByText("Processed", { exact: true })).toBeVisible();
+});
+
 test("search results render in the authenticated app", async ({ page }) => {
   await mockApi(page, {
     loginSucceeds: true,
@@ -190,6 +218,19 @@ async function mockApi(
         properties: Record<string, unknown>;
       }>;
     };
+    adminActivity?: {
+      page: number;
+      pageSize: number;
+      hasMore: boolean;
+      entries: Array<{
+        id: string;
+        type: string;
+        summary: string;
+        occurredAt: string;
+        fileId: string | null;
+        conversationId: string | null;
+      }>;
+    };
   },
 ) {
   await page.route(`${apiBaseUrl}/auth/login`, async (route) => {
@@ -251,6 +292,18 @@ async function mockApi(
     await route.fulfill({
       status: 200,
       json: options.adminLogs ?? {
+        page: 1,
+        pageSize: 25,
+        hasMore: false,
+        entries: [],
+      },
+    });
+  });
+
+  await page.route(`${apiBaseUrl}/admin/activity**`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      json: options.adminActivity ?? {
         page: 1,
         pageSize: 25,
         hasMore: false,

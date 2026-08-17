@@ -3,6 +3,8 @@ using AmanahDrive.Api.Shared.Infrastructure.Ai;
 using AmanahDrive.Api.Shared.Infrastructure.Data;
 using AmanahDrive.Api.Modules.Drive.Storage;
 using AmanahDrive.Api.Modules.Processing.Models;
+using AmanahDrive.Api.Modules.Processing.Events;
+using AmanahDrive.Api.Shared.DomainEvents;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Pgvector;
@@ -13,6 +15,7 @@ public sealed class ProcessingJobRunner(
     AmanahDriveDbContext dbContext,
     IFileStorage storage,
     IAiProcessingClient aiClient,
+    IDomainEventDispatcher eventDispatcher,
     IOptions<AiServiceOptions> options,
     ILogger<ProcessingJobRunner> logger)
 {
@@ -107,6 +110,9 @@ public sealed class ProcessingJobRunner(
                 job.CompletedAt = DateTimeOffset.UtcNow;
                 job.UpdatedAt = DateTimeOffset.UtcNow;
                 await dbContext.SaveChangesAsync(cancellationToken);
+                await eventDispatcher.PublishAsync(
+                    new ProcessingCompletedEvent(job.FileItemId, job.FileItem.OriginalFileName, job.CompletedAt.Value),
+                    cancellationToken);
                 return;
             }
 
@@ -146,6 +152,9 @@ public sealed class ProcessingJobRunner(
             job.CompletedAt = DateTimeOffset.UtcNow;
             job.UpdatedAt = DateTimeOffset.UtcNow;
             await dbContext.SaveChangesAsync(cancellationToken);
+            await eventDispatcher.PublishAsync(
+                new ProcessingCompletedEvent(job.FileItemId, job.FileItem.OriginalFileName, job.CompletedAt.Value),
+                cancellationToken);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -155,6 +164,9 @@ public sealed class ProcessingJobRunner(
             job.FailedAt = DateTimeOffset.UtcNow;
             job.UpdatedAt = DateTimeOffset.UtcNow;
             await dbContext.SaveChangesAsync(CancellationToken.None);
+            await eventDispatcher.PublishAsync(
+                new ProcessingFailedEvent(job.FileItemId, job.FileItem.OriginalFileName, job.FailedAt.Value),
+                CancellationToken.None);
         }
     }
 }

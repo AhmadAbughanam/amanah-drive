@@ -126,3 +126,10 @@
 - Added W3C trace-context propagation across API-to-AI-service calls.
 - Added Jaeger all-in-one to Docker Compose with in-memory storage and OTLP receivers.
 - Documented the deliberately narrow tracing scope in ADR 0009 while leaving metrics, alerting, external retention, and multi-replica observability deferred.
+
+### Phase 18 - Domain Activity Feed
+
+- Added lightweight in-process domain notifications for uploads, processing outcomes, and answered chats.
+- Added the Admin-owned `activity_entries` projection and authenticated, filterable `/admin/activity` endpoint.
+- Added a paginated Activity dashboard view with periodic refresh.
+- Kept activity handlers non-critical so notification failures cannot fail the originating operation.
