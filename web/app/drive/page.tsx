@@ -3,6 +3,7 @@
 import type { ChangeEvent, FormEvent } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import ReactMarkdown from "react-markdown";
 import { apiFetch, apiJson, errorMessage } from "@/lib/api";
 import type { ActivityResponse, AdminLogResponse, ChatCitation, ChatResponse, FileItem, Folder, FolderContents, SearchResponse, SearchResult } from "@/lib/types";
 import { useAuth } from "../auth-provider";
@@ -27,6 +28,30 @@ const secondaryButtonClass =
 const iconButtonClass =
   "grid h-11 w-11 place-items-center rounded-[11px] border border-black/12 bg-white/55 text-black transition hover:border-black/35 hover:bg-white disabled:cursor-not-allowed disabled:opacity-40";
 const panelClass = "rounded-[10px] border border-black/10 bg-white/35";
+const chatMarkdownElements = ["p", "strong", "em", "ul", "ol", "li", "code", "br"];
+
+function ChatAnswer({ content }: { content: string }) {
+  return (
+    <div className="mt-3 text-sm leading-7">
+      <ReactMarkdown
+        allowedElements={chatMarkdownElements}
+        skipHtml
+        unwrapDisallowed
+        components={{
+          p: ({ children }) => <p className="whitespace-pre-wrap [&:not(:first-child)]:mt-3">{children}</p>,
+          strong: ({ children }) => <strong className="font-semibold text-black">{children}</strong>,
+          em: ({ children }) => <em className="italic">{children}</em>,
+          ul: ({ children }) => <ul className="my-3 list-disc space-y-1 pl-5">{children}</ul>,
+          ol: ({ children }) => <ol className="my-3 list-decimal space-y-1 pl-5">{children}</ol>,
+          li: ({ children }) => <li className="pl-1">{children}</li>,
+          code: ({ children }) => <code className="rounded-[4px] bg-black/[0.06] px-1 py-0.5 font-mono text-[0.9em]">{children}</code>,
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
+  );
+}
 
 export default function DrivePage() {
   const router = useRouter();
@@ -1014,7 +1039,7 @@ function KnowledgeView({
             {chatEntries.map((entry) => (
               <article key={entry.id} className={entry.role === "user" ? "ml-auto max-w-[760px] rounded-[10px] bg-black px-5 py-4 text-white shadow-[0_18px_35px_rgba(0,0,0,0.18)]" : "mr-auto max-w-[760px] rounded-[10px] border border-black/10 bg-white/45 px-5 py-4"}>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] opacity-65">{entry.role === "user" ? "You" : "Amanah Drive"}</p>
-                <p className="mt-3 whitespace-pre-wrap text-sm leading-7">{entry.content}</p>
+                {entry.role === "assistant" ? <ChatAnswer content={entry.content} /> : <p className="mt-3 whitespace-pre-wrap text-sm leading-7">{entry.content}</p>}
                 {entry.citations && entry.citations.length > 0 ? (
                   <div className="mt-5 space-y-3 border-t border-black/10 pt-4">
                     <p className={labelClass}>Sources & citations</p>
