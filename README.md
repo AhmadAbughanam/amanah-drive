@@ -161,6 +161,7 @@ sequenceDiagram
 - API log named volume
 - Nginx config placeholder
 - GitHub Actions CI
+- Versioned GHCR image publishing; see [Releasing](docs/RELEASING.md)
 - CodeQL analysis for C#, JavaScript/TypeScript, and Python
 - Jaeger all-in-one with in-memory local trace storage
 

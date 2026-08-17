@@ -1,0 +1,12 @@
+services:
+  api:
+    image: ghcr.io/${GHCR_OWNER:?GHCR_OWNER is required}/amanah-drive-api:${AMANAH_DRIVE_VERSION:-latest}
+    pull_policy: always
+
+  ai-service:
+    image: ghcr.io/${GHCR_OWNER:?GHCR_OWNER is required}/amanah-drive-ai-service:${AMANAH_DRIVE_VERSION:-latest}
+    pull_policy: always
+
+  web:
+    image: ghcr.io/${GHCR_OWNER:?GHCR_OWNER is required}/amanah-drive-web:${AMANAH_DRIVE_VERSION:-latest}
+    pull_policy: always

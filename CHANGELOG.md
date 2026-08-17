@@ -133,3 +133,9 @@
 - Added the Admin-owned `activity_entries` projection and authenticated, filterable `/admin/activity` endpoint.
 - Added a paginated Activity dashboard view with periodic refresh.
 - Kept activity handlers non-critical so notification failures cannot fail the originating operation.
+
+### Phase 19 - Versioned Container Releases
+
+- Added tag-triggered GitHub Actions publishing for API, AI service, and web images.
+- Added semantic version and `latest` tags in GitHub Container Registry using `GITHUB_TOKEN` package permissions.
+- Added an additive Compose override and release instructions for running published images without changing local build behavior.
