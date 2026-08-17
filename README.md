@@ -31,6 +31,9 @@ The search and chat screenshot was taken against the implemented embedding and g
 - Durable rolling API logs and an authenticated in-app log viewer.
 - Non-critical in-process domain notifications projected into an authenticated activity feed.
 - Connected API-to-AI-service traces in a local in-memory Jaeger instance.
+- Retry, timeout, and circuit-breaker resilience around API-to-AI-service and AI-service-to-Hugging-Face calls.
+- Versioned GHCR image publishing on tagged releases.
+- A documented, trace-informed load test of the real running stack.
 
 ## Architecture
 
@@ -197,6 +200,8 @@ CSRF posture in V1: application mutations require a bearer access token, while r
 - Structured logging and request logging.
 - Background processing with atomic PostgreSQL job claiming.
 - Per-phase API, AI service, and web tests.
+- Resilience-by-default on cross-service HTTP calls: retries, timeouts, and circuit breaking, never on non-idempotent or client-error responses.
+- Measure before optimizing: performance and scaling decisions are driven by real traces and load-test data, not assumptions.
 
 ## Roadmap
 
@@ -279,6 +284,19 @@ CSRF posture in V1: application mutations require a bearer access token, while r
 - Reworked job claiming with `FOR UPDATE SKIP LOCKED`.
 - Added a real PostgreSQL concurrency test proving jobs are not claimed twice.
 
+### Phase 12 - Documentation Overhaul
+
+- Replaced internal task handoff documents with [CHANGELOG.md](CHANGELOG.md).
+- Updated README, architecture, API reference, AI service contract, and ADR index to match the implemented system.
+- Added ADR 0007 for the OpenAPI, health-probe, and job-claiming decisions.
+- Duplicated the architecture diagrams into `docs/architecture.md` so it is self-contained.
+
+### Phase 13 - Drive Dashboard Redesign
+
+- Rebuilt the authenticated `/drive` dashboard (file management and Search & Chat views) to match a supplied visual design.
+- Kept all existing behavior unchanged: folder/file CRUD, upload validation, pagination, semantic search, chat with citations, and conversation state.
+- Extended the same visual language to mobile with stacked panels rather than shrinking the desktop layout.
+
 ### Phase 14 - Durable Logging and Admin Viewer
 
 - Added compact-JSON daily and size-based rolling API logs with bounded retention.
@@ -304,6 +322,30 @@ CSRF posture in V1: application mutations require a bearer access token, while r
 - Added Jaeger all-in-one to Docker Compose for local, in-memory trace inspection.
 - Kept tracing exporters outside startup and readiness dependencies.
 
+### Phase 18 - Load Test and Trace Analysis
+
+- Ran a k6 load test against the real running stack across increasing concurrency levels.
+- Diagnosed the dominant chat-latency cost (the external Hugging Face call) and the first throughput boundary (the configured search/chat rate limit) using real Jaeger traces, not guesses.
+- Documented the full methodology, results, and honest limitations in [docs/performance/load-test-2026-08-17.md](docs/performance/load-test-2026-08-17.md); made no speculative application changes since the data did not show a defect to fix.
+
+### Phase 19 - Domain Activity Feed
+
+- Added lightweight in-process domain notifications for uploads, processing outcomes, and answered chats.
+- Added the Admin-owned `activity_entries` projection and authenticated, filterable `/admin/activity` endpoint.
+- Added a paginated Activity dashboard view with periodic refresh.
+- Kept activity handlers non-critical so notification failures cannot fail the originating operation.
+
+### Phase 20 - Versioned Container Releases
+
+- Added tag-triggered GitHub Actions publishing for API, AI service, and web images.
+- Added semantic version and `latest` tags in GitHub Container Registry using `GITHUB_TOKEN` package permissions.
+- Added an additive Compose override and release instructions in [docs/RELEASING.md](docs/RELEASING.md) for running published images without changing local build behavior.
+
+### Phase 21 - Chat Output Polish
+
+- Replaced raw-GUID chunk citations with clean numbered markers (`[1]`, `[2]`) resolved server-side against the retrieved-chunk list.
+- Rendered chat answers as sanitized Markdown (bold, italics, lists, inline code only; no raw HTML) instead of literal text.
+
 ## Future Improvements
 
 - Object storage implementation for S3, Cloudflare R2, or MinIO behind `IFileStorage`.
@@ -315,7 +357,8 @@ CSRF posture in V1: application mutations require a bearer access token, while r
 - Mobile app.
 - Real-time synchronization.
 - Separately deployable processing worker when background load justifies it.
-- Broader observability and scaling work: Prometheus/Grafana, alerting, external trace retention, distributed rate limiting, load testing, and multiple stateless API replicas behind a load balancer.
+- Broader observability and scaling work: Prometheus/Grafana, alerting, external trace retention, distributed rate limiting, and multiple stateless API replicas behind a load balancer.
+- Sustained-load and larger-dataset load testing (the [Phase 18 load test](docs/performance/load-test-2026-08-17.md) covered short interactive bursts against a small dataset only).
 
 ## References
 
@@ -324,3 +367,5 @@ CSRF posture in V1: application mutations require a bearer access token, while r
 - [AI Service Contract](docs/ai-service-contract.md)
 - [Architecture Decision Records](docs/decisions/README.md)
 - [Changelog](CHANGELOG.md)
+- [Releasing](docs/RELEASING.md)
+- [Load Test Report](docs/performance/load-test-2026-08-17.md)
