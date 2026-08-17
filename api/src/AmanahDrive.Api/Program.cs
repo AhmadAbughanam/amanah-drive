@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using AmanahDrive.Api.Modules.Admin;
 using AmanahDrive.Api.Modules.Auth;
 using AmanahDrive.Api.Modules.Drive;
@@ -10,6 +11,9 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Serilog;
 using Serilog.Formatting.Compact;
 using Scalar.AspNetCore;
+
+Activity.DefaultIdFormat = ActivityIdFormat.W3C;
+Activity.ForceDefaultIdFormat = true;
 
 var builder = WebApplication.CreateBuilder(args);
 var fileLoggingOptions = builder.Configuration.GetSection(FileLoggingOptions.SectionName).Get<FileLoggingOptions>()

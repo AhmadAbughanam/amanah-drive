@@ -112,3 +112,17 @@
 - Added NuGet, npm, and Python dependency vulnerability scans to the existing service CI jobs.
 - Set NuGet to fail on Critical findings, npm to fail on High or Critical findings, and Python auditing to report without blocking while known upstream advisories remain unresolved.
 - Updated `pypdf` to an available fixed release after auditing the current Python dependency graph.
+
+### Phase 16 - Outbound HTTP Resilience
+
+- Added retries with exponential backoff and jitter around API-to-AI-service HTTP calls.
+- Added per-attempt and overall request timeouts plus circuit breaking to the API AI client.
+- Added transient-only Hugging Face retries with Tenacity while leaving configuration and other client errors non-retryable.
+- Added focused tests for recovery, circuit opening, fail-fast behavior, and non-retryable responses.
+
+### Phase 17 - Local Distributed Tracing
+
+- Instrumented ASP.NET Core, `HttpClient`, FastAPI, and HTTPX with OpenTelemetry tracing.
+- Added W3C trace-context propagation across API-to-AI-service calls.
+- Added Jaeger all-in-one to Docker Compose with in-memory storage and OTLP receivers.
+- Documented the deliberately narrow tracing scope in ADR 0009 while leaving metrics, alerting, external retention, and multi-replica observability deferred.

@@ -29,6 +29,7 @@ The search and chat screenshot was taken against the implemented embedding and g
 - CI jobs for API, AI service, and web build/test checks, dependency audits, and CodeQL analysis.
 - Interactive OpenAPI documentation for the API at `/docs` when enabled.
 - Durable rolling API logs and an authenticated in-app log viewer.
+- Connected API-to-AI-service traces in a local in-memory Jaeger instance.
 
 ## Architecture
 
@@ -50,6 +51,7 @@ flowchart TB
 
     AI["Python FastAPI AI Service"]
     HF["Hugging Face Inference API"]
+    Jaeger["Jaeger - local traces"]
     PG[("PostgreSQL + pgvector")]
     FS[("Local filesystem storage")]
 
@@ -66,6 +68,8 @@ flowchart TB
     SearchChat --> PG
     SearchChat -- "embed query, rag/answer" --> AI
     AI -- "grounded generation" --> HF
+    API -. "OTLP traces" .-> Jaeger
+    AI -. "OTLP traces" .-> Jaeger
 ```
 
 ### Document Processing Pipeline
@@ -139,6 +143,7 @@ sequenceDiagram
 - Compact-JSON rolling file sink with bounded retention
 - Microsoft.AspNetCore.OpenApi document generation
 - Scalar interactive API documentation at `/docs`
+- OpenTelemetry ASP.NET Core and HTTP client tracing
 
 ### AI Service
 
@@ -146,6 +151,7 @@ sequenceDiagram
 - pypdf for PDF extraction
 - Sentence Transformers with `sentence-transformers/all-MiniLM-L6-v2` embeddings
 - Hugging Face Inference API for grounded generation
+- OpenTelemetry FastAPI and HTTPX tracing
 
 ### Infrastructure
 
@@ -155,6 +161,7 @@ sequenceDiagram
 - Nginx config placeholder
 - GitHub Actions CI
 - CodeQL analysis for C#, JavaScript/TypeScript, and Python
+- Jaeger all-in-one with in-memory local trace storage
 
 ## Security
 
@@ -275,13 +282,25 @@ CSRF posture in V1: application mutations require a bearer access token, while r
 - Added compact-JSON daily and size-based rolling API logs with bounded retention.
 - Persisted API logs in a dedicated Docker named volume.
 - Added an authenticated, filtered, paginated admin log endpoint and dashboard view.
-- Kept external log aggregation and tracing deferred until operational scale requires them.
+- Kept external log aggregation, metrics, and alerting deferred until operational scale requires them.
 
 ### Phase 15 - CI Security Scanning
 
 - Added CodeQL analysis for the API, web app, and AI service.
 - Added NuGet, npm, and Python dependency vulnerability reports with documented failure policies.
 - Updated the vulnerable `pypdf` direct dependency to an available fixed release.
+
+### Phase 16 - Outbound HTTP Resilience
+
+- Added bounded retries with exponential backoff and jitter for API-to-AI-service calls.
+- Added per-attempt and total timeouts plus circuit breaking around the API HTTP client.
+- Added transient-only Hugging Face retries in the AI service.
+
+### Phase 17 - Local Distributed Tracing
+
+- Added OpenTelemetry tracing to the API and AI service with W3C trace-context propagation.
+- Added Jaeger all-in-one to Docker Compose for local, in-memory trace inspection.
+- Kept tracing exporters outside startup and readiness dependencies.
 
 ## Future Improvements
 
@@ -294,7 +313,7 @@ CSRF posture in V1: application mutations require a bearer access token, while r
 - Mobile app.
 - Real-time synchronization.
 - Separately deployable processing worker when background load justifies it.
-- Broader observability and scaling work: OpenTelemetry, Prometheus/Grafana, distributed rate limiting, load testing, and multiple stateless API replicas behind a load balancer.
+- Broader observability and scaling work: Prometheus/Grafana, alerting, external trace retention, distributed rate limiting, load testing, and multiple stateless API replicas behind a load balancer.
 
 ## References
 

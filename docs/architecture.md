@@ -10,6 +10,7 @@ This is the repository architecture reference for Amanah Drive. The README provi
 - Database: PostgreSQL with `pgvector`
 - V1 file storage: local filesystem on the VPS behind a storage abstraction
 - Deployment and infrastructure: Docker, Docker Compose, Nginx, and GitHub Actions
+- Local distributed tracing: OpenTelemetry exported to an in-memory Jaeger instance
 
 ## Diagrams
 
@@ -31,6 +32,7 @@ flowchart TB
 
     AI["Python FastAPI AI Service"]
     HF["Hugging Face Inference API"]
+    Jaeger["Jaeger - local traces"]
     PG[("PostgreSQL + pgvector")]
     FS[("Local filesystem storage")]
 
@@ -47,6 +49,8 @@ flowchart TB
     SearchChat --> PG
     SearchChat -- "embed query, rag/answer" --> AI
     AI -- "grounded generation" --> HF
+    API -. "OTLP traces" .-> Jaeger
+    AI -. "OTLP traces" .-> Jaeger
 ```
 
 ### Document Processing Pipeline
@@ -126,12 +130,18 @@ The API is a modular monolith: one deployable ASP.NET Core service, one physical
 - `Modules/Processing` owns processing jobs, document chunks, the background worker, and chunk retrieval over `pgvector`.
 - `Modules/SearchChat` owns search/chat endpoints, conversations, chat messages, and semantic search orchestration.
 - `Modules/Admin` owns authenticated operational views, currently the read-only persisted-log endpoint and file reader.
-- `Shared/Infrastructure` owns cross-cutting infrastructure: DbContext, migrations, external AI HTTP client, CORS, security headers, file-logging configuration, and host-level wiring.
+- `Shared/Infrastructure` owns cross-cutting infrastructure: DbContext, migrations, external AI HTTP client, CORS, security headers, file-logging configuration, OpenTelemetry tracing, and host-level wiring.
 
 Modules communicate through DI interfaces or plain IDs/DTOs, not direct cross-module data access from feature services. For example, SearchChat asks Processing's `IChunkSearchRepository` for retrieved chunks instead of querying `DocumentChunk` directly.
 
 Future split candidates are Auth/User, Drive/File metadata, Processing worker, Search/Chat, AI service, and Web frontend. That split is not happening now; revisit it only with a concrete reason such as independent scaling, deployment ownership, heavy processing load, or separate data ownership.
 
 See [Architecture Decision Records](decisions/README.md) for the reasoning behind these boundaries and other significant decisions.
+
+## Local Tracing
+
+Docker Compose starts Jaeger all-in-one with in-memory trace storage. Open <http://localhost:16686>, select `amanah-drive-api` or `amanah-drive-ai-service`, and search for traces. Requests crossing from the API to the AI service use W3C `traceparent` propagation and appear under one trace ID.
+
+Tracing is not a readiness dependency. Set `OTEL_TRACING_ENABLED=false` to disable export; if Jaeger is unavailable, the API and AI service continue serving requests while their background exporters report and discard failed exports.
 
 Keep this file focused on layout and boundaries. Larger tradeoffs belong in the ADRs.

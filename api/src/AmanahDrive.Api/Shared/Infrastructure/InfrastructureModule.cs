@@ -5,6 +5,7 @@ using AmanahDrive.Api.Shared.Infrastructure.Cors;
 using AmanahDrive.Api.Shared.Infrastructure.Data;
 using AmanahDrive.Api.Shared.Infrastructure.Health;
 using AmanahDrive.Api.Shared.Infrastructure.Security;
+using AmanahDrive.Api.Shared.Infrastructure.Telemetry;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -109,6 +110,8 @@ public static class InfrastructureModule
             client.BaseAddress = new Uri(aiServiceOptions.BaseUrl);
             client.Timeout = Timeout.InfiniteTimeSpan;
         }).AddAiServiceResilience(aiServiceOptions);
+
+        services.AddApplicationTracing(configuration);
 
         return services;
     }
