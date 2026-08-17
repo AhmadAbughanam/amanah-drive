@@ -105,3 +105,10 @@
 - Added the authenticated `/admin/logs` endpoint with level, text, and pagination filters.
 - Added a Logs view to the authenticated dashboard with loading, empty, error, filtering, and pagination states.
 - Recorded the deliberate file-based logging decision in ADR 0008 while keeping external observability infrastructure deferred.
+
+### Phase 15 - CI Security Scanning
+
+- Added a CodeQL workflow for C#, JavaScript/TypeScript, and Python on pushes and pull requests.
+- Added NuGet, npm, and Python dependency vulnerability scans to the existing service CI jobs.
+- Set NuGet to fail on Critical findings, npm to fail on High or Critical findings, and Python auditing to report without blocking while known upstream advisories remain unresolved.
+- Updated `pypdf` to an available fixed release after auditing the current Python dependency graph.

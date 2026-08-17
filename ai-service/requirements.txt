@@ -1,6 +1,6 @@
 fastapi[standard]==0.116.1
 httpx==0.28.1
-pypdf==5.9.0
+pypdf==6.16.1
 sentence-transformers==5.1.0
 torch==2.8.0
 transformers==4.57.6

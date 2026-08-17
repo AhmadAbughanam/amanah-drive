@@ -20,6 +20,21 @@ jobs:
       - name: Restore
         run: dotnet restore api/AmanahDrive.Api.slnx
 
+      - name: Audit NuGet dependencies
+        working-directory: api
+        run: dotnet list package --vulnerable --include-transitive
+
+      - name: Enforce NuGet critical vulnerability threshold
+        working-directory: api
+        shell: bash
+        run: |
+          dotnet list package --vulnerable --include-transitive --format json > vulnerability-report.json
+          critical_count=$(jq '[.. | objects | select(((.severity? // "") | ascii_downcase) == "critical")] | length' vulnerability-report.json)
+          if [ "$critical_count" -gt 0 ]; then
+            echo "Found $critical_count critical NuGet vulnerability record(s)."
+            exit 1
+          fi
+
       - name: Build
         run: dotnet build api/AmanahDrive.Api.slnx --no-restore
 
@@ -42,6 +57,16 @@ jobs:
         working-directory: ai-service
         run: pip install -r requirements.txt
 
+      - name: Install pip-audit
+        run: pip install pip-audit==2.9.0
+
+      # pip-audit has no severity threshold, and the current dependency graph has
+      # published advisories whose fixed versions are not available on PyPI.
+      - name: Audit Python dependencies (report only)
+        continue-on-error: true
+        working-directory: ai-service
+        run: pip-audit -r requirements.txt
+
       - name: Test
         working-directory: ai-service
         run: pytest -q
@@ -61,6 +86,10 @@ jobs:
       - name: Install dependencies
         working-directory: web
         run: npm install
+
+      - name: Audit npm dependencies
+        working-directory: web
+        run: npm audit --audit-level=high
 
       - name: Build
         working-directory: web

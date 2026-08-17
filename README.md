@@ -26,7 +26,7 @@ The search and chat screenshot was taken against the implemented embedding and g
 - Authenticated Next.js dashboard for file management, search, and chat.
 - Portfolio landing page and login flow.
 - Docker Compose environment for PostgreSQL, API, AI service, and web app.
-- CI jobs for API, AI service, and web build/test checks.
+- CI jobs for API, AI service, and web build/test checks, dependency audits, and CodeQL analysis.
 - Interactive OpenAPI documentation for the API at `/docs` when enabled.
 - Durable rolling API logs and an authenticated in-app log viewer.
 
@@ -154,6 +154,7 @@ sequenceDiagram
 - API log named volume
 - Nginx config placeholder
 - GitHub Actions CI
+- CodeQL analysis for C#, JavaScript/TypeScript, and Python
 
 ## Security
 
@@ -275,6 +276,12 @@ CSRF posture in V1: application mutations require a bearer access token, while r
 - Persisted API logs in a dedicated Docker named volume.
 - Added an authenticated, filtered, paginated admin log endpoint and dashboard view.
 - Kept external log aggregation and tracing deferred until operational scale requires them.
+
+### Phase 15 - CI Security Scanning
+
+- Added CodeQL analysis for the API, web app, and AI service.
+- Added NuGet, npm, and Python dependency vulnerability reports with documented failure policies.
+- Updated the vulnerable `pypdf` direct dependency to an available fixed release.
 
 ## Future Improvements
 
