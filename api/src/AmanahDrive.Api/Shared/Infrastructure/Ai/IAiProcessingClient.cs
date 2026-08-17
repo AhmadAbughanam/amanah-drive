@@ -21,7 +21,7 @@ public sealed record EmbedResponse(string Model, int Dimension, IReadOnlyCollect
 
 public sealed record RagAnswerRequest(string Question, IReadOnlyCollection<RagAnswerChunk> Chunks, IReadOnlyCollection<RagAnswerHistoryMessage> History);
 
-public sealed record RagAnswerChunk(string Reference, string FileName, string Text);
+public sealed record RagAnswerChunk(string FileName, string Text);
 
 public sealed record RagAnswerHistoryMessage(string Role, string Content);
 

@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Globalization;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text.Json;
@@ -137,15 +138,15 @@ public static class SearchChatEndpoints
         }
 
         var history = await LoadHistoryAsync(dbContext, conversation.Id, options.Value.ChatHistoryMessageLimit, cancellationToken);
-        IReadOnlyCollection<RetrievedChunk> retrievedChunks;
+        IReadOnlyList<RetrievedChunk> retrievedChunks;
         RagAnswerResponse answer;
         try
         {
-            retrievedChunks = await searchService.SearchAsync(userId.Value, request.Question.Trim(), options.Value.TopK, cancellationToken);
+            retrievedChunks = (await searchService.SearchAsync(userId.Value, request.Question.Trim(), options.Value.TopK, cancellationToken)).ToList();
             answer = await aiClient.AnswerAsync(
                 new RagAnswerRequest(
                     request.Question.Trim(),
-                    retrievedChunks.Select(chunk => new RagAnswerChunk(chunk.ChunkId.ToString(), chunk.FileName, chunk.Text)).ToList(),
+                    retrievedChunks.Select(chunk => new RagAnswerChunk(chunk.FileName, chunk.Text)).ToList(),
                     history.Select(message => new RagAnswerHistoryMessage(message.Role, message.Content)).ToList()),
                 cancellationToken);
         }
@@ -256,16 +257,18 @@ public static class SearchChatEndpoints
     private static SearchResult ToSearchResult(RetrievedChunk chunk, int snippetLength) =>
         new(chunk.ChunkId, chunk.FileId, chunk.FileName, chunk.ChunkIndex, CreateSnippet(chunk.Text, snippetLength), chunk.Score);
 
-    private static ChatCitation ToChatCitation(RagCitation citation, IReadOnlyCollection<RetrievedChunk> retrievedChunks, int snippetLength)
+    private static ChatCitation ToChatCitation(RagCitation citation, IReadOnlyList<RetrievedChunk> retrievedChunks, int snippetLength)
     {
-        var matchedChunk = Guid.TryParse(citation.Reference, out var chunkId)
-            ? retrievedChunks.SingleOrDefault(chunk => chunk.ChunkId == chunkId)
-            : null;
+        var matchedChunk = int.TryParse(citation.Reference, NumberStyles.None, CultureInfo.InvariantCulture, out var reference)
+            && reference >= 1
+            && reference <= retrievedChunks.Count
+                ? retrievedChunks[reference - 1]
+                : null;
 
         return new ChatCitation(
-            matchedChunk?.ChunkId ?? chunkId,
+            matchedChunk?.ChunkId ?? Guid.Empty,
             matchedChunk?.FileId,
-            citation.FileName,
+            matchedChunk?.FileName ?? citation.FileName,
             string.IsNullOrWhiteSpace(citation.Snippet)
                 ? CreateSnippet(matchedChunk?.Text ?? string.Empty, snippetLength)
                 : CreateSnippet(citation.Snippet, snippetLength));

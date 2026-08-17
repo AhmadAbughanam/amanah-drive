@@ -35,9 +35,9 @@ def build_grounded_prompt(payload: RagAnswerRequest) -> str:
         history_lines.append(f"{message.role}: {message.content}")
 
     chunk_lines = []
-    for chunk in payload.chunks:
+    for reference, chunk in enumerate(payload.chunks, start=1):
         chunk_lines.append(
-            f"[{chunk.reference}] File: {chunk.fileName}\n{chunk.text}"
+            f"[{reference}] File: {chunk.fileName}\n{chunk.text}"
         )
 
     history_text = "\n".join(history_lines) if history_lines else "No prior conversation."
@@ -46,7 +46,8 @@ def build_grounded_prompt(payload: RagAnswerRequest) -> str:
     return (
         "You are Amanah Drive's grounded document assistant. Answer only from the retrieved chunks. "
         "If the chunks do not contain the answer, say you do not know from the provided documents. "
-        "Cite relevant chunk references in square brackets when possible.\n\n"
+        "Cite relevant chunks using only their numeric markers, such as [1] or [2]. "
+        "Never include internal identifiers in the answer.\n\n"
         f"Recent conversation:\n{history_text}\n\n"
         f"Retrieved chunks:\n{chunks_text}\n\n"
         f"Question: {payload.question}\n\n"
@@ -140,11 +141,11 @@ def call_hugging_face(prompt: str, model: str) -> str:
 def create_citations(payload: RagAnswerRequest) -> List[RagCitation]:
     return [
         RagCitation(
-            reference=chunk.reference,
+            reference=str(reference),
             fileName=chunk.fileName,
             snippet=create_snippet(chunk.text),
         )
-        for chunk in payload.chunks
+        for reference, chunk in enumerate(payload.chunks, start=1)
     ]
 
 

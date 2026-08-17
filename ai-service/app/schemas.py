@@ -33,7 +33,6 @@ class EmbedResponse(BaseModel):
 
 
 class RagChunk(BaseModel):
-    reference: str
     fileName: str
     text: str
 

@@ -114,6 +114,25 @@ public sealed class SearchChatEndpointTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Chat_MapsNumericCitationReferenceToRetrievedChunk()
+    {
+        var client = await CreateAuthorizedClientAsync();
+        var chunks = await SeedChunksAsync();
+        _aiClient.CitationReference = "2";
+
+        var response = await client.PostAsJsonAsync("/chat", new
+        {
+            Question = "What is the renewal rule?"
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await ReadJsonAsync<ChatResponseDto>(response);
+        Assert.Single(body.Citations);
+        Assert.Equal(chunks.PolicyChunkId, body.Citations[0].ChunkId);
+        Assert.Equal("policy.md", body.Citations[0].FileName);
+    }
+
+    [Fact]
     public async Task Chat_AfterRepeatedRequests_IsRateLimited()
     {
         var client = await CreateAuthorizedClientAsync();
@@ -371,6 +390,8 @@ public sealed class SearchChatEndpointTests : IAsyncLifetime
     {
         public List<RagAnswerRequest> AnswerRequests { get; } = [];
 
+        public string CitationReference { get; set; } = "1";
+
         public Task<ExtractResponse> ExtractAsync(string fileName, string contentType, Stream fileStream, CancellationToken cancellationToken) =>
             Task.FromResult(new ExtractResponse("unused", contentType, 6));
 
@@ -389,12 +410,13 @@ public sealed class SearchChatEndpointTests : IAsyncLifetime
         public Task<RagAnswerResponse> AnswerAsync(RagAnswerRequest request, CancellationToken cancellationToken)
         {
             AnswerRequests.Add(request);
-            var firstChunk = request.Chunks.First();
+            var citationIndex = int.Parse(CitationReference) - 1;
+            var citedChunk = request.Chunks.ElementAt(citationIndex);
             return Task.FromResult(new RagAnswerResponse(
                 "Grounded answer from retrieved chunks.",
                 "fake",
                 [
-                    new RagCitation(firstChunk.Reference, firstChunk.FileName, firstChunk.Text)
+                    new RagCitation(CitationReference, citedChunk.FileName, citedChunk.Text)
                 ]));
         }
     }

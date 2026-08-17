@@ -8,7 +8,7 @@ from tenacity import wait_none
 from app.config import EMBEDDING_DIMENSION, HF_DEFAULT_MODEL
 from app.main import app
 from app.schemas import RagAnswerResponse, RagCitation
-from app.services.rag import HuggingFaceUpstreamError, build_grounded_prompt, call_hugging_face
+from app.services.rag import HuggingFaceUpstreamError, build_grounded_prompt, call_hugging_face, create_citations
 
 TOKEN = "tests-only-service-token"
 
@@ -144,19 +144,27 @@ def test_rag_prompt_includes_question_and_chunks():
     prompt = build_grounded_prompt(rag_request())
 
     assert "What is the renewal rule?" in prompt
-    assert "[chunk-1] File: lease.pdf" in prompt
+    assert "[1] File: lease.pdf" in prompt
     assert "The lease renews yearly." in prompt
-    assert "[chunk-2] File: policy.md" in prompt
+    assert "[2] File: policy.md" in prompt
     assert "Approval is required." in prompt
+    assert "using only their numeric markers" in prompt
+
+
+def test_rag_citations_use_one_based_chunk_order():
+    citations = create_citations(rag_request())
+
+    assert [citation.reference for citation in citations] == ["1", "2"]
+    assert citations[1].fileName == "policy.md"
 
 
 def test_rag_answer_with_stubbed_llm_returns_expected_shape():
     def generator(payload):
         return RagAnswerResponse(
-            answer="The lease renews yearly. [chunk-1]",
+            answer="The lease renews yearly. [1]",
             model=HF_DEFAULT_MODEL,
             citations=[
-                RagCitation(reference=payload.chunks[0].reference, fileName=payload.chunks[0].fileName, snippet=payload.chunks[0].text)
+                RagCitation(reference="1", fileName=payload.chunks[0].fileName, snippet=payload.chunks[0].text)
             ],
         )
 
@@ -168,10 +176,10 @@ def test_rag_answer_with_stubbed_llm_returns_expected_shape():
 
     assert response.status_code == 200
     body = response.json()
-    assert body["answer"] == "The lease renews yearly. [chunk-1]"
+    assert body["answer"] == "The lease renews yearly. [1]"
     assert body["model"] == HF_DEFAULT_MODEL
     assert body["citations"] == [
-        {"reference": "chunk-1", "fileName": "lease.pdf", "snippet": "The lease renews yearly."}
+        {"reference": "1", "fileName": "lease.pdf", "snippet": "The lease renews yearly."}
     ]
 
 
@@ -233,8 +241,8 @@ def rag_request_json() -> dict:
     return {
         "question": "What is the renewal rule?",
         "chunks": [
-            {"reference": "chunk-1", "fileName": "lease.pdf", "text": "The lease renews yearly."},
-            {"reference": "chunk-2", "fileName": "policy.md", "text": "Approval is required."},
+            {"fileName": "lease.pdf", "text": "The lease renews yearly."},
+            {"fileName": "policy.md", "text": "Approval is required."},
         ],
         "history": [
             {"role": "user", "content": "What document is this?"},

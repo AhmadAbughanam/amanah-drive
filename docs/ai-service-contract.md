@@ -160,7 +160,6 @@ Request:
   "question": "What does the lease say about renewal?",
   "chunks": [
     {
-      "reference": "chunk-id-or-api-reference",
       "fileName": "lease.pdf",
       "text": "The tenant may renew the lease..."
     }
@@ -184,11 +183,11 @@ Response `200`:
 
 ```json
 {
-  "answer": "The lease allows renewal under the conditions listed in the cited chunks.",
+  "answer": "The lease allows renewal under the conditions in the first retrieved chunk. [1]",
   "model": "openai/gpt-oss-20b",
   "citations": [
     {
-      "reference": "chunk-id-or-api-reference",
+      "reference": "1",
       "fileName": "lease.pdf",
       "snippet": "The tenant may renew the lease..."
     }
@@ -196,7 +195,7 @@ Response `200`:
 }
 ```
 
-Citation granularity in V1 is chunk-level. The service may cite every provided chunk it used; it is not required to return inline character spans.
+Citation granularity in V1 is chunk-level. Chunks are assigned one-based references from their request order, so the first chunk is cited as `[1]`, the second as `[2]`, and so on. The AI service returns the same number as the citation `reference`; the API maps that ordinal back to its internal chunk and file identifiers. Internal chunk GUIDs are not sent as citation references or injected into the retrieved-chunk prompt. The response includes citation metadata for every supplied chunk; inline numeric markers identify the chunks cited by the generated answer. Character-level citation spans are not returned.
 
 Error responses:
 
