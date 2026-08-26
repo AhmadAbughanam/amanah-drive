@@ -11,3 +11,4 @@ Short records of significant, deliberate engineering decisions on Amanah Drive �
 - [0007 — API Documentation and Probe Hardening](0007-api-documentation-and-probe-hardening.md)
 - [0008 — File-Based Operational Logging](0008-file-based-operational-logging.md)
 - [0009 — Narrow Local Distributed Tracing](0009-narrow-local-distributed-tracing.md)
+- [0010 — Production Deployment Architecture](0010-production-deployment-architecture.md)

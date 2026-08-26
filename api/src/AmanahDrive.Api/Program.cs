@@ -56,6 +56,7 @@ var app = builder.Build();
 
 await app.ApplyPendingMigrationsAsync();
 
+app.UseForwardedHeaders();
 app.UseSerilogRequestLogging();
 app.UseInfrastructure();
 app.UseRateLimiter();

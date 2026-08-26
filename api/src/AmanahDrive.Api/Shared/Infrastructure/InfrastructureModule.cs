@@ -1,3 +1,4 @@
+using System.Net;
 using System.Text;
 using AmanahDrive.Api.Modules.Auth.Options;
 using AmanahDrive.Api.Shared.DomainEvents;
@@ -8,6 +9,7 @@ using AmanahDrive.Api.Shared.Infrastructure.Health;
 using AmanahDrive.Api.Shared.Infrastructure.Security;
 using AmanahDrive.Api.Shared.Infrastructure.Telemetry;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.IdentityModel.Tokens;
@@ -94,6 +96,23 @@ public static class InfrastructureModule
                     .WithMethods("GET", "POST", "PATCH", "DELETE", "OPTIONS")
                     .AllowCredentials();
             });
+        });
+
+        services.Configure<ForwardedHeadersOptions>(options =>
+        {
+            options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+
+            // The API is only ever reached through the Caddy reverse proxy on the same
+            // private Docker network (see infra/Caddyfile). Docker's internal bridge
+            // network is not reachable from outside the host, so the proxy hop is
+            // trusted implicitly. Clearing these lists is the standard, documented
+            // pattern for a container reached only by a co-located reverse proxy;
+            // without it, ASP.NET Core rejects forwarded headers from an unknown
+            // proxy IP and every request appears to originate from Caddy's internal
+            // address, which silently breaks IP-based rate limiting and refresh-token
+            // audit fields (CreatedByIp/RevokedByIp).
+            options.KnownNetworks.Clear();
+            options.KnownProxies.Clear();
         });
 
         services.AddAuthorization();

@@ -1,3 +1,12 @@
 node_modules/
 .next/
 npm-debug.log
+.git/
+.gitignore
+*.md
+.env
+.env.*
+tests/
+test-results/
+playwright-report/
+.playwright-mcp/

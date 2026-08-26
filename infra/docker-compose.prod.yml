@@ -1,0 +1,40 @@
+# Additive production override. Combine with the base file and, when running
+# published images instead of building locally, the GHCR override too:
+#
+#   docker compose --env-file .env \
+#     -f infra/docker-compose.yml \
+#     -f infra/docker-compose.ghcr.yml \
+#     -f infra/docker-compose.prod.yml \
+#     up -d --no-build
+#
+# This file only adds the public-facing reverse proxy. Every other production
+# hardening change (restart policies, loopback-only port bindings, health
+# checks, non-root users, the uploaded-file volume) lives directly in the
+# base infra/docker-compose.yml because it is safe and correct for local
+# development too — an override file cannot remove a `ports:` entry declared
+# in the base file (Compose merges list fields rather than replacing them),
+# so anything that needed to be *removed* for production had to change in
+# the base file instead.
+services:
+  caddy:
+    image: caddy:2.10-alpine
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:?DOMAIN is required, e.g. ahmadabughanam.com}
+      WWW_DOMAIN: ${WWW_DOMAIN:?WWW_DOMAIN is required, e.g. www.ahmadabughanam.com}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+
+volumes:
+  caddy_data:
+  caddy_config:

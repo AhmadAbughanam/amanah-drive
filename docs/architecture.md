@@ -9,7 +9,7 @@ This is the repository architecture reference for Amanah Drive. The README provi
 - Web dashboard: Next.js, TypeScript, and Tailwind CSS
 - Database: PostgreSQL with `pgvector`
 - V1 file storage: local filesystem on the VPS behind a storage abstraction
-- Deployment and infrastructure: Docker, Docker Compose, Nginx, and GitHub Actions
+- Deployment and infrastructure: Docker, Docker Compose, Caddy (reverse proxy with automatic HTTPS), and GitHub Actions — see [Deployment](DEPLOYMENT.md)
 - Local distributed tracing: OpenTelemetry exported to an in-memory Jaeger instance
 
 ## Diagrams
@@ -108,7 +108,7 @@ sequenceDiagram
 * `api/` — ASP.NET Core REST API (authentication, drive behavior, metadata, retrieval, orchestration)
 * `ai-service/` — Python FastAPI service (extraction, chunking, embeddings, grounded answer generation)
 * `web/` — Next.js portfolio, login, and authenticated dashboard
-* `infra/` — Docker Compose, Nginx, and deployment configuration
+* `infra/` — Docker Compose, the Caddy reverse-proxy config, and deployment configuration
 
 Each service owns its own dependency manifest and does not reach into another service's directory. New top-level directories should map to one of these four areas; do not introduce a fifth without updating this file.
 

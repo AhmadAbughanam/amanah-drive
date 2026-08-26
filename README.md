@@ -161,8 +161,8 @@ sequenceDiagram
 
 - Docker and Docker Compose
 - PostgreSQL named volume
-- API log named volume
-- Nginx config placeholder
+- API log and uploaded-file named volumes
+- Caddy reverse proxy with automatic HTTPS (Let's Encrypt); see [Deployment](docs/DEPLOYMENT.md)
 - GitHub Actions CI
 - Versioned GHCR image publishing; see [Releasing](docs/RELEASING.md)
 - CodeQL analysis for C#, JavaScript/TypeScript, and Python
@@ -346,6 +346,14 @@ CSRF posture in V1: application mutations require a bearer access token, while r
 - Replaced raw-GUID chunk citations with clean numbered markers (`[1]`, `[2]`) resolved server-side against the retrieved-chunk list.
 - Rendered chat answers as sanitized Markdown (bold, italics, lists, inline code only; no raw HTML) instead of literal text.
 
+### Phase 22 - Production Deployment
+
+- Added a Caddy reverse proxy with automatic HTTPS and single-domain path-based routing; only Caddy is publicly reachable, every internal service is loopback-bound.
+- Fixed a real data-loss gap: uploaded files now persist in a dedicated volume instead of being destroyed on every deploy.
+- Added restart policies, container health checks, and non-root users across all three application images.
+- Added continuous deployment: every `main` push that passes CI is built, published to GHCR, and deployed to the VPS over SSH.
+- Full setup and maintenance process in [Deployment](docs/DEPLOYMENT.md); reasoning in [ADR 0010](docs/decisions/0010-production-deployment-architecture.md).
+
 ## Future Improvements
 
 - Object storage implementation for S3, Cloudflare R2, or MinIO behind `IFileStorage`.
@@ -368,4 +376,5 @@ CSRF posture in V1: application mutations require a bearer access token, while r
 - [Architecture Decision Records](docs/decisions/README.md)
 - [Changelog](CHANGELOG.md)
 - [Releasing](docs/RELEASING.md)
+- [Deployment and Maintenance](docs/DEPLOYMENT.md)
 - [Load Test Report](docs/performance/load-test-2026-08-17.md)

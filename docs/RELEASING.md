@@ -2,6 +2,8 @@
 
 Releases publish versioned API, AI service, and web images to GitHub Container Registry. They do not deploy the application.
 
+This is the deliberate, numbered-version publishing path (`vMAJOR.MINOR.PATCH` tags, `.github/workflows/release.yml`). It is separate from continuous deployment: every push to `main` is automatically built, published under the moving `main` tag and a permanent `sha-<short>` tag, and deployed to the production VPS by `.github/workflows/deploy.yml` — see [Deployment](DEPLOYMENT.md) for that path, including rollback using the `sha-<short>` tags it publishes.
+
 ## Image Names And Tags
 
 For a repository owned by `example-owner`, release `v1.2.3` publishes:

@@ -3,21 +3,28 @@ name: amanah-drive
 services:
   jaeger:
     image: jaegertracing/all-in-one:1.76.0
+    restart: unless-stopped
     environment:
       COLLECTOR_OTLP_ENABLED: "true"
+    # Bound to loopback only: this is local-only tracing tooling (see ADR 0009),
+    # never meant to be reachable from the public internet. Reach it from the
+    # VPS itself (e.g. over an SSH tunnel) if you need to inspect traces there.
     ports:
-      - "${JAEGER_UI_PORT:-16686}:16686"
-      - "${JAEGER_OTLP_GRPC_PORT:-4317}:4317"
-      - "${JAEGER_OTLP_HTTP_PORT:-4318}:4318"
+      - "127.0.0.1:${JAEGER_UI_PORT:-16686}:16686"
+      - "127.0.0.1:${JAEGER_OTLP_GRPC_PORT:-4317}:4317"
+      - "127.0.0.1:${JAEGER_OTLP_HTTP_PORT:-4318}:4318"
 
   postgres:
     image: pgvector/pgvector:pg17
+    restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
       POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    # No ports: mapping — Postgres is reachable only from other containers on
+    # this Compose network, never from the host or the public internet.
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
       interval: 10s
@@ -28,6 +35,7 @@ services:
     build:
       context: ../api
       dockerfile: Dockerfile
+    restart: unless-stopped
     environment:
       ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
       ASPNETCORE_URLS: http://+:8080
@@ -38,6 +46,7 @@ services:
       Auth__BootstrapToken: ${AUTH_BOOTSTRAP_TOKEN:?AUTH_BOOTSTRAP_TOKEN is required}
       Auth__SecureCookies: ${AUTH_SECURE_COOKIES:-true}
       Cors__AllowedOrigins__0: ${WEB_ORIGIN:-http://localhost:3000}
+      Drive__StorageRoot: /var/lib/amanah-drive/storage
       AiService__BaseUrl: ${AI_SERVICE_BASE_URL:-http://ai-service:8000}
       AiService__ServiceToken: ${AI_SERVICE_TOKEN:?AI_SERVICE_TOKEN is required}
       AiService__WorkerEnabled: "true"
@@ -49,8 +58,14 @@ services:
       Telemetry__OtlpEndpoint: ${OTEL_EXPORTER_OTLP_GRPC_ENDPOINT:-http://jaeger:4317}
     volumes:
       - api_logs:/var/log/amanah-drive
+      - api_storage:/var/lib/amanah-drive/storage
+    # Bound to loopback only: the public reverse proxy (Caddy) reaches this
+    # service over the internal Docker network by service name (api:8080),
+    # never through this host-published port. The 127.0.0.1 binding exists
+    # purely so you can `curl localhost:8080/health/ready` from an SSH
+    # session on the VPS itself for troubleshooting.
     ports:
-      - "${API_HTTP_PORT:-8080}:8080"
+      - "127.0.0.1:${API_HTTP_PORT:-8080}:8080"
     depends_on:
       postgres:
         condition: service_healthy
@@ -61,6 +76,7 @@ services:
     build:
       context: ../ai-service
       dockerfile: Dockerfile
+    restart: unless-stopped
     environment:
       AI_SERVICE_TOKEN: ${AI_SERVICE_TOKEN:?AI_SERVICE_TOKEN is required}
       HF_API_TOKEN: ${HF_API_TOKEN:?HF_API_TOKEN is required}
@@ -69,8 +85,9 @@ services:
       OTEL_SERVICE_NAME: amanah-drive-ai-service
       OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: ${OTEL_EXPORTER_OTLP_HTTP_TRACES_ENDPOINT:-http://jaeger:4318/v1/traces}
       OTEL_EXPORTER_OTLP_TRACES_TIMEOUT: ${OTEL_EXPORTER_OTLP_TIMEOUT_SECONDS:-5}
+    # Bound to loopback only — same reasoning as the api service above.
     ports:
-      - "${AI_SERVICE_PORT:-8000}:8000"
+      - "127.0.0.1:${AI_SERVICE_PORT:-8000}:8000"
 
   web:
     build:
@@ -78,15 +95,18 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8080}
+    restart: unless-stopped
     environment:
       NEXT_TELEMETRY_DISABLED: "1"
       NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8080}
+    # Bound to loopback only — same reasoning as the api service above.
     ports:
-      - "${WEB_PORT:-3000}:3000"
+      - "127.0.0.1:${WEB_PORT:-3000}:3000"
     depends_on:
       api:
-        condition: service_started
+        condition: service_healthy
 
 volumes:
   postgres_data:
   api_logs:
+  api_storage:

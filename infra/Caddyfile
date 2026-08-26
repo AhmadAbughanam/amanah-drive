@@ -1,0 +1,36 @@
+# Production reverse proxy for Amanah Drive.
+#
+# Caddy automatically:
+#   - obtains and renews a Let's Encrypt certificate for every domain listed
+#     below (HTTP-01 challenge over port 80), as long as DNS for that domain
+#     already points at this server when Caddy starts or reloads;
+#   - redirects all plain HTTP traffic on port 80 to HTTPS on port 443;
+#   - sets X-Forwarded-For / X-Forwarded-Proto / X-Forwarded-Host on every
+#     proxied request, which api/src/AmanahDrive.Api/Program.cs's
+#     UseForwardedHeaders() call is configured to trust.
+#
+# {$DOMAIN} and {$WWW_DOMAIN} are read from the environment (see
+# infra/docker-compose.prod.yml) rather than hardcoded, so this file does not
+# need to change if the domain ever does.
+
+{$DOMAIN} {
+	encode gzip zstd
+
+	# /api/* -> the ASP.NET Core API, with the /api prefix stripped so the
+	# proxied path matches the API's actual routes (e.g. /api/auth/login on
+	# the public internet becomes /auth/login when it reaches the api
+	# container). This keeps everything on one public domain without
+	# needing a separate api.* DNS record.
+	handle_path /api/* {
+		reverse_proxy api:8080
+	}
+
+	# Everything else goes to the Next.js app.
+	handle {
+		reverse_proxy web:3000
+	}
+}
+
+{$WWW_DOMAIN} {
+	redir https://{$DOMAIN}{uri} permanent
+}

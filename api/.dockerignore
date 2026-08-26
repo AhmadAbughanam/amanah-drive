@@ -2,3 +2,9 @@
 **/obj/
 **/.vs/
 **/.vscode/
+.git/
+.gitignore
+*.md
+.env
+.env.*
+tests/
