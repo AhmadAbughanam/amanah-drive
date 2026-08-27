@@ -5,8 +5,8 @@ Production architecture and reasoning: [ADR 0010](decisions/0010-production-depl
 ## How deployment works
 
 1. You push (or merge a PR) to `main`.
-2. `.github/workflows/ci.yml` builds and tests all three services.
-3. On success, `.github/workflows/deploy.yml` builds all three Docker images and pushes them to GitHub Container Registry, tagged `main` (moving) and `sha-<short-sha>` (permanently pinned to that commit).
+2. `.github/workflows/ci-cd.yml` builds and tests all three services (the `api`, `ai-service`, and `web` jobs).
+3. If every one of those jobs succeeds, and only for a push to `main`, the same workflow's `publish` job builds all three Docker images and pushes them to GitHub Container Registry, tagged `main` (moving) and `sha-<short-sha>` (permanently pinned to that commit).
 4. The same workflow then connects to the VPS over SSH and runs `docker compose pull` + `docker compose up -d`, which pulls the freshly-pushed `main`-tagged images and recreates only the containers whose image actually changed.
 5. Postgres, its data, your uploaded files, and your logs are untouched by this — they live in named volumes that deploys never delete (see "Where persistent data is stored" below).
 
@@ -116,7 +116,7 @@ This last one matters more than it looks: it's compiled into the web app's brows
 
 ### 7. Make the GHCR packages pullable from the VPS
 
-The first time `deploy.yml` runs, it publishes three packages to `ghcr.io/ahmadabughanam/amanah-drive-{api,ai-service,web}`. By default, GHCR packages are **private** even in a public repository. Since the repo itself is public, the simplest option is to make the packages public too (no registry login needed on the VPS):
+The first time the `publish` job in `ci-cd.yml` runs, it publishes three packages to `ghcr.io/ahmadabughanam/amanah-drive-{api,ai-service,web}`. By default, GHCR packages are **private** even in a public repository. Since the repo itself is public, the simplest option is to make the packages public too (no registry login needed on the VPS):
 
 1. After the first successful deploy workflow run, go to your GitHub profile → **Packages**.
 2. Open each of the three `amanah-drive-*` packages.
@@ -126,7 +126,7 @@ If you'd rather keep them private, generate a GitHub Personal Access Token with 
 
 ### 8. First deploy
 
-Push any commit to `main` (or just re-run the `Deploy` workflow from the Actions tab). Watch it run in **Actions**. It will fail at the SSH step if any of the secrets above are wrong — the error will say so.
+Push any commit to `main` (or just re-run the `deploy` job of the `CI/CD` workflow from the Actions tab). Watch it run in **Actions**. It will fail at the SSH step if any of the secrets above are wrong — the error will say so.
 
 Once it succeeds, on the VPS itself, bootstrap the admin account (there is no registration UI by design — see [ADR 0003](decisions/0003-single-admin-auth-model.md)):
 
@@ -193,7 +193,7 @@ docker compose --env-file ../.env -f docker-compose.yml -f docker-compose.ghcr.y
 docker compose --env-file ../.env -f docker-compose.yml -f docker-compose.ghcr.yml -f docker-compose.prod.yml up -d
 ```
 
-Find the SHA for any past deploy in the GitHub **Actions** tab under the `Deploy` workflow's run history, or via `git log --oneline`. This only rolls back the application images — it does not touch the database. If the commit you're rolling back to had a different database schema, you would need a corresponding down-migration, which this project does not currently generate automatically; roll back application code only when the database schema is unaffected, or restore a database backup alongside it (see below).
+Find the SHA for any past deploy in the GitHub **Actions** tab under the `CI/CD` workflow's run history, or via `git log --oneline`. This only rolls back the application images — it does not touch the database. If the commit you're rolling back to had a different database schema, you would need a corresponding down-migration, which this project does not currently generate automatically; roll back application code only when the database schema is unaffected, or restore a database backup alongside it (see below).
 
 ## Where persistent data is stored
 
@@ -259,7 +259,7 @@ Rotating `AUTH_JWT_SIGNING_KEY` invalidates every existing access token and refr
 
 ## How to troubleshoot a failed deployment
 
-**The GitHub Actions `Deploy` workflow failed:**
+**The GitHub Actions `CI/CD` workflow's `publish` or `deploy` job failed:**
 - Check the **Actions** tab — the failing step's log tells you which stage broke (image build, GHCR push, or the SSH script).
 - An SSH connection failure almost always means one of the four `VPS_*` secrets is wrong, or the deploy public key isn't in `/root/.ssh/authorized_keys` on the VPS — verify with `ssh -i amanah-drive-deploy-key root@148.230.104.231` from your own machine.
 - A `docker compose pull` failure inside the SSH script usually means the GHCR packages are still private (see one-time setup step 7) or `AMANAH_DRIVE_VERSION`/`GHCR_OWNER` aren't set correctly in the VPS `.env`.
