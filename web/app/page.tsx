@@ -379,46 +379,90 @@ function CredentialsSection() {
   );
 }
 
-function ContactSection() {
+function PortfolioFooter() {
   return (
-    <section id="contact" className="relative overflow-hidden bg-[#050507] px-6 py-20 sm:px-10 lg:py-28">
-      <Scribble className="absolute right-6 top-8 w-44 text-[#f472b6]/55 sm:right-16 sm:w-64" />
-      <div className="relative mx-auto grid max-w-[1180px] gap-14 lg:grid-cols-[1fr_0.9fr] lg:gap-24">
-        <form action="mailto:abughannam98@gmail.com" method="post" encType="text/plain" className="space-y-7">
-          <div>
-            <SectionLabel>Contact</SectionLabel>
-            <h2 className="mt-4 text-4xl font-semibold text-white sm:text-6xl">Contact</h2>
-          </div>
-          <label className="block">
-            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-white/48">Name</span>
-            <input name="name" required className="mt-3 w-full border-0 border-b border-white/22 bg-transparent px-0 py-3 text-base text-white outline-none transition placeholder:text-white/24 focus:border-[#c084fc]" />
-          </label>
-          <label className="block">
-            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-white/48">Email</span>
-            <input name="email" type="email" required className="mt-3 w-full border-0 border-b border-white/22 bg-transparent px-0 py-3 text-base text-white outline-none transition placeholder:text-white/24 focus:border-[#f472b6]" />
-          </label>
-          <label className="block">
-            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-white/48">Message</span>
-            <textarea name="message" required rows={5} className="mt-3 w-full resize-y rounded-[8px] border border-white/18 bg-white/[0.025] p-4 text-base leading-7 text-white outline-none transition placeholder:text-white/24 focus:border-[#60a5fa]" />
-          </label>
-          <button type="submit" className="rounded-full bg-white px-6 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-black transition hover:bg-[#e9d5ff]">
-            Send message
-          </button>
-        </form>
+    <footer id="contact" className="relative overflow-hidden border-t border-white/[0.08] bg-[#030305] px-6 pb-8 pt-16 sm:px-10 sm:pt-24 lg:pt-28">
+      <div className="pointer-events-none absolute inset-x-0 top-8 mx-auto max-w-[1180px] px-6 sm:top-12 sm:px-10">
+        <div className="h-px bg-gradient-to-r from-transparent via-[#c084fc]/70 to-transparent" />
+        <Scribble className="absolute right-8 top-[-30px] w-36 text-[#f472b6]/70 sm:right-14 sm:top-[-44px] sm:w-56" />
+      </div>
 
-        <div className="border-t border-white/14 pt-8 lg:border-l lg:border-t-0 lg:pl-14 lg:pt-0">
-          <p className="text-sm leading-7 text-white/50">Direct contact</p>
-          <div className="mt-7 space-y-5 text-2xl font-semibold leading-tight text-white sm:text-3xl">
-            <a href="mailto:abughannam98@gmail.com" className="block break-words transition hover:text-[#fbcfe8]">abughannam98@gmail.com</a>
-            <a href="tel:+962786099743" className="block transition hover:text-[#bfdbfe]">0786099743</a>
+      <div className="relative mx-auto max-w-[1180px]">
+        <SectionLabel>Contact</SectionLabel>
+        <h2 className="mt-6 max-w-[1050px] font-serif text-[54px] font-medium leading-[0.92] text-white sm:text-[80px] lg:text-[116px]">
+          Let&apos;s build <span className="bg-gradient-to-r from-[#c084fc] via-[#f472b6] to-[#60a5fa] bg-clip-text text-transparent">something.</span>
+        </h2>
+
+        <div className="mt-12 grid gap-9 border-y border-white/12 py-9 sm:mt-16 sm:grid-cols-[minmax(0,1.35fr)_minmax(220px,0.65fr)] sm:items-end sm:gap-12 sm:py-11">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/42">Write to me</p>
+            <a href="mailto:abughannam98@gmail.com" className="group mt-4 inline-flex max-w-full flex-col text-[22px] font-semibold leading-tight text-white transition duration-300 hover:text-[#fbcfe8] sm:text-[30px] lg:text-[38px]">
+              <span className="break-words">abughannam98@gmail.com</span>
+              <span className="mt-3 h-px w-full origin-left scale-x-[0.2] bg-gradient-to-r from-[#c084fc] via-[#f472b6] to-[#60a5fa] transition-transform duration-300 group-hover:scale-x-100 group-focus-visible:scale-x-100" />
+            </a>
           </div>
-          <div className="mt-10 flex flex-wrap gap-3">
-            <a href="https://github.com/AhmadAbughanam" className="rounded-full border border-white/18 px-5 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-white/70 transition hover:border-[#c084fc] hover:text-white">GitHub</a>
-            <a href="https://linkedin.com/in/ahmad-maher" className="rounded-full border border-white/18 px-5 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-white/70 transition hover:border-[#60a5fa] hover:text-white">LinkedIn</a>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/42">Call</p>
+            <a href="tel:+962786099743" className="mt-4 inline-block text-[22px] font-semibold text-white transition duration-300 hover:-translate-y-0.5 hover:text-[#bfdbfe] sm:text-[30px]">
+              0786099743
+            </a>
           </div>
         </div>
+
+        <div className="grid gap-16 py-16 lg:grid-cols-[minmax(0,1.15fr)_minmax(300px,0.65fr)] lg:gap-24 lg:py-24">
+          <form action="mailto:abughannam98@gmail.com" method="post" encType="text/plain" className="space-y-7">
+            <p className="font-serif text-3xl text-white sm:text-4xl">Send a message</p>
+            <label className="block">
+              <span className="text-xs font-semibold uppercase tracking-[0.16em] text-white/48">Name</span>
+              <input name="name" required className="mt-3 w-full border-0 border-b border-white/22 bg-transparent px-0 py-3 text-base text-white outline-none transition placeholder:text-white/24 focus:border-[#c084fc]" />
+            </label>
+            <label className="block">
+              <span className="text-xs font-semibold uppercase tracking-[0.16em] text-white/48">Email</span>
+              <input name="email" type="email" required className="mt-3 w-full border-0 border-b border-white/22 bg-transparent px-0 py-3 text-base text-white outline-none transition placeholder:text-white/24 focus:border-[#f472b6]" />
+            </label>
+            <label className="block">
+              <span className="text-xs font-semibold uppercase tracking-[0.16em] text-white/48">Message</span>
+              <textarea name="message" required rows={5} className="mt-3 w-full resize-y rounded-[8px] border border-white/18 bg-white/[0.025] p-4 text-base leading-7 text-white outline-none transition placeholder:text-white/24 focus:border-[#60a5fa]" />
+            </label>
+            <button type="submit" className="rounded-full bg-white px-6 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-black transition hover:bg-[#e9d5ff]">
+              Send message
+            </button>
+          </form>
+
+          <div className="border-t border-white/14 pt-9 lg:border-l lg:border-t-0 lg:pl-14 lg:pt-0">
+            <SectionLabel>Elsewhere</SectionLabel>
+            <div className="mt-6 space-y-3">
+              <a href="https://github.com/AhmadAbughanam" className="group flex items-center justify-between border-b border-white/12 py-4 text-sm font-semibold uppercase tracking-[0.16em] text-white/72 transition duration-300 hover:border-[#c084fc] hover:text-white">
+                <span className="flex items-center gap-4"><span className="flex h-10 w-10 items-center justify-center rounded-full border border-white/18 text-[10px] transition duration-300 group-hover:-translate-y-0.5 group-hover:border-[#c084fc] group-hover:bg-[#c084fc] group-hover:text-black">GH</span>GitHub</span>
+                <span aria-hidden="true" className="text-lg transition-transform duration-300 group-hover:translate-x-1">&#8599;</span>
+              </a>
+              <a href="https://linkedin.com/in/ahmad-maher" className="group flex items-center justify-between border-b border-white/12 py-4 text-sm font-semibold uppercase tracking-[0.16em] text-white/72 transition duration-300 hover:border-[#60a5fa] hover:text-white">
+                <span className="flex items-center gap-4"><span className="flex h-10 w-10 items-center justify-center rounded-full border border-white/18 text-xs font-bold normal-case transition duration-300 group-hover:-translate-y-0.5 group-hover:border-[#60a5fa] group-hover:bg-[#60a5fa] group-hover:text-black">in</span>LinkedIn</span>
+                <span aria-hidden="true" className="text-lg transition-transform duration-300 group-hover:translate-x-1">&#8599;</span>
+              </a>
+            </div>
+
+            <div className="mt-12">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/42">Quick links</p>
+              <nav aria-label="Footer navigation" className="mt-5 grid grid-cols-2 gap-x-8 gap-y-4 text-sm text-white/58">
+                <a href="#about" className="transition hover:text-[#c084fc]">About</a>
+                <a href="#projects" className="transition hover:text-[#f472b6]">Work</a>
+                <a href="#experience" className="transition hover:text-[#60a5fa]">Experience</a>
+                <a href="#contact" className="transition hover:text-white">Contact</a>
+              </nav>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-4 border-t border-white/12 pt-7 text-xs uppercase tracking-[0.14em] text-white/38 sm:flex-row sm:items-center sm:justify-between">
+          <span>&copy; 2026 Ahmad Abughanam</span>
+          <a href="#top" className="group inline-flex items-center gap-3 transition hover:text-white">
+            Back to top
+            <span aria-hidden="true" className="transition-transform duration-300 group-hover:-translate-y-1">&#8593;</span>
+          </a>
+        </div>
       </div>
-    </section>
+    </footer>
   );
 }
 
@@ -432,13 +476,7 @@ export default function Home() {
       <AboutSection />
       <ProjectsSection />
       <CredentialsSection />
-      <ContactSection />
-      <footer className="border-t border-white/[0.08] bg-[#050507] px-6 py-7 sm:px-10">
-        <div className="mx-auto flex max-w-[1180px] flex-col gap-3 text-xs uppercase tracking-[0.14em] text-white/38 sm:flex-row sm:items-center sm:justify-between">
-          <span>Ahmad Maher Abughanam</span>
-          <span>Amman, Jordan</span>
-        </div>
-      </footer>
+      <PortfolioFooter />
     </main>
   );
 }
