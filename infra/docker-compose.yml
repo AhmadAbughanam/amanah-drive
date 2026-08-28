@@ -99,6 +99,8 @@ services:
     environment:
       NEXT_TELEMETRY_DISABLED: "1"
       NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8080}
+      CONTACT_EMAIL_API_KEY: ${CONTACT_EMAIL_API_KEY:-}
+      CONTACT_EMAIL_FROM: ${CONTACT_EMAIL_FROM:-}
     # Bound to loopback only — same reasoning as the api service above.
     ports:
       - "127.0.0.1:${WEB_PORT:-3000}:3000"

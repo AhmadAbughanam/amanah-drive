@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { ContactForm } from "./contact-form";
+
 const navigation = [
   { label: "About", href: "#about" },
   { label: "Skills", href: "#skills" },
@@ -90,12 +92,6 @@ function PortfolioNav() {
             {item.label}
           </a>
         ))}
-        <Link
-          href="/login"
-          className="rounded-full border border-[#60a5fa]/55 px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-[#bfdbfe] transition hover:bg-[#60a5fa]/10"
-        >
-          Open Drive
-        </Link>
       </nav>
 
       <details className="group relative lg:hidden">
@@ -109,9 +105,6 @@ function PortfolioNav() {
               {item.label}
             </a>
           ))}
-          <Link href="/login" className="mt-2 block rounded-full border border-[#60a5fa]/55 px-3 py-3 text-center text-xs font-semibold uppercase tracking-[0.14em] text-[#bfdbfe]">
-            Open Drive
-          </Link>
         </nav>
       </details>
     </header>
@@ -139,9 +132,6 @@ function HeroSection() {
           <a href="#projects" className="rounded-full bg-white px-6 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-black transition hover:bg-[#e9d5ff]">
             Explore work
           </a>
-          <Link href="/login" className="rounded-full border border-white/20 px-6 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-white transition hover:border-[#f472b6]/60 hover:text-[#fbcfe8]">
-            Enter Drive
-          </Link>
         </div>
 
         <div className="mt-12 flex items-center gap-6 text-xs font-semibold uppercase tracking-[0.16em] text-white/52">
@@ -321,10 +311,7 @@ function ProjectsSection() {
               <span className="text-sm font-semibold text-[#f472b6]">01</span>
               <span className="h-px w-16 bg-[#f472b6]/55" aria-hidden="true" />
             </div>
-            <Link href="/login" aria-label="Amanah Drive" className="group mt-6 inline-flex items-center gap-5 outline-none focus-visible:ring-2 focus-visible:ring-[#c084fc]">
-              <span className="text-4xl font-semibold text-white transition group-hover:text-[#e9d5ff] sm:text-6xl">Amanah Drive</span>
-              <span className="text-3xl text-[#c084fc] transition group-hover:translate-x-1" aria-hidden="true">-&gt;</span>
-            </Link>
+            <h3 className="mt-6 text-4xl font-semibold text-white sm:text-6xl">Amanah Drive</h3>
             <p className="mt-7 max-w-[500px] text-base leading-8 text-white/62 sm:text-lg">
               A secure AI-powered storage & knowledge drive with semantic search and RAG.
             </p>
@@ -410,24 +397,7 @@ function PortfolioFooter() {
         </div>
 
         <div className="grid gap-16 py-16 lg:grid-cols-[minmax(0,1.15fr)_minmax(300px,0.65fr)] lg:gap-24 lg:py-24">
-          <form action="mailto:abughannam98@gmail.com" method="post" encType="text/plain" className="space-y-7">
-            <p className="font-serif text-3xl text-white sm:text-4xl">Send a message</p>
-            <label className="block">
-              <span className="text-xs font-semibold uppercase tracking-[0.16em] text-white/48">Name</span>
-              <input name="name" required className="mt-3 w-full border-0 border-b border-white/22 bg-transparent px-0 py-3 text-base text-white outline-none transition placeholder:text-white/24 focus:border-[#c084fc]" />
-            </label>
-            <label className="block">
-              <span className="text-xs font-semibold uppercase tracking-[0.16em] text-white/48">Email</span>
-              <input name="email" type="email" required className="mt-3 w-full border-0 border-b border-white/22 bg-transparent px-0 py-3 text-base text-white outline-none transition placeholder:text-white/24 focus:border-[#f472b6]" />
-            </label>
-            <label className="block">
-              <span className="text-xs font-semibold uppercase tracking-[0.16em] text-white/48">Message</span>
-              <textarea name="message" required rows={5} className="mt-3 w-full resize-y rounded-[8px] border border-white/18 bg-white/[0.025] p-4 text-base leading-7 text-white outline-none transition placeholder:text-white/24 focus:border-[#60a5fa]" />
-            </label>
-            <button type="submit" className="rounded-full bg-white px-6 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-black transition hover:bg-[#e9d5ff]">
-              Send message
-            </button>
-          </form>
+          <ContactForm />
 
           <div className="border-t border-white/14 pt-9 lg:border-l lg:border-t-0 lg:pl-14 lg:pt-0">
             <SectionLabel>Elsewhere</SectionLabel>
@@ -455,7 +425,13 @@ function PortfolioFooter() {
         </div>
 
         <div className="flex flex-col gap-4 border-t border-white/12 pt-7 text-xs uppercase tracking-[0.14em] text-white/38 sm:flex-row sm:items-center sm:justify-between">
-          <span>&copy; 2026 Ahmad Abughanam</span>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <span>&copy; 2026 Ahmad Abughanam</span>
+            <span className="hidden h-3 w-px bg-white/16 sm:block" aria-hidden="true" />
+            <Link href="/login" className="normal-case tracking-normal text-white/24 transition hover:text-white/48 focus-visible:text-white/60 focus-visible:outline-none">
+              Admin access
+            </Link>
+          </div>
           <a href="#top" className="group inline-flex items-center gap-3 transition hover:text-white">
             Back to top
             <span aria-hidden="true" className="transition-transform duration-300 group-hover:-translate-y-1">&#8593;</span>

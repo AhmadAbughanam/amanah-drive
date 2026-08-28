@@ -2,14 +2,60 @@ import { expect, test } from "@playwright/test";
 
 const apiBaseUrl = "http://localhost:8080";
 
-test("portfolio CTA navigates to login", async ({ page }) => {
+test("quiet portfolio admin access navigates to login", async ({ page }) => {
   await page.goto("/");
 
   await expect(page.getByRole("heading", { name: "Ahmad Maher Abughanam" })).toBeVisible();
-  await page.getByRole("link", { name: "Amanah Drive" }).click();
+  await expect(page.getByRole("heading", { name: "Amanah Drive" })).toBeVisible();
+  await expect(page.locator('a[href="/login"]')).toHaveCount(1);
+  await page.getByRole("link", { name: "Admin access" }).click();
 
   await expect(page).toHaveURL("/login");
   await expect(page.getByRole("heading", { name: "Amanah Drive" })).toBeVisible();
+});
+
+test("portfolio contact form sends a message", async ({ page }) => {
+  await page.route("**/api/contact", async (route) => {
+    expect(route.request().postDataJSON()).toMatchObject({
+      name: "Ahmad",
+      email: "ahmad@example.com",
+      message: "Project enquiry",
+      website: "",
+    });
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ message: "Message sent successfully." }),
+    });
+  });
+
+  await page.goto("/");
+  await page.getByLabel("Name").fill("Ahmad");
+  await page.getByLabel("Email").fill("ahmad@example.com");
+  await page.getByLabel("Message").fill("Project enquiry");
+  await page.getByRole("button", { name: "Send message" }).click();
+
+  await expect(page.getByRole("status")).toHaveText("Message sent successfully.");
+});
+
+test("contact route validates requests and rate limits by IP", async ({ request }) => {
+  const ip = "203.0.113.42";
+
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const response = await request.post("/api/contact", {
+      headers: { "x-forwarded-for": ip },
+      data: { name: "", email: "invalid", message: "", website: "" },
+    });
+    expect(response.status()).toBe(400);
+  }
+
+  const limited = await request.post("/api/contact", {
+    headers: { "x-forwarded-for": ip },
+    data: { name: "Ahmad", email: "ahmad@example.com", message: "Hello", website: "" },
+  });
+
+  expect(limited.status()).toBe(429);
+  expect(limited.headers()["retry-after"]).toBeTruthy();
 });
 
 test("valid login reaches drive", async ({ page }) => {
