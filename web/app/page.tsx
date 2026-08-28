@@ -251,8 +251,21 @@ function AboutSection() {
       <div className="mx-auto grid max-w-[1180px] items-center gap-12 lg:grid-cols-[0.88fr_1.12fr] lg:gap-20">
         <div className="relative mx-auto w-full max-w-[470px]">
           <div className="absolute -bottom-4 -left-4 h-full w-full rounded-[8px] border border-[#c084fc]/35" aria-hidden="true" />
-          <div className="relative aspect-[5/6] overflow-hidden rounded-[8px] border border-white/12 bg-black">
-            <Image src="/profile.png" alt="Portrait of Ahmad Abughanam" fill sizes="(max-width: 1024px) 90vw, 40vw" className="object-cover object-[48%_46%] grayscale" />
+          <div className="relative flex aspect-[5/6] flex-col justify-between overflow-hidden rounded-[8px] border border-white/12 bg-[#07070b] p-7 sm:p-9">
+            <div className="absolute inset-x-0 top-1/3 h-px bg-gradient-to-r from-transparent via-[#c084fc]/45 to-transparent" aria-hidden="true" />
+            <div className="absolute bottom-1/3 inset-x-0 h-px bg-gradient-to-r from-transparent via-[#60a5fa]/45 to-transparent" aria-hidden="true" />
+            <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.18em] text-white/42">
+              <span>Ahmad Maher Abughanam</span>
+              <span>Amman, Jordan</span>
+            </div>
+            <div className="relative">
+              <span className="block bg-gradient-to-br from-[#c084fc] via-[#f472b6] to-[#60a5fa] bg-clip-text text-[132px] font-semibold leading-none text-transparent sm:text-[168px]" aria-hidden="true">AA</span>
+              <Scribble className="absolute -bottom-8 right-0 w-32 text-[#f472b6] sm:w-40" />
+            </div>
+            <div className="border-t border-white/14 pt-5">
+              <p className="text-lg font-semibold text-white">AI Engineer</p>
+              <p className="mt-2 text-sm leading-6 text-white/52">Backend Software Engineer</p>
+            </div>
           </div>
           <Scribble className="absolute -bottom-12 right-0 w-36 text-[#60a5fa]" />
         </div>
@@ -320,9 +333,14 @@ function ProjectsSection() {
                 <span key={item} className={`rounded-full border px-3 py-2 text-xs ${skillStyles[index % skillStyles.length]}`}>{item}</span>
               ))}
             </div>
-            <Link href="/login" className="mt-9 inline-flex items-center gap-3 border-b border-white/30 pb-2 text-xs font-semibold uppercase tracking-[0.16em] text-white transition hover:border-[#60a5fa] hover:text-[#bfdbfe]">
-              View case study <span aria-hidden="true">-&gt;</span>
-            </Link>
+            <a
+              href="https://github.com/AhmadAbughanam/amanah-drive"
+              target="_blank"
+              rel="noreferrer"
+              className="mt-9 inline-flex items-center gap-3 border-b border-white/30 pb-2 text-xs font-semibold uppercase tracking-[0.16em] text-white transition hover:border-[#60a5fa] hover:text-[#bfdbfe]"
+            >
+              View GitHub repository <span aria-hidden="true">-&gt;</span>
+            </a>
           </div>
         </article>
       </div>
