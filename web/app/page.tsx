@@ -146,7 +146,7 @@ function HeroSection() {
 
         <div className="mt-12 flex items-center gap-6 text-xs font-semibold uppercase tracking-[0.16em] text-white/52">
           <a href="https://github.com/AhmadAbughanam" className="transition hover:text-white">GitHub</a>
-          <a href="https://linkedin.com/in/ahmad-maher" className="transition hover:text-white">LinkedIn</a>
+          <a href="https://www.linkedin.com/in/ahmad-maher-2a67212b5" className="transition hover:text-white">LinkedIn</a>
           <span className="h-px w-14 bg-gradient-to-r from-[#c084fc] to-[#60a5fa]" aria-hidden="true" />
         </div>
       </div>
@@ -436,7 +436,7 @@ function PortfolioFooter() {
                 <span className="flex items-center gap-4"><span className="flex h-10 w-10 items-center justify-center rounded-full border border-white/18 text-[10px] transition duration-300 group-hover:-translate-y-0.5 group-hover:border-[#c084fc] group-hover:bg-[#c084fc] group-hover:text-black">GH</span>GitHub</span>
                 <span aria-hidden="true" className="text-lg transition-transform duration-300 group-hover:translate-x-1">&#8599;</span>
               </a>
-              <a href="https://linkedin.com/in/ahmad-maher" className="group flex items-center justify-between border-b border-white/12 py-4 text-sm font-semibold uppercase tracking-[0.16em] text-white/72 transition duration-300 hover:border-[#60a5fa] hover:text-white">
+              <a href="https://www.linkedin.com/in/ahmad-maher-2a67212b5" className="group flex items-center justify-between border-b border-white/12 py-4 text-sm font-semibold uppercase tracking-[0.16em] text-white/72 transition duration-300 hover:border-[#60a5fa] hover:text-white">
                 <span className="flex items-center gap-4"><span className="flex h-10 w-10 items-center justify-center rounded-full border border-white/18 text-xs font-bold normal-case transition duration-300 group-hover:-translate-y-0.5 group-hover:border-[#60a5fa] group-hover:bg-[#60a5fa] group-hover:text-black">in</span>LinkedIn</span>
                 <span aria-hidden="true" className="text-lg transition-transform duration-300 group-hover:translate-x-1">&#8599;</span>
               </a>
