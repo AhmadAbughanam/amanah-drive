@@ -4,13 +4,15 @@ import type { ChangeEvent, FormEvent } from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
+import { Area, AreaChart, Bar, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { apiFetch, apiJson, errorMessage } from "@/lib/api";
-import type { ActivityResponse, AdminLogResponse, ChatCitation, ChatResponse, FileItem, Folder, FolderContents, SearchResponse, SearchResult } from "@/lib/types";
+import type { ActivityResponse, AdminLogResponse, ChatCitation, ChatResponse, FileItem, Folder, FolderContents, ObservabilitySnapshot, SearchResponse, SearchResult } from "@/lib/types";
 import { useAuth } from "../auth-provider";
 
 type Breadcrumb = { id: string | null; name: string };
-type AppView = "files" | "knowledge" | "activity" | "logs";
-type LogFilters = { level: string; search: string };
+type AppView = "files" | "knowledge" | "logs";
+type ObservabilityCategory = "api" | "security" | "ai" | "activity" | "errors";
+type LogFilters = { level: string; search: string; source: string; from: string; to: string };
 type ChatEntry = {
   id: string;
   role: "user" | "assistant";
@@ -77,17 +79,6 @@ export default function DrivePage() {
   const [chatEntries, setChatEntries] = useState<ChatEntry[]>([]);
   const [chatLoading, setChatLoading] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
-  const [activity, setActivity] = useState<ActivityResponse | null>(null);
-  const [activityPage, setActivityPage] = useState(1);
-  const [activityLoading, setActivityLoading] = useState(false);
-  const [activityError, setActivityError] = useState<string | null>(null);
-  const [logs, setLogs] = useState<AdminLogResponse | null>(null);
-  const [logFilters, setLogFilters] = useState<LogFilters>({ level: "", search: "" });
-  const [appliedLogFilters, setAppliedLogFilters] = useState<LogFilters>({ level: "", search: "" });
-  const [logPage, setLogPage] = useState(1);
-  const [logLoading, setLogLoading] = useState(false);
-  const [logError, setLogError] = useState<string | null>(null);
-  const [logRefreshKey, setLogRefreshKey] = useState(0);
 
   const folderQuery = useMemo(() => {
     const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
@@ -110,38 +101,6 @@ export default function DrivePage() {
     }
   }, [folderQuery]);
 
-  const loadLogs = useCallback(async () => {
-    setLogLoading(true);
-    setLogError(null);
-    try {
-      const params = new URLSearchParams({ page: String(logPage), pageSize: "25" });
-      if (appliedLogFilters.level) {
-        params.set("level", appliedLogFilters.level);
-      }
-      if (appliedLogFilters.search) {
-        params.set("search", appliedLogFilters.search);
-      }
-      setLogs(await apiJson<AdminLogResponse>(`/admin/logs?${params}`));
-    } catch (err) {
-      setLogError(err instanceof Error ? err.message : "Unable to load system logs.");
-    } finally {
-      setLogLoading(false);
-    }
-  }, [appliedLogFilters, logPage]);
-
-  const loadActivity = useCallback(async () => {
-    setActivityLoading(true);
-    setActivityError(null);
-    try {
-      const params = new URLSearchParams({ page: String(activityPage), pageSize: "25" });
-      setActivity(await apiJson<ActivityResponse>(`/admin/activity?${params}`));
-    } catch (err) {
-      setActivityError(err instanceof Error ? err.message : "Unable to load recent activity.");
-    } finally {
-      setActivityLoading(false);
-    }
-  }, [activityPage]);
-
   useEffect(() => {
     let cancelled = false;
     ensureSession().then((ok) => {
@@ -159,22 +118,6 @@ export default function DrivePage() {
       void loadContents();
     }
   }, [loadContents, status]);
-
-  useEffect(() => {
-    if (status === "authenticated" && activeView === "logs") {
-      void loadLogs();
-    }
-  }, [activeView, loadLogs, logRefreshKey, status]);
-
-  useEffect(() => {
-    if (status !== "authenticated" || activeView !== "activity") {
-      return;
-    }
-
-    void loadActivity();
-    const refresh = window.setInterval(() => void loadActivity(), 15_000);
-    return () => window.clearInterval(refresh);
-  }, [activeView, loadActivity, status]);
 
   function enterFolder(folder: Folder) {
     setCurrentFolderId(folder.id);
@@ -402,16 +345,6 @@ export default function DrivePage() {
     setChatError(null);
   }
 
-  function applyLogFilters(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setLogPage(1);
-    setAppliedLogFilters({
-      level: logFilters.level,
-      search: logFilters.search.trim(),
-    });
-    setLogRefreshKey((value) => value + 1);
-  }
-
   if (status === "checking" || (status === "anonymous" && !contents)) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#080808] px-6 text-[#f8f7f2]">
@@ -432,7 +365,7 @@ export default function DrivePage() {
               </div>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between lg:justify-end">
-              <nav className="grid grid-cols-2 rounded-[10px] border border-black/12 bg-white/35 p-1 sm:min-w-[440px] sm:grid-cols-4" aria-label="Drive sections">
+              <nav className="grid grid-cols-3 rounded-[10px] border border-black/12 bg-white/35 p-1 sm:min-w-[390px]" aria-label="Drive sections">
                 <button
                   className={`rounded-[8px] px-4 py-3 text-sm transition ${activeView === "files" ? "bg-black text-white shadow-[0_10px_22px_rgba(0,0,0,0.20)]" : "text-black/70 hover:text-black"}`}
                   type="button"
@@ -446,13 +379,6 @@ export default function DrivePage() {
                   onClick={() => setActiveView("knowledge")}
                 >
                   Search & Chat
-                </button>
-                <button
-                  className={`rounded-[8px] px-3 py-3 text-sm transition ${activeView === "activity" ? "bg-black text-white shadow-[0_10px_22px_rgba(0,0,0,0.20)]" : "text-black/70 hover:text-black"}`}
-                  type="button"
-                  onClick={() => setActiveView("activity")}
-                >
-                  Activity
                 </button>
                 <button
                   className={`rounded-[8px] px-4 py-3 text-sm transition ${activeView === "logs" ? "bg-black text-white shadow-[0_10px_22px_rgba(0,0,0,0.20)]" : "text-black/70 hover:text-black"}`}
@@ -514,108 +440,11 @@ export default function DrivePage() {
             onSearch={runSearch}
             onSearchQueryChange={setSearchQuery}
           />
-        ) : activeView === "activity" ? (
-          <ActivityView
-            activity={activity}
-            error={activityError}
-            isLoading={activityLoading}
-            onPageChange={setActivityPage}
-            onRefresh={() => void loadActivity()}
-          />
         ) : (
-          <LogsView
-            error={logError}
-            filters={logFilters}
-            isLoading={logLoading}
-            logs={logs}
-            onApplyFilters={applyLogFilters}
-            onFiltersChange={setLogFilters}
-            onPageChange={setLogPage}
-          />
+          <ObservabilityView />
         )}
       </div>
     </main>
-  );
-}
-
-function ActivityView({
-  activity,
-  error,
-  isLoading,
-  onPageChange,
-  onRefresh,
-}: {
-  activity: ActivityResponse | null;
-  error: string | null;
-  isLoading: boolean;
-  onPageChange: (page: number) => void;
-  onRefresh: () => void;
-}) {
-  return (
-    <section className="px-5 py-7 sm:px-8 lg:px-9">
-      <div className="mb-8 flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className={labelClass}>Administration</p>
-          <h2 className="mt-3 font-serif text-4xl font-normal leading-tight text-black sm:text-5xl">Activity</h2>
-          <p className="mt-2 text-base text-black/55">Recent uploads, document processing outcomes, and answered questions.</p>
-        </div>
-        <button className={secondaryButtonClass} disabled={isLoading} onClick={onRefresh} type="button">
-          {isLoading ? "Refreshing" : "Refresh"}
-        </button>
-      </div>
-
-      <div className={`${panelClass} overflow-hidden`}>
-        {error ? (
-          <div className="m-5 rounded-[10px] border border-red-900/25 bg-red-50 px-4 py-3 text-sm text-red-800 sm:m-6" role="alert">
-            {error}
-          </div>
-        ) : null}
-
-        <div className="min-h-[470px] divide-y divide-black/10">
-          {isLoading && !activity ? <p className="p-6 text-sm text-black/55">Loading recent activity...</p> : null}
-          {!isLoading && activity?.entries.length === 0 ? <p className="p-6 text-sm text-black/55">No activity has been recorded yet.</p> : null}
-          {activity?.entries.map((entry) => (
-            <article className="grid gap-4 px-5 py-5 sm:grid-cols-[170px_minmax(0,1fr)] sm:px-6" key={entry.id}>
-              <div>
-                <span className={`inline-flex rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${activityTypeClass(entry.type)}`}>
-                  {activityTypeLabel(entry.type)}
-                </span>
-                <time className="mt-3 block text-xs leading-5 text-black/45" dateTime={entry.occurredAt}>
-                  {formatDate(entry.occurredAt)}
-                </time>
-              </div>
-              <div className="min-w-0 sm:pt-1">
-                <p className="break-words font-serif text-xl leading-7 text-black">{entry.summary}</p>
-                {entry.fileId ? <p className="mt-2 break-all text-xs text-black/40">File {entry.fileId}</p> : null}
-                {entry.conversationId ? <p className="mt-2 break-all text-xs text-black/40">Conversation {entry.conversationId}</p> : null}
-              </div>
-            </article>
-          ))}
-        </div>
-
-        <div className="flex items-center justify-between gap-4 border-t border-black/10 px-5 py-5 text-sm text-black/55 sm:px-6">
-          <span>Page {activity?.page ?? 1}</span>
-          <div className="flex items-center gap-2">
-            <button
-              className={secondaryButtonClass}
-              disabled={isLoading || (activity?.page ?? 1) <= 1}
-              onClick={() => onPageChange(Math.max(1, (activity?.page ?? 1) - 1))}
-              type="button"
-            >
-              Previous
-            </button>
-            <button
-              className={secondaryButtonClass}
-              disabled={isLoading || !activity?.hasMore}
-              onClick={() => onPageChange((activity?.page ?? 1) + 1)}
-              type="button"
-            >
-              Next
-            </button>
-          </div>
-        </div>
-      </div>
-    </section>
   );
 }
 
@@ -1094,123 +923,311 @@ function KnowledgeView({
   );
 }
 
-function LogsView({
-  error,
-  filters,
-  isLoading,
-  logs,
-  onApplyFilters,
-  onFiltersChange,
-  onPageChange,
-}: {
-  error: string | null;
-  filters: LogFilters;
-  isLoading: boolean;
-  logs: AdminLogResponse | null;
-  onApplyFilters: (event: FormEvent<HTMLFormElement>) => void;
-  onFiltersChange: (filters: LogFilters) => void;
-  onPageChange: (page: number) => void;
-}) {
+function ObservabilityView() {
+  const [range, setRange] = useState<"24h" | "7d" | "30d">("24h");
+  const [category, setCategory] = useState<ObservabilityCategory>("api");
+  const [snapshot, setSnapshot] = useState<ObservabilitySnapshot | null>(null);
+  const [snapshotError, setSnapshotError] = useState<string | null>(null);
+  const [snapshotLoading, setSnapshotLoading] = useState(true);
+  const [logs, setLogs] = useState<AdminLogResponse | null>(null);
+  const [logPage, setLogPage] = useState(1);
+  const [logLoading, setLogLoading] = useState(false);
+  const [logError, setLogError] = useState<string | null>(null);
+  const emptyFilters: LogFilters = { level: "", search: "", source: "", from: "", to: "" };
+  const [filters, setFilters] = useState<LogFilters>(emptyFilters);
+  const [appliedFilters, setAppliedFilters] = useState<LogFilters>(emptyFilters);
+  const [activity, setActivity] = useState<ActivityResponse | null>(null);
+  const [activityPage, setActivityPage] = useState(1);
+  const [activityLoading, setActivityLoading] = useState(false);
+  const [activityError, setActivityError] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  const loadSnapshot = useCallback(async () => {
+    setSnapshotLoading(true);
+    setSnapshotError(null);
+    try {
+      setSnapshot(await apiJson<ObservabilitySnapshot>(`/admin/observability?range=${range}`));
+    } catch (err) {
+      setSnapshotError(err instanceof Error ? err.message : "Unable to load observability metrics.");
+    } finally {
+      setSnapshotLoading(false);
+    }
+  }, [range]);
+
+  const loadLogs = useCallback(async () => {
+    if (category === "activity") return;
+    setLogLoading(true);
+    setLogError(null);
+    try {
+      const params = new URLSearchParams({ page: String(logPage), pageSize: "25", category });
+      if (appliedFilters.level) params.set("level", appliedFilters.level);
+      if (appliedFilters.search) params.set("search", appliedFilters.search);
+      if (appliedFilters.source) params.set("source", appliedFilters.source);
+      if (appliedFilters.from) params.set("from", new Date(appliedFilters.from).toISOString());
+      if (appliedFilters.to) params.set("to", new Date(appliedFilters.to).toISOString());
+      setLogs(await apiJson<AdminLogResponse>(`/admin/logs?${params}`));
+    } catch (err) {
+      setLogError(err instanceof Error ? err.message : "Unable to load system logs.");
+    } finally {
+      setLogLoading(false);
+    }
+  }, [appliedFilters, category, logPage]);
+
+  const loadActivity = useCallback(async () => {
+    setActivityLoading(true);
+    setActivityError(null);
+    try {
+      setActivity(await apiJson<ActivityResponse>(`/admin/activity?page=${activityPage}&pageSize=25`));
+    } catch (err) {
+      setActivityError(err instanceof Error ? err.message : "Unable to load recent activity.");
+    } finally {
+      setActivityLoading(false);
+    }
+  }, [activityPage]);
+
+  useEffect(() => {
+    void loadSnapshot();
+  }, [loadSnapshot, refreshKey]);
+
+  useEffect(() => {
+    if (category === "activity") {
+      void loadActivity();
+      return;
+    }
+    void loadLogs();
+  }, [category, loadActivity, loadLogs, refreshKey]);
+
+  useEffect(() => {
+    if (category !== "activity") return;
+    const refresh = window.setInterval(() => void loadActivity(), 15_000);
+    return () => window.clearInterval(refresh);
+  }, [category, loadActivity]);
+
+  function selectCategory(nextCategory: ObservabilityCategory) {
+    setCategory(nextCategory);
+    setLogPage(1);
+    setActivityPage(1);
+  }
+
+  function applyFilters(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setLogPage(1);
+    setAppliedFilters({ ...filters, search: filters.search.trim() });
+  }
+
+  const requestChart = snapshot?.requests.map((point) => ({ ...point, label: formatMetricBucket(point.timestamp, range) })) ?? [];
+  const aiChart = snapshot?.aiUsage.map((point) => ({ ...point, label: formatMetricBucket(point.timestamp, range) })) ?? [];
+  const securityChart = snapshot?.security.map((point) => ({ ...point, label: formatMetricBucket(point.timestamp, range) })) ?? [];
+  const tooltipStyle = { backgroundColor: "#101016", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 8, color: "#fff" };
+  const chartAxis = { fill: "rgba(255,255,255,0.45)", fontSize: 11 };
+
   return (
-    <section className="px-5 py-7 sm:px-8 lg:px-9">
-      <div className="mb-8">
-        <p className={labelClass}>Administration</p>
-        <h2 className="mt-3 font-serif text-4xl font-normal leading-tight text-black sm:text-5xl">System logs</h2>
-        <p className="mt-2 text-base text-black/55">Inspect recent API activity and failures from persisted structured logs.</p>
-      </div>
-
-      <div className={`${panelClass} overflow-hidden`}>
-        <form className="grid gap-4 border-b border-black/10 p-5 sm:grid-cols-[180px_minmax(0,1fr)_auto] sm:items-end sm:p-6" onSubmit={onApplyFilters}>
-          <label className="block">
-            <span className={labelClass}>Log level</span>
-            <select
-              className={`${fieldClass} mt-2`}
-              value={filters.level}
-              onChange={(event) => onFiltersChange({ ...filters, level: event.target.value })}
-            >
-              <option value="">All levels</option>
-              <option value="Information">Information</option>
-              <option value="Warning">Warning</option>
-              <option value="Error">Error</option>
-              <option value="Fatal">Fatal</option>
-              <option value="Debug">Debug</option>
-              <option value="Verbose">Verbose</option>
-            </select>
-          </label>
-          <label className="block">
-            <span className={labelClass}>Search logs</span>
-            <input
-              className={`${fieldClass} mt-2`}
-              value={filters.search}
-              onChange={(event) => onFiltersChange({ ...filters, search: event.target.value })}
-              placeholder="Message, path, status, source..."
-            />
-          </label>
-          <button className={primaryButtonClass} disabled={isLoading} type="submit">
-            Apply filters
-          </button>
-        </form>
-
-        {error ? (
-          <div className="m-5 rounded-[10px] border border-red-900/25 bg-red-50 px-4 py-3 text-sm text-red-800 sm:m-6" role="alert">
-            {error}
+    <section className="min-h-[calc(100vh-118px)] bg-[#060608] px-4 py-7 text-white sm:px-7 lg:px-9 lg:py-10">
+      <div className="mx-auto max-w-[1380px]">
+        <div className="flex flex-col gap-6 border-b border-white/10 pb-8 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#c084fc]">Administration / observability</p>
+            <h2 className="mt-3 font-serif text-4xl font-normal leading-tight sm:text-6xl">System signals</h2>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/48">Request health, security events, AI usage, activity, and retained structured logs.</p>
           </div>
-        ) : null}
-
-        <div className="min-h-[470px] divide-y divide-black/10">
-          {isLoading && !logs ? <p className="p-6 text-sm text-black/55">Loading persisted logs...</p> : null}
-          {!isLoading && logs?.entries.length === 0 ? <p className="p-6 text-sm text-black/55">No log entries match these filters.</p> : null}
-          {logs?.entries.map((entry, index) => (
-            <article className="grid gap-4 px-5 py-5 sm:px-6 lg:grid-cols-[170px_minmax(0,1fr)]" key={`${entry.timestamp}-${index}`}>
-              <div>
-                <span className={`inline-flex rounded-full border px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${logLevelClass(entry.level)}`}>
-                  {entry.level}
-                </span>
-                <time className="mt-3 block text-xs leading-5 text-black/45" dateTime={entry.timestamp}>
-                  {formatDate(entry.timestamp)}
-                </time>
-              </div>
-              <div className="min-w-0">
-                <p className="break-words font-mono text-sm leading-6 text-black">{entry.message}</p>
-                {Object.keys(entry.properties).length > 0 ? (
-                  <pre className="mt-3 overflow-x-auto rounded-[8px] border border-black/8 bg-black/[0.03] p-3 text-xs leading-5 text-black/55">
-                    {JSON.stringify(entry.properties, null, 2)}
-                  </pre>
-                ) : null}
-                {entry.exception ? (
-                  <pre className="mt-3 overflow-x-auto whitespace-pre-wrap rounded-[8px] border border-red-900/20 bg-red-50 p-3 text-xs leading-5 text-red-900">
-                    {entry.exception}
-                  </pre>
-                ) : null}
-              </div>
-            </article>
-          ))}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex rounded-[8px] border border-white/12 bg-white/[0.035] p-1" aria-label="Metrics range">
+              {(["24h", "7d", "30d"] as const).map((option) => (
+                <button key={option} className={`rounded-[6px] px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition ${range === option ? "bg-white text-black" : "text-white/50 hover:text-white"}`} onClick={() => setRange(option)} type="button">
+                  {option}
+                </button>
+              ))}
+            </div>
+            <button className="rounded-[8px] border border-white/14 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-white/65 transition hover:border-[#60a5fa]/65 hover:text-white" disabled={snapshotLoading || logLoading || activityLoading} onClick={() => setRefreshKey((value) => value + 1)} type="button">
+              Refresh
+            </button>
+          </div>
         </div>
 
-        <div className="flex items-center justify-between gap-4 border-t border-black/10 px-5 py-5 text-sm text-black/55 sm:px-6">
-          <span>Page {logs?.page ?? 1}</span>
-          <div className="flex items-center gap-2">
-            <button
-              className={secondaryButtonClass}
-              disabled={isLoading || (logs?.page ?? 1) <= 1}
-              onClick={() => onPageChange(Math.max(1, (logs?.page ?? 1) - 1))}
-              type="button"
-            >
-              Previous
-            </button>
-            <button
-              className={secondaryButtonClass}
-              disabled={isLoading || !logs?.hasMore}
-              onClick={() => onPageChange((logs?.page ?? 1) + 1)}
-              type="button"
-            >
-              Next
-            </button>
+        {snapshotError ? <div className="mt-6 rounded-[8px] border border-red-400/25 bg-red-500/10 px-4 py-3 text-sm text-red-200" role="alert">{snapshotError}</div> : null}
+
+        <div className="mt-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <MetricCard label="Requests today (UTC)" value={formatInteger(snapshot?.stats.requestsToday)} detail="Completed API requests" accent="text-[#bfdbfe]" />
+          <MetricCard label="5xx error rate" value={formatPercent(snapshot?.stats.errorRatePercent)} detail={`Across the selected ${range}`} accent="text-[#fda4af]" />
+          <MetricCard label="Average latency" value={formatMilliseconds(snapshot?.stats.averageLatencyMilliseconds)} detail={`Across the selected ${range}`} accent="text-[#fde68a]" />
+          <MetricCard
+            label="AI spend this month"
+            value={formatCurrency(snapshot?.stats.aiSpendThisMonthUsd)}
+            detail={snapshot?.stats.aiPricingComplete === false ? "Known spend only; pricing is incomplete" : "Estimated from measured model tokens"}
+            accent="text-[#e9d5ff]"
+          />
+        </div>
+
+        <div className="mt-6 grid gap-4 xl:grid-cols-2">
+          <ChartPanel eyebrow="API traffic" title="Request volume and 5xx rate">
+            <ResponsiveContainer width="100%" height={270}>
+              <ComposedChart data={requestChart} margin={{ top: 10, right: 4, left: -24, bottom: 0 }}>
+                <CartesianGrid stroke="rgba(255,255,255,0.07)" vertical={false} />
+                <XAxis dataKey="label" tick={chartAxis} axisLine={false} tickLine={false} minTickGap={24} />
+                <YAxis yAxisId="requests" tick={chartAxis} axisLine={false} tickLine={false} allowDecimals={false} />
+                <YAxis yAxisId="rate" orientation="right" tick={chartAxis} axisLine={false} tickLine={false} unit="%" />
+                <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: "#fff" }} />
+                <Bar yAxisId="requests" dataKey="requests" fill="#60a5fa" radius={[3, 3, 0, 0]} maxBarSize={24} />
+                <Line yAxisId="rate" type="monotone" dataKey="errorRatePercent" name="5xx rate %" stroke="#fb7185" strokeWidth={2} dot={false} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </ChartPanel>
+
+          <ChartPanel eyebrow="Log mix" title="Level distribution">
+            <ResponsiveContainer width="100%" height={270}>
+              <AreaChart data={snapshot?.logLevels ?? []} margin={{ top: 10, right: 4, left: -24, bottom: 0 }}>
+                <defs><linearGradient id="levelFill" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#c084fc" stopOpacity={0.7} /><stop offset="95%" stopColor="#c084fc" stopOpacity={0.04} /></linearGradient></defs>
+                <CartesianGrid stroke="rgba(255,255,255,0.07)" vertical={false} />
+                <XAxis dataKey="level" tick={chartAxis} axisLine={false} tickLine={false} />
+                <YAxis tick={chartAxis} axisLine={false} tickLine={false} allowDecimals={false} />
+                <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: "#fff" }} />
+                <Area type="monotone" dataKey="count" stroke="#c084fc" fill="url(#levelFill)" strokeWidth={2} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </ChartPanel>
+
+          <ChartPanel eyebrow="AI / cost" title="Token and estimated cost usage">
+            <ResponsiveContainer width="100%" height={270}>
+              <ComposedChart data={aiChart} margin={{ top: 10, right: 4, left: -24, bottom: 0 }}>
+                <CartesianGrid stroke="rgba(255,255,255,0.07)" vertical={false} />
+                <XAxis dataKey="label" tick={chartAxis} axisLine={false} tickLine={false} minTickGap={24} />
+                <YAxis yAxisId="tokens" tick={chartAxis} axisLine={false} tickLine={false} allowDecimals={false} />
+                <YAxis yAxisId="cost" orientation="right" tick={chartAxis} axisLine={false} tickLine={false} tickFormatter={(value) => `$${Number(value).toFixed(3)}`} />
+                <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: "#fff" }} />
+                <Area yAxisId="tokens" type="monotone" dataKey="inputTokens" name="Input tokens" stackId="tokens" stroke="#60a5fa" fill="#60a5fa" fillOpacity={0.42} />
+                <Area yAxisId="tokens" type="monotone" dataKey="outputTokens" name="Output tokens" stackId="tokens" stroke="#f472b6" fill="#f472b6" fillOpacity={0.42} />
+                <Line yAxisId="cost" type="monotone" dataKey="estimatedCostUsd" name="Estimated cost (USD)" stroke="#fde68a" strokeWidth={2} dot={false} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </ChartPanel>
+
+          <ChartPanel eyebrow="Security" title="Security event timeline">
+            <ResponsiveContainer width="100%" height={270}>
+              <AreaChart data={securityChart} margin={{ top: 10, right: 4, left: -24, bottom: 0 }}>
+                <CartesianGrid stroke="rgba(255,255,255,0.07)" vertical={false} />
+                <XAxis dataKey="label" tick={chartAxis} axisLine={false} tickLine={false} minTickGap={24} />
+                <YAxis tick={chartAxis} axisLine={false} tickLine={false} allowDecimals={false} />
+                <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: "#fff" }} />
+                <Area type="stepAfter" dataKey="events" stroke="#fb7185" fill="#fb7185" fillOpacity={0.22} strokeWidth={2} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </ChartPanel>
+        </div>
+
+        <div className="mt-6 grid gap-4 xl:grid-cols-2">
+          <InsightPanel title="Top errors" empty="No warning or error signatures in this range.">
+            {snapshot?.topErrors.map((item) => (
+              <div className="flex items-start justify-between gap-5 border-b border-white/[0.08] py-4 last:border-0" key={item.signature}>
+                <div className="min-w-0"><p className="break-words text-sm text-white/82">{item.signature}</p><p className="mt-1 text-xs text-white/38">Last seen {formatDate(item.lastSeen)}</p></div>
+                <span className="rounded-full border border-red-300/20 bg-red-400/10 px-3 py-1 text-xs text-red-200">{item.count}</span>
+              </div>
+            ))}
+          </InsightPanel>
+          <InsightPanel title="Recent security events" empty="No tagged security events in this range.">
+            {snapshot?.recentSecurityEvents.map((item, index) => (
+              <div className="grid grid-cols-[10px_minmax(0,1fr)] gap-3 border-b border-white/[0.08] py-4 last:border-0" key={`${item.timestamp}-${index}`}>
+                <span className="mt-1.5 h-2 w-2 rounded-full bg-[#f472b6] shadow-[0_0_12px_rgba(244,114,182,0.65)]" />
+                <div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#fbcfe8]">{item.event}</p><p className="mt-2 text-sm leading-6 text-white/65">{item.message}</p><p className="mt-2 text-xs text-white/35">{formatDate(item.timestamp)}</p></div>
+              </div>
+            ))}
+          </InsightPanel>
+        </div>
+
+        <div className="mt-8 border-t border-white/10 pt-7">
+          <div className="flex flex-wrap gap-2 pb-2" role="tablist" aria-label="Observability categories">
+            {([
+              ["api", "API"],
+              ["security", "Security"],
+              ["ai", "AI / Cost"],
+              ["activity", "Activity"],
+              ["errors", "Errors"],
+            ] as const).map(([value, label]) => (
+              <button key={value} role="tab" aria-selected={category === value} className={`shrink-0 rounded-full border px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] transition ${category === value ? "border-white bg-white text-black" : "border-white/14 text-white/50 hover:border-white/30 hover:text-white"}`} onClick={() => selectCategory(value)} type="button">
+                {label}
+              </button>
+            ))}
           </div>
+
+          {category === "activity" ? (
+            <ObservabilityActivity activity={activity} error={activityError} isLoading={activityLoading} onPageChange={setActivityPage} />
+          ) : (
+            <div className="mt-5 overflow-hidden rounded-[8px] border border-white/12 bg-white/[0.025]">
+              <form className="grid gap-4 border-b border-white/10 p-5 md:grid-cols-2 xl:grid-cols-[140px_170px_minmax(220px,1fr)_180px_180px_auto] xl:items-end" onSubmit={applyFilters}>
+                <DarkSelect label="Level" value={filters.level} onChange={(value) => setFilters({ ...filters, level: value })} options={[["", "All levels"], ["Information", "Information"], ["Warning", "Warning"], ["Error", "Error"], ["Fatal", "Fatal"], ["Debug", "Debug"]]} />
+                <DarkSelect label="Module" value={filters.source} onChange={(value) => setFilters({ ...filters, source: value })} options={[["", "All modules"], ["Auth", "Auth"], ["Drive", "Drive"], ["Processing", "Processing"], ["SearchChat", "Search / Chat"], ["Admin", "Admin"]]} />
+                <label className="block"><span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/38">Search logs</span><input className="mt-2 w-full rounded-[7px] border border-white/12 bg-black/25 px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/25 focus:border-[#c084fc]/70" value={filters.search} onChange={(event) => setFilters({ ...filters, search: event.target.value })} placeholder="Message, path, source..." /></label>
+                <DarkDate label="From" value={filters.from} onChange={(value) => setFilters({ ...filters, from: value })} />
+                <DarkDate label="To" value={filters.to} onChange={(value) => setFilters({ ...filters, to: value })} />
+                <button className="rounded-[7px] bg-white px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-black transition hover:bg-[#e9d5ff] disabled:opacity-50" disabled={logLoading} type="submit">Apply</button>
+              </form>
+
+              {logError ? <div className="m-5 rounded-[8px] border border-red-400/25 bg-red-500/10 px-4 py-3 text-sm text-red-200" role="alert">{logError}</div> : null}
+              <div className="min-h-[380px] divide-y divide-white/[0.08]">
+                {logLoading && !logs ? <p className="p-6 text-sm text-white/45">Loading persisted logs...</p> : null}
+                {!logLoading && logs?.entries.length === 0 ? <p className="p-6 text-sm text-white/45">No log entries match these filters.</p> : null}
+                {logs?.entries.map((entry, index) => (
+                  <details className="group px-5 py-5 sm:px-6" key={`${entry.timestamp}-${index}`}>
+                    <summary className="grid cursor-pointer list-none gap-4 outline-none sm:grid-cols-[110px_180px_minmax(0,1fr)_24px] sm:items-center [&::-webkit-details-marker]:hidden">
+                      <span className={`w-fit rounded-full border px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.14em] ${darkLogLevelClass(entry.level)}`}>{entry.level}</span>
+                      <time className="text-xs text-white/38" dateTime={entry.timestamp}>{formatDate(entry.timestamp)}</time>
+                      <span className="min-w-0 break-words font-mono text-xs leading-5 text-white/72">{entry.message}</span>
+                      <span className="text-white/35 transition group-open:rotate-45" aria-hidden="true">+</span>
+                    </summary>
+                    <div className="mt-5 grid gap-4 border-t border-white/[0.08] pt-5 lg:grid-cols-2">
+                      <div><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">Properties</p><pre className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap break-all rounded-[7px] bg-black/35 p-4 text-xs leading-5 text-white/55">{JSON.stringify(redactForDisplay(entry.properties), null, 2)}</pre></div>
+                      <div><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/35">Exception</p><pre className="mt-3 max-h-80 overflow-auto whitespace-pre-wrap break-words rounded-[7px] bg-black/35 p-4 text-xs leading-5 text-red-200/70">{entry.exception ?? "No exception attached."}</pre></div>
+                    </div>
+                  </details>
+                ))}
+              </div>
+              <div className="flex items-center justify-between gap-4 border-t border-white/10 px-5 py-5 text-sm text-white/42 sm:px-6">
+                <span>Page {logs?.page ?? 1}</span>
+                <div className="flex gap-2"><DarkPageButton disabled={logLoading || (logs?.page ?? 1) <= 1} onClick={() => setLogPage(Math.max(1, (logs?.page ?? 1) - 1))}>Previous</DarkPageButton><DarkPageButton disabled={logLoading || !logs?.hasMore} onClick={() => setLogPage((logs?.page ?? 1) + 1)}>Next</DarkPageButton></div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </section>
   );
+}
+
+function MetricCard({ label, value, detail, accent }: { label: string; value: string; detail: string; accent: string }) {
+  return <article className="rounded-[8px] border border-white/10 bg-white/[0.035] p-5"><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/38">{label}</p><p className={`mt-4 font-serif text-4xl ${accent}`}>{value}</p><p className="mt-3 text-xs leading-5 text-white/35">{detail}</p></article>;
+}
+
+function ChartPanel({ eyebrow, title, children }: { eyebrow: string; title: string; children: React.ReactNode }) {
+  return <section className="min-w-0 rounded-[8px] border border-white/10 bg-white/[0.03] p-4 sm:p-5"><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">{eyebrow}</p><h3 className="mt-2 font-serif text-2xl text-white/90">{title}</h3><div className="mt-5 h-[270px] min-w-0">{children}</div></section>;
+}
+
+function InsightPanel({ title, empty, children }: { title: string; empty: string; children: React.ReactNode }) {
+  const items = Array.isArray(children) ? children.filter(Boolean) : children;
+  const isEmpty = Array.isArray(items) && items.length === 0;
+  return <section className="rounded-[8px] border border-white/10 bg-white/[0.025] p-5"><h3 className="font-serif text-2xl text-white/90">{title}</h3><div className="mt-3 max-h-[330px] overflow-y-auto">{isEmpty ? <p className="py-5 text-sm text-white/38">{empty}</p> : children}</div></section>;
+}
+
+function ObservabilityActivity({ activity, error, isLoading, onPageChange }: { activity: ActivityResponse | null; error: string | null; isLoading: boolean; onPageChange: (page: number) => void }) {
+  return <div className="mt-5 overflow-hidden rounded-[8px] border border-white/12 bg-white/[0.025]">
+    {error ? <div className="m-5 rounded-[8px] border border-red-400/25 bg-red-500/10 px-4 py-3 text-sm text-red-200" role="alert">{error}</div> : null}
+    <div className="min-h-[380px] divide-y divide-white/[0.08]">
+      {isLoading && !activity ? <p className="p-6 text-sm text-white/45">Loading recent activity...</p> : null}
+      {!isLoading && activity?.entries.length === 0 ? <p className="p-6 text-sm text-white/45">No activity has been recorded yet.</p> : null}
+      {activity?.entries.map((entry) => <article className="grid gap-3 px-5 py-5 sm:grid-cols-[170px_minmax(0,1fr)] sm:px-6" key={entry.id}><div><span className="rounded-full border border-[#c084fc]/30 bg-[#c084fc]/10 px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#e9d5ff]">{activityTypeLabel(entry.type)}</span><time className="mt-3 block text-xs text-white/35" dateTime={entry.occurredAt}>{formatDate(entry.occurredAt)}</time></div><div><p className="font-serif text-xl text-white/82">{entry.summary}</p>{entry.fileId ? <p className="mt-2 break-all text-xs text-white/28">File {entry.fileId}</p> : null}{entry.conversationId ? <p className="mt-2 break-all text-xs text-white/28">Conversation {entry.conversationId}</p> : null}</div></article>)}
+    </div>
+    <div className="flex items-center justify-between border-t border-white/10 px-5 py-5 text-sm text-white/42"><span>Page {activity?.page ?? 1}</span><div className="flex gap-2"><DarkPageButton disabled={isLoading || (activity?.page ?? 1) <= 1} onClick={() => onPageChange(Math.max(1, (activity?.page ?? 1) - 1))}>Previous</DarkPageButton><DarkPageButton disabled={isLoading || !activity?.hasMore} onClick={() => onPageChange((activity?.page ?? 1) + 1)}>Next</DarkPageButton></div></div>
+  </div>;
+}
+
+function DarkSelect({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: ReadonlyArray<readonly [string, string]> }) {
+  return <label className="block"><span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/38">{label}</span><select className="mt-2 w-full rounded-[7px] border border-white/12 bg-[#101016] px-3 py-2.5 text-sm text-white outline-none focus:border-[#c084fc]/70" value={value} onChange={(event) => onChange(event.target.value)}>{options.map(([optionValue, optionLabel]) => <option value={optionValue} key={optionValue || "all"}>{optionLabel}</option>)}</select></label>;
+}
+
+function DarkDate({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return <label className="block"><span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/38">{label}</span><input type="datetime-local" className="mt-2 w-full rounded-[7px] border border-white/12 bg-[#101016] px-3 py-2.5 text-sm text-white outline-none focus:border-[#60a5fa]/70 [color-scheme:dark]" value={value} onChange={(event) => onChange(event.target.value)} /></label>;
+}
+
+function DarkPageButton({ children, disabled, onClick }: { children: React.ReactNode; disabled: boolean; onClick: () => void }) {
+  return <button className="rounded-[7px] border border-white/14 px-3 py-2 text-xs text-white/60 transition hover:border-white/35 hover:text-white disabled:cursor-not-allowed disabled:opacity-30" disabled={disabled} onClick={onClick} type="button">{children}</button>;
 }
 
 function FileMoveControl({
@@ -1374,6 +1391,39 @@ function formatDate(value: string) {
   }).format(date);
 }
 
+function formatMetricBucket(value: string, range: "24h" | "7d" | "30d") {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Unknown";
+  return new Intl.DateTimeFormat("en", range === "24h" ? { hour: "numeric" } : { month: "short", day: "numeric" }).format(date);
+}
+
+function formatInteger(value: number | undefined) {
+  return value === undefined ? "--" : new Intl.NumberFormat("en").format(value);
+}
+
+function formatPercent(value: number | undefined) {
+  return value === undefined ? "--" : `${value.toFixed(2)}%`;
+}
+
+function formatMilliseconds(value: number | undefined) {
+  return value === undefined ? "--" : `${value.toFixed(value >= 100 ? 0 : 1)} ms`;
+}
+
+function formatCurrency(value: number | undefined) {
+  return value === undefined
+    ? "--"
+    : new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 4, maximumFractionDigits: 6 }).format(value);
+}
+
+function redactForDisplay(value: unknown, key = ""): unknown {
+  const normalizedKey = key.replace(/[_-]/g, "").toLowerCase();
+  const sensitive = ["password", "authorization", "cookie", "secret", "apikey", "accesstoken", "refreshtoken", "servicetoken", "tokenhash"];
+  if (sensitive.some((part) => normalizedKey.includes(part))) return "[REDACTED]";
+  if (Array.isArray(value)) return value.map((item) => redactForDisplay(item));
+  if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([childKey, childValue]) => [childKey, redactForDisplay(childValue, childKey)]));
+  return value;
+}
+
 function activityTypeLabel(type: string) {
   switch (type) {
     case "FileUploaded":
@@ -1389,30 +1439,17 @@ function activityTypeLabel(type: string) {
   }
 }
 
-function activityTypeClass(type: string) {
-  switch (type) {
-    case "ProcessingFailed":
-      return "border-red-900/20 bg-red-50 text-red-800";
-    case "ProcessingCompleted":
-      return "border-emerald-900/20 bg-emerald-50 text-emerald-900";
-    case "ChatAnswered":
-      return "border-black bg-black text-white";
-    default:
-      return "border-black/15 bg-white/65 text-black/65";
-  }
-}
-
-function logLevelClass(level: string) {
+function darkLogLevelClass(level: string) {
   switch (level.toLowerCase()) {
     case "fatal":
     case "error":
-      return "border-red-900/20 bg-red-50 text-red-800";
+      return "border-red-300/25 bg-red-400/10 text-red-200";
     case "warning":
-      return "border-amber-900/20 bg-amber-50 text-amber-900";
+      return "border-amber-200/25 bg-amber-300/10 text-amber-100";
     case "debug":
     case "verbose":
-      return "border-black/10 bg-black/[0.03] text-black/55";
+      return "border-white/12 bg-white/[0.03] text-white/45";
     default:
-      return "border-emerald-900/20 bg-emerald-50 text-emerald-900";
+      return "border-emerald-200/20 bg-emerald-300/10 text-emerald-100";
   }
 }

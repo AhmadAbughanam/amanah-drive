@@ -13,7 +13,7 @@ public sealed class FileLoggingOptions
     public string FileNamePrefix { get; set; } = "api-";
 
     [Range(1, 365)]
-    public int RetainedFileCountLimit { get; set; } = 14;
+    public int RetainedFileCountLimit { get; set; } = 30;
 
     [Range(1_048_576, long.MaxValue)]
     public long FileSizeLimitBytes { get; set; } = 25 * 1024 * 1024;

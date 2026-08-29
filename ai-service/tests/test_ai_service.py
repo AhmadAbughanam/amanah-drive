@@ -209,14 +209,19 @@ def test_hugging_face_call_retries_transient_failures_then_succeeds(monkeypatch)
             raise httpx.ConnectError("temporary connection failure", request=request)
         return httpx.Response(
             200,
-            json={"choices": [{"message": {"content": "Recovered answer"}}]},
+            json={
+                "choices": [{"message": {"content": "Recovered answer"}}],
+                "usage": {"prompt_tokens": 21, "completion_tokens": 7},
+            },
         )
 
     monkeypatch.setattr("app.services.rag.httpx.post", fake_post)
 
-    answer = call_hugging_face.retry_with(wait=wait_none())("grounded prompt", "test-model")
+    result = call_hugging_face.retry_with(wait=wait_none())("grounded prompt", "test-model")
 
-    assert answer == "Recovered answer"
+    assert result.answer == "Recovered answer"
+    assert result.input_tokens == 21
+    assert result.output_tokens == 7
     assert attempts == 3
 
 

@@ -18,6 +18,10 @@ public sealed class AiServiceOptions
 
     public bool WorkerEnabled { get; init; } = true;
 
+    public string EmbeddingModel { get; init; } = "sentence-transformers/all-MiniLM-L6-v2";
+
+    public string ChatModel { get; init; } = "openai/gpt-oss-20b";
+
     public int WorkerPollSeconds { get; init; } = 5;
 
     public int RetryMaxAttempts { get; init; } = 2;

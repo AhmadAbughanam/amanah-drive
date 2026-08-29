@@ -1,4 +1,5 @@
 using AmanahDrive.Api.Modules.Admin.Logging;
+using AmanahDrive.Api.Modules.Admin.Observability;
 using AmanahDrive.Api.Modules.Admin.Options;
 using AmanahDrive.Api.Shared.Infrastructure.Data;
 using AmanahDrive.Api.Shared.Infrastructure.Logging;
@@ -25,12 +26,23 @@ public static class AdminEndpoints
             .Produces(StatusCodes.Status401Unauthorized)
             .RequireAuthorization();
 
+        app.MapGet("/admin/observability", GetObservabilityAsync)
+            .WithTags("Admin")
+            .WithSummary("Return retained request, error, AI usage, and security metrics.")
+            .Produces<ObservabilitySnapshot>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .RequireAuthorization();
+
         return app;
     }
 
     private static Task<LogPage> GetLogsAsync(
         string? level,
         string? search,
+        string? category,
+        string? source,
+        DateTimeOffset? from,
+        DateTimeOffset? to,
         int? page,
         int? pageSize,
         ILogReader logReader,
@@ -44,9 +56,15 @@ public static class AdminEndpoints
             options.Value.MaxPageSize);
 
         return logReader.ReadAsync(
-            new LogQuery(level, search, normalizedPage, normalizedPageSize),
+            new LogQuery(level, search, category, source, from, to, normalizedPage, normalizedPageSize),
             cancellationToken);
     }
+
+    private static Task<ObservabilitySnapshot> GetObservabilityAsync(
+        string? range,
+        IObservabilityService observabilityService,
+        CancellationToken cancellationToken) =>
+        observabilityService.GetSnapshotAsync(range, cancellationToken);
 
     private static async Task<ActivityPageResponse> GetActivityAsync(
         string? type,

@@ -137,6 +137,8 @@ Modules communicate through DI interfaces or plain IDs/DTOs, not direct cross-mo
 
 Module-owned domain-event contracts provide optional in-process notifications for the Admin activity feed. Drive, Processing, and SearchChat publish facts only after their direct business work is committed; Admin handlers project those facts into `activity_entries`. The shared dispatcher isolates handler failures, so activity recording cannot become a prerequisite for upload, processing, or chat behavior. These notifications do not replace direct module calls or provide durable cross-process delivery.
 
+The Admin module also owns observability read models. It aggregates retained, redacted Serilog events for request/error/security views and stores measured AI operation usage in `ai_usage_records`. The shared AI client reports usage through `IAiUsageRecorder`; it does not access Admin entities directly. Per-model prices are operator configuration, and unmatched billable usage remains explicitly unpriced.
+
 Future split candidates are Auth/User, Drive/File metadata, Processing worker, Search/Chat, AI service, and Web frontend. That split is not happening now; revisit it only with a concrete reason such as independent scaling, deployment ownership, heavy processing load, or separate data ownership.
 
 See [Architecture Decision Records](decisions/README.md) for the reasoning behind these boundaries and other significant decisions.

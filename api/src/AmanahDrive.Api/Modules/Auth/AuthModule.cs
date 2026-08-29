@@ -1,6 +1,7 @@
 using System.Threading.RateLimiting;
 using AmanahDrive.Api.Modules.Auth.Endpoints;
 using AmanahDrive.Api.Modules.Auth.Options;
+using AmanahDrive.Api.Shared.Infrastructure.Security;
 
 namespace AmanahDrive.Api.Modules.Auth;
 
@@ -25,6 +26,7 @@ public static class AuthModule
         services.AddRateLimiter(options =>
         {
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+            options.OnRejected = SecurityRateLimitLogging.LogRejectedAsync;
             options.AddPolicy("login", httpContext =>
                 RateLimitPartition.GetFixedWindowLimiter(
                     httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",

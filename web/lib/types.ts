@@ -104,6 +104,70 @@ export type ActivityResponse = {
   entries: ActivityEntry[];
 };
 
+export type ObservabilityStats = {
+  requestsToday: number;
+  errorRatePercent: number;
+  averageLatencyMilliseconds: number;
+  aiSpendThisMonthUsd: number;
+  aiPricingComplete: boolean;
+};
+
+export type RequestMetricPoint = {
+  timestamp: string;
+  requests: number;
+  errors: number;
+  errorRatePercent: number;
+};
+
+export type LogLevelCount = {
+  level: string;
+  count: number;
+};
+
+export type AiUsageMetricPoint = {
+  timestamp: string;
+  inputTokens: number;
+  outputTokens: number;
+  estimatedCostUsd: number;
+  operations: number;
+  failures: number;
+  unpricedOperations: number;
+};
+
+export type SecurityMetricPoint = {
+  timestamp: string;
+  events: number;
+};
+
+export type SecurityEventSummary = {
+  timestamp: string;
+  event: string;
+  message: string;
+  source: string;
+};
+
+export type TopErrorSummary = {
+  signature: string;
+  message: string;
+  exceptionType: string | null;
+  level: string;
+  count: number;
+  lastSeen: string;
+};
+
+export type ObservabilitySnapshot = {
+  range: "24h" | "7d" | "30d";
+  from: string;
+  to: string;
+  stats: ObservabilityStats;
+  requests: RequestMetricPoint[];
+  logLevels: LogLevelCount[];
+  aiUsage: AiUsageMetricPoint[];
+  security: SecurityMetricPoint[];
+  recentSecurityEvents: SecurityEventSummary[];
+  topErrors: TopErrorSummary[];
+};
+
 export type ApiErrorBody = {
   message?: string;
   title?: string;

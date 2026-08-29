@@ -58,11 +58,22 @@ public sealed class AuthService(
 
         if (user is null)
         {
+            logger.LogWarning(
+                "Admin login failed for an unknown account from {IpAddress} {Category} {SecurityEvent}",
+                ipAddress ?? "unknown",
+                "Security",
+                "LoginFailed");
             return AuthResult.Unauthorized("Invalid credentials.");
         }
 
         if (user.LockoutEndsAt is not null && user.LockoutEndsAt > DateTimeOffset.UtcNow)
         {
+            logger.LogWarning(
+                "Login attempted for locked admin user {UserId} from {IpAddress} {Category} {SecurityEvent}",
+                user.Id,
+                ipAddress ?? "unknown",
+                "Security",
+                "LockedAccountLoginAttempt");
             return AuthResult.Locked("Account is temporarily locked.");
         }
 
@@ -74,7 +85,23 @@ public sealed class AuthService(
             if (user.FailedLoginAttempts >= _options.LockoutFailedAttempts)
             {
                 user.LockoutEndsAt = DateTimeOffset.UtcNow.AddMinutes(_options.LockoutMinutes);
-                logger.LogWarning("Admin user {UserId} locked after failed login attempts", user.Id);
+                logger.LogWarning(
+                    "Admin user {UserId} locked after {FailedLoginAttempts} failed login attempts from {IpAddress} {Category} {SecurityEvent}",
+                    user.Id,
+                    user.FailedLoginAttempts,
+                    ipAddress ?? "unknown",
+                    "Security",
+                    "AccountLocked");
+            }
+            else
+            {
+                logger.LogWarning(
+                    "Admin login failed for user {UserId}; attempt {FailedLoginAttempts} from {IpAddress} {Category} {SecurityEvent}",
+                    user.Id,
+                    user.FailedLoginAttempts,
+                    ipAddress ?? "unknown",
+                    "Security",
+                    "LoginFailed");
             }
 
             await dbContext.SaveChangesAsync(cancellationToken);
@@ -108,11 +135,22 @@ public sealed class AuthService(
 
         if (existingToken is null)
         {
+            logger.LogWarning(
+                "Invalid refresh token presented from {IpAddress} {Category} {SecurityEvent}",
+                ipAddress ?? "unknown",
+                "Security",
+                "InvalidRefreshToken");
             return AuthResult.Unauthorized("Refresh token is invalid.");
         }
 
         if (!existingToken.IsActive)
         {
+            logger.LogWarning(
+                "Refresh token reuse detected for user {UserId} from {IpAddress} {Category} {SecurityEvent}",
+                existingToken.UserId,
+                ipAddress ?? "unknown",
+                "Security",
+                "RefreshTokenReuseDetected");
             await RevokeUserRefreshTokensAsync(existingToken.UserId, ipAddress, cancellationToken);
             await dbContext.SaveChangesAsync(cancellationToken);
             return AuthResult.Unauthorized("Refresh token is invalid.");

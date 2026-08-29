@@ -1,11 +1,12 @@
 import logging
-from typing import Any, List
+from dataclasses import dataclass
+from typing import Any, List, Optional
 
 import httpx
 from tenacity import before_sleep_log, retry, retry_if_exception, stop_after_attempt, wait_exponential_jitter
 
 from app.config import HF_CHAT_COMPLETIONS_URL, HF_REQUEST_TIMEOUT_SECONDS, get_hf_api_token, get_hf_model
-from app.schemas import RagAnswerRequest, RagAnswerResponse, RagCitation
+from app.schemas import ModelUsage, RagAnswerRequest, RagAnswerResponse, RagCitation
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +28,13 @@ class HuggingFaceUpstreamError(RuntimeError):
 
 class HuggingFaceTimeoutError(RuntimeError):
     pass
+
+
+@dataclass(frozen=True)
+class HuggingFaceResult:
+    answer: str
+    input_tokens: Optional[int]
+    output_tokens: Optional[int]
 
 
 def build_grounded_prompt(payload: RagAnswerRequest) -> str:
@@ -64,8 +72,17 @@ def generate_grounded_answer(payload: RagAnswerRequest, app_state: Any) -> RagAn
         return generator_override(payload)
 
     model = get_hf_model()
-    answer = call_hugging_face(build_grounded_prompt(payload), model)
-    return RagAnswerResponse(answer=answer, model=model, citations=create_citations(payload))
+    result = call_hugging_face(build_grounded_prompt(payload), model)
+    return RagAnswerResponse(
+        answer=result.answer,
+        model=model,
+        citations=create_citations(payload),
+        usage=ModelUsage(
+            provider="huggingface",
+            inputTokens=result.input_tokens,
+            outputTokens=result.output_tokens,
+        ),
+    )
 
 
 def _is_transient_hugging_face_error(exception: BaseException) -> bool:
@@ -85,7 +102,7 @@ def _is_transient_hugging_face_error(exception: BaseException) -> bool:
     before_sleep=before_sleep_log(logger, logging.WARNING),
     reraise=True,
 )
-def call_hugging_face(prompt: str, model: str) -> str:
+def call_hugging_face(prompt: str, model: str) -> HuggingFaceResult:
     token = get_hf_api_token()
     if not token:
         raise HuggingFaceConfigurationError("HF_API_TOKEN is not configured")
@@ -129,13 +146,20 @@ def call_hugging_face(prompt: str, model: str) -> str:
         choices = body["choices"]
         message = choices[0]["message"]
         content = message["content"]
+        usage = body.get("usage") or {}
+        input_tokens = usage.get("prompt_tokens")
+        output_tokens = usage.get("completion_tokens")
     except (KeyError, IndexError, TypeError, ValueError) as exc:
         raise HuggingFaceUpstreamError("Hugging Face returned an invalid response") from exc
 
     if not isinstance(content, str) or not content.strip():
         raise HuggingFaceUpstreamError("Hugging Face returned an empty response")
 
-    return content.strip()
+    return HuggingFaceResult(
+        answer=content.strip(),
+        input_tokens=input_tokens if isinstance(input_tokens, int) else None,
+        output_tokens=output_tokens if isinstance(output_tokens, int) else None,
+    )
 
 
 def create_citations(payload: RagAnswerRequest) -> List[RagCitation]:

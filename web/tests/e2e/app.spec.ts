@@ -93,8 +93,9 @@ test("authenticated admin log viewer renders persisted entries", async ({ page }
   await signIn(page);
   await page.getByRole("button", { name: "Logs" }).click();
 
-  await expect(page.getByRole("heading", { name: "System logs" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "System signals" })).toBeVisible();
   await expect(page.getByText("Document processing job {JobId} failed")).toBeVisible();
+  await page.getByText("Document processing job {JobId} failed").click();
   await expect(page.getByText("job-123")).toBeVisible();
 });
 
@@ -119,9 +120,9 @@ test("authenticated activity view renders domain entries", async ({ page }) => {
   });
 
   await signIn(page);
-  await page.getByRole("button", { name: "Activity" }).click();
+  await page.getByRole("button", { name: "Logs" }).click();
+  await page.getByRole("tab", { name: "Activity" }).click();
 
-  await expect(page.getByRole("heading", { name: "Activity" })).toBeVisible();
   await expect(page.getByText("Finished processing report.pdf")).toBeVisible();
   await expect(page.getByText("Processed", { exact: true })).toBeVisible();
 });
@@ -277,6 +278,7 @@ async function mockApi(
         conversationId: string | null;
       }>;
     };
+    observability?: Record<string, unknown>;
   },
 ) {
   await page.route(`${apiBaseUrl}/auth/login`, async (route) => {
@@ -354,6 +356,30 @@ async function mockApi(
         pageSize: 25,
         hasMore: false,
         entries: [],
+      },
+    });
+  });
+
+  await page.route(`${apiBaseUrl}/admin/observability**`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      json: options.observability ?? {
+        range: "24h",
+        from: "2026-08-28T12:00:00Z",
+        to: "2026-08-29T12:00:00Z",
+        stats: {
+          requestsToday: 12,
+          errorRatePercent: 1.5,
+          averageLatencyMilliseconds: 42.3,
+          aiSpendThisMonthUsd: 0.0042,
+          aiPricingComplete: true,
+        },
+        requests: [{ timestamp: "2026-08-29T11:00:00Z", requests: 12, errors: 1, errorRatePercent: 8.33 }],
+        logLevels: [{ level: "Information", count: 10 }, { level: "Warning", count: 2 }, { level: "Error", count: 1 }],
+        aiUsage: [{ timestamp: "2026-08-29T11:00:00Z", inputTokens: 120, outputTokens: 30, estimatedCostUsd: 0.0042, operations: 1, failures: 0, unpricedOperations: 0 }],
+        security: [{ timestamp: "2026-08-29T11:00:00Z", events: 1 }],
+        recentSecurityEvents: [{ timestamp: "2026-08-29T11:00:00Z", event: "LoginFailed", message: "Admin login failed", source: "AuthService" }],
+        topErrors: [{ signature: "Processing failed", message: "Processing failed", exceptionType: null, level: "Error", count: 1, lastSeen: "2026-08-29T11:00:00Z" }],
       },
     });
   });

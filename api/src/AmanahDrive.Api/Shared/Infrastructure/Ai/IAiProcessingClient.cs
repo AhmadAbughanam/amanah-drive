@@ -17,7 +17,7 @@ public sealed record ChunkResponse(IReadOnlyCollection<ChunkDto> Chunks);
 
 public sealed record ChunkDto(int Index, string Text, int StartOffset, int EndOffset);
 
-public sealed record EmbedResponse(string Model, int Dimension, IReadOnlyCollection<float[]> Embeddings);
+public sealed record EmbedResponse(string Model, int Dimension, IReadOnlyCollection<float[]> Embeddings, AiModelUsage? Usage = null);
 
 public sealed record RagAnswerRequest(string Question, IReadOnlyCollection<RagAnswerChunk> Chunks, IReadOnlyCollection<RagAnswerHistoryMessage> History);
 
@@ -25,6 +25,8 @@ public sealed record RagAnswerChunk(string FileName, string Text);
 
 public sealed record RagAnswerHistoryMessage(string Role, string Content);
 
-public sealed record RagAnswerResponse(string Answer, string Model, IReadOnlyCollection<RagCitation> Citations);
+public sealed record RagAnswerResponse(string Answer, string Model, IReadOnlyCollection<RagCitation> Citations, AiModelUsage? Usage = null);
 
 public sealed record RagCitation(string Reference, string FileName, string Snippet);
+
+public sealed record AiModelUsage(string Provider, int? InputTokens, int? OutputTokens);

@@ -2,6 +2,7 @@ using System.Threading.RateLimiting;
 using AmanahDrive.Api.Modules.SearchChat.Endpoints;
 using AmanahDrive.Api.Modules.SearchChat.Options;
 using AmanahDrive.Api.Modules.SearchChat.Search;
+using AmanahDrive.Api.Shared.Infrastructure.Security;
 
 namespace AmanahDrive.Api.Modules.SearchChat;
 
@@ -21,6 +22,7 @@ public static class SearchChatModule
         services.AddRateLimiter(options =>
         {
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+            options.OnRejected = SecurityRateLimitLogging.LogRejectedAsync;
             options.AddPolicy("ai", httpContext =>
                 RateLimitPartition.GetFixedWindowLimiter(
                     httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",

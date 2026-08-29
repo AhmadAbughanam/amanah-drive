@@ -11,6 +11,8 @@ public sealed class AmanahDriveDbContext(DbContextOptions<AmanahDriveDbContext> 
 {
     public DbSet<ActivityEntry> ActivityEntries => Set<ActivityEntry>();
 
+    public DbSet<AiUsageRecord> AiUsageRecords => Set<AiUsageRecord>();
+
     public DbSet<AdminUser> AdminUsers => Set<AdminUser>();
 
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();

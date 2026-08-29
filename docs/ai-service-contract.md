@@ -136,6 +136,11 @@ Response `200`:
 {
   "model": "sentence-transformers/all-MiniLM-L6-v2",
   "dimension": 384,
+  "usage": {
+    "provider": "local",
+    "inputTokens": 12,
+    "outputTokens": 0
+  },
   "embeddings": [
     [0.0123, -0.0456]
   ]
@@ -185,6 +190,11 @@ Response `200`:
 {
   "answer": "The lease allows renewal under the conditions in the first retrieved chunk. [1]",
   "model": "openai/gpt-oss-20b",
+  "usage": {
+    "provider": "huggingface",
+    "inputTokens": 342,
+    "outputTokens": 86
+  },
   "citations": [
     {
       "reference": "1",
@@ -196,6 +206,8 @@ Response `200`:
 ```
 
 Citation granularity in V1 is chunk-level. Chunks are assigned one-based references from their request order, so the first chunk is cited as `[1]`, the second as `[2]`, and so on. The AI service returns the same number as the citation `reference`; the API maps that ordinal back to its internal chunk and file identifiers. Internal chunk GUIDs are not sent as citation references or injected into the retrieved-chunk prompt. The response includes citation metadata for every supplied chunk; inline numeric markers identify the chunks cited by the generated answer. Character-level citation spans are not returned.
+
+`usage` contains measured tokenizer counts when the model/provider exposes them. A count may be `null` when an upstream response omits usage data; callers must not estimate missing token counts from character length.
 
 Error responses:
 

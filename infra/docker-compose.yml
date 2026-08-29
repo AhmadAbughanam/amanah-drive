@@ -49,9 +49,15 @@ services:
       Drive__StorageRoot: /var/lib/amanah-drive/storage
       AiService__BaseUrl: ${AI_SERVICE_BASE_URL:-http://ai-service:8000}
       AiService__ServiceToken: ${AI_SERVICE_TOKEN:?AI_SERVICE_TOKEN is required}
+      AiService__ChatModel: ${HF_MODEL:-openai/gpt-oss-20b}
       AiService__WorkerEnabled: "true"
+      AiPricing__Models__0__Enabled: ${AI_PRICING_ENABLED:-false}
+      AiPricing__Models__0__Provider: ${AI_PRICING_PROVIDER:-huggingface}
+      AiPricing__Models__0__Model: ${AI_PRICING_MODEL:-openai/gpt-oss-20b}
+      AiPricing__Models__0__InputUsdPerMillionTokens: ${AI_PRICING_INPUT_USD_PER_MILLION_TOKENS:-0}
+      AiPricing__Models__0__OutputUsdPerMillionTokens: ${AI_PRICING_OUTPUT_USD_PER_MILLION_TOKENS:-0}
       LoggingFiles__DirectoryPath: /var/log/amanah-drive
-      LoggingFiles__RetainedFileCountLimit: ${API_LOG_RETENTION_FILES:-14}
+      LoggingFiles__RetainedFileCountLimit: ${API_LOG_RETENTION_FILES:-30}
       LoggingFiles__FileSizeLimitBytes: ${API_LOG_FILE_SIZE_LIMIT_BYTES:-26214400}
       Telemetry__TracingEnabled: ${OTEL_TRACING_ENABLED:-true}
       Telemetry__ServiceName: amanah-drive-api

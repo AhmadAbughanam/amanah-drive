@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -26,10 +26,17 @@ class EmbedRequest(BaseModel):
     texts: List[str]
 
 
+class ModelUsage(BaseModel):
+    provider: str
+    inputTokens: Optional[int] = None
+    outputTokens: Optional[int] = None
+
+
 class EmbedResponse(BaseModel):
     model: str
     dimension: int
     embeddings: List[List[float]]
+    usage: Optional[ModelUsage] = None
 
 
 class RagChunk(BaseModel):
@@ -58,3 +65,4 @@ class RagAnswerResponse(BaseModel):
     answer: str
     model: str
     citations: List[RagCitation]
+    usage: Optional[ModelUsage] = None

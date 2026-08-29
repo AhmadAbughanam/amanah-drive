@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Json;
 using AmanahDrive.Api.Shared.Infrastructure.Ai;
+using AmanahDrive.Api.Shared.Infrastructure.Observability;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
@@ -47,24 +48,64 @@ public sealed class AiProcessingClientResilienceTests
     [Fact]
     public async Task EmbedAsync_WhenResponseIsClientError_DoesNotRetry()
     {
+        var recorder = new CapturingUsageRecorder();
         var handler = new SequenceHandler(_ => new HttpResponseMessage(HttpStatusCode.BadRequest)
         {
             Content = new StringContent("invalid request")
         });
-        await using var services = BuildServices(handler, RetryOptions(maxRetryAttempts: 2, minimumThroughput: 4));
+        await using var services = BuildServices(handler, RetryOptions(maxRetryAttempts: 2, minimumThroughput: 4), recorder);
         var client = services.GetRequiredService<IAiProcessingClient>();
 
         var exception = await Assert.ThrowsAsync<AiServiceException>(() => client.EmbedAsync(["test"], CancellationToken.None));
 
         Assert.Equal(1, handler.CallCount);
         Assert.Contains("400", exception.Message, StringComparison.Ordinal);
+        var usage = Assert.Single(recorder.Measurements);
+        Assert.Equal("sentence-transformers/all-MiniLM-L6-v2", usage.Model);
+        Assert.False(usage.Succeeded);
     }
 
-    private static ServiceProvider BuildServices(HttpMessageHandler handler, AiServiceOptions options)
+    [Fact]
+    public async Task EmbedAsync_RecordsMeasuredUsageAfterRetriesComplete()
+    {
+        var recorder = new CapturingUsageRecorder();
+        var handler = new SequenceHandler(call => call == 1
+            ? new HttpResponseMessage(HttpStatusCode.ServiceUnavailable)
+            : JsonResponse(new EmbedResponse(
+                "test-model",
+                3,
+                [[1f, 2f, 3f]],
+                new AiModelUsage("local", 4, 0))));
+        await using var services = BuildServices(
+            handler,
+            RetryOptions(maxRetryAttempts: 1, minimumThroughput: 4),
+            recorder);
+        var client = services.GetRequiredService<IAiProcessingClient>();
+
+        await client.EmbedAsync(["test"], CancellationToken.None);
+
+        var usage = Assert.Single(recorder.Measurements);
+        Assert.Equal("embed", usage.Operation);
+        Assert.Equal("local", usage.Provider);
+        Assert.Equal("test-model", usage.Model);
+        Assert.Equal(4, usage.InputTokens);
+        Assert.Equal(0, usage.OutputTokens);
+        Assert.True(usage.Succeeded);
+        Assert.True(usage.LatencyMilliseconds >= 0);
+    }
+
+    private static ServiceProvider BuildServices(
+        HttpMessageHandler handler,
+        AiServiceOptions options,
+        IAiUsageRecorder? recorder = null)
     {
         var services = new ServiceCollection();
         services.AddLogging();
         services.AddSingleton<IOptions<AiServiceOptions>>(Options.Create(options));
+        if (recorder is not null)
+        {
+            services.AddSingleton(recorder);
+        }
         services
             .AddHttpClient<IAiProcessingClient, AiProcessingClient>(client => client.BaseAddress = new Uri(options.BaseUrl))
             .ConfigurePrimaryHttpMessageHandler(() => handler)
@@ -100,6 +141,17 @@ public sealed class AiProcessingClientResilienceTests
         {
             var call = Interlocked.Increment(ref _callCount);
             return Task.FromResult(responseFactory(call));
+        }
+    }
+
+    private sealed class CapturingUsageRecorder : IAiUsageRecorder
+    {
+        public List<AiUsageMeasurement> Measurements { get; } = [];
+
+        public Task RecordAsync(AiUsageMeasurement measurement, CancellationToken cancellationToken)
+        {
+            Measurements.Add(measurement);
+            return Task.CompletedTask;
         }
     }
 }
