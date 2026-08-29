@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import { Area, AreaChart, Bar, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { portfolioClasses, portfolioPalette, Scribble, SectionLabel } from "@/components/portfolio-theme";
 import { apiFetch, apiJson, errorMessage } from "@/lib/api";
 import type { ActivityResponse, AdminLogResponse, ChatCitation, ChatResponse, FileItem, Folder, FolderContents, ObservabilitySnapshot, SearchResponse, SearchResult } from "@/lib/types";
 import { useAuth } from "../auth-provider";
@@ -20,16 +21,12 @@ type ChatEntry = {
   citations?: ChatCitation[];
 };
 
-const labelClass = "text-[11px] font-semibold uppercase tracking-[0.22em] text-black/50";
-const fieldClass =
-  "w-full rounded-[14px] border border-black/12 bg-white/65 px-4 py-3 text-sm text-black outline-none placeholder:text-black/35 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] transition focus:border-black/45";
-const primaryButtonClass =
-  "rounded-[14px] bg-black px-5 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-white shadow-[0_10px_22px_rgba(0,0,0,0.18)] transition hover:bg-black/80 disabled:cursor-not-allowed disabled:bg-black/35";
-const secondaryButtonClass =
-  "rounded-[14px] border border-black/12 bg-white/55 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-black transition hover:border-black/35 hover:bg-white disabled:cursor-not-allowed disabled:opacity-40";
-const iconButtonClass =
-  "grid h-11 w-11 place-items-center rounded-[11px] border border-black/12 bg-white/55 text-black transition hover:border-black/35 hover:bg-white disabled:cursor-not-allowed disabled:opacity-40";
-const panelClass = "rounded-[10px] border border-black/10 bg-white/35";
+const labelClass = portfolioClasses.label;
+const fieldClass = portfolioClasses.field;
+const primaryButtonClass = portfolioClasses.primaryButton;
+const secondaryButtonClass = portfolioClasses.secondaryButton;
+const iconButtonClass = portfolioClasses.iconButton;
+const panelClass = portfolioClasses.panel;
 const chatMarkdownElements = ["p", "strong", "em", "ul", "ol", "li", "code", "br"];
 
 function ChatAnswer({ content }: { content: string }) {
@@ -41,12 +38,12 @@ function ChatAnswer({ content }: { content: string }) {
         unwrapDisallowed
         components={{
           p: ({ children }) => <p className="whitespace-pre-wrap [&:not(:first-child)]:mt-3">{children}</p>,
-          strong: ({ children }) => <strong className="font-semibold text-black">{children}</strong>,
+          strong: ({ children }) => <strong className="font-semibold text-white">{children}</strong>,
           em: ({ children }) => <em className="italic">{children}</em>,
           ul: ({ children }) => <ul className="my-3 list-disc space-y-1 pl-5">{children}</ul>,
           ol: ({ children }) => <ol className="my-3 list-decimal space-y-1 pl-5">{children}</ol>,
           li: ({ children }) => <li className="pl-1">{children}</li>,
-          code: ({ children }) => <code className="rounded-[4px] bg-black/[0.06] px-1 py-0.5 font-mono text-[0.9em]">{children}</code>,
+          code: ({ children }) => <code className="rounded-[4px] border border-white/10 bg-white/[0.08] px-1 py-0.5 font-mono text-[0.9em] text-[#e9d5ff]">{children}</code>,
         }}
       >
         {content}
@@ -347,48 +344,50 @@ export default function DrivePage() {
 
   if (status === "checking" || (status === "anonymous" && !contents)) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#080808] px-6 text-[#f8f7f2]">
+      <main className="flex min-h-screen items-center justify-center bg-[#060608] px-6 text-white">
         <p className={labelClass}>Checking session...</p>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-[#080808] px-3 py-3 text-black sm:px-6 sm:py-6">
-      <div className="mx-auto min-h-[calc(100vh-1.5rem)] max-w-[1500px] overflow-hidden rounded-[22px] border border-white/10 bg-[#f8f7f2] shadow-[0_34px_120px_rgba(0,0,0,0.55)] sm:min-h-[calc(100vh-3rem)] sm:rounded-[28px]">
-        <header className="border-b border-black/10 px-5 py-5 sm:px-8 lg:px-9">
+    <main className="min-h-screen bg-[#060608] px-3 py-3 text-white sm:px-6 sm:py-6">
+      <div className="mx-auto min-h-[calc(100vh-1.5rem)] max-w-[1500px] overflow-hidden rounded-[8px] border border-white/10 bg-[#0b0b10] shadow-[0_34px_120px_rgba(0,0,0,0.65)] sm:min-h-[calc(100vh-3rem)]">
+        <header className="relative overflow-hidden border-b border-white/10 bg-[#0d0c13] px-5 py-5 sm:px-8 lg:px-9">
+          <Scribble className="pointer-events-none absolute -right-8 -top-8 w-44 text-[#c084fc]/20" />
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-center gap-4">
               <ShieldMark />
               <div>
-                <p className="text-[13px] font-bold uppercase tracking-[0.34em] text-black">Amanah Drive</p>
+                <p className="text-[13px] font-bold uppercase tracking-[0.34em] text-white">Amanah Drive</p>
+                <p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-white/38">Private knowledge workspace</p>
               </div>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between lg:justify-end">
-              <nav className="grid grid-cols-3 rounded-[10px] border border-black/12 bg-white/35 p-1 sm:min-w-[390px]" aria-label="Drive sections">
+              <nav className="grid grid-cols-3 rounded-[8px] border border-white/10 bg-white/[0.025] p-1 sm:min-w-[390px]" aria-label="Drive sections">
                 <button
-                  className={`rounded-[8px] px-4 py-3 text-sm transition ${activeView === "files" ? "bg-black text-white shadow-[0_10px_22px_rgba(0,0,0,0.20)]" : "text-black/70 hover:text-black"}`}
+                  className={`rounded-[6px] px-3 py-3 text-xs font-semibold uppercase tracking-[0.12em] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c084fc]/70 sm:px-4 ${activeView === "files" ? "border border-[#c084fc]/45 bg-[#c084fc]/12 text-[#e9d5ff]" : "border border-transparent text-white/52 hover:bg-white/[0.05] hover:text-white"}`}
                   type="button"
                   onClick={() => setActiveView("files")}
                 >
                   Files
                 </button>
                 <button
-                  className={`rounded-[8px] px-4 py-3 text-sm transition ${activeView === "knowledge" ? "bg-black text-white shadow-[0_10px_22px_rgba(0,0,0,0.20)]" : "text-black/70 hover:text-black"}`}
+                  className={`rounded-[6px] px-3 py-3 text-xs font-semibold uppercase tracking-[0.12em] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f472b6]/70 sm:px-4 ${activeView === "knowledge" ? "border border-[#f472b6]/45 bg-[#f472b6]/12 text-[#fbcfe8]" : "border border-transparent text-white/52 hover:bg-white/[0.05] hover:text-white"}`}
                   type="button"
                   onClick={() => setActiveView("knowledge")}
                 >
                   Search & Chat
                 </button>
                 <button
-                  className={`rounded-[8px] px-4 py-3 text-sm transition ${activeView === "logs" ? "bg-black text-white shadow-[0_10px_22px_rgba(0,0,0,0.20)]" : "text-black/70 hover:text-black"}`}
+                  className={`rounded-[6px] px-3 py-3 text-xs font-semibold uppercase tracking-[0.12em] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/70 sm:px-4 ${activeView === "logs" ? "border border-[#60a5fa]/45 bg-[#60a5fa]/12 text-[#bfdbfe]" : "border border-transparent text-white/52 hover:bg-white/[0.05] hover:text-white"}`}
                   type="button"
                   onClick={() => setActiveView("logs")}
                 >
                   Logs
                 </button>
               </nav>
-              <button className="rounded-[10px] border border-black/12 bg-white/35 px-5 py-3 text-sm text-black transition hover:border-black/35 hover:bg-white" onClick={signOut} type="button">
+              <button className={secondaryButtonClass} onClick={signOut} type="button">
                 Logout <span aria-hidden="true" className="ml-2">[-&gt;</span>
               </button>
             </div>
@@ -500,14 +499,16 @@ function FilesView({
   const lastItem = (currentPage - 1) * pageSize + totalItems;
 
   return (
-    <section className="px-5 py-7 sm:px-8 lg:px-9">
-      <div className="mb-8">
-        <h2 className="font-serif text-4xl font-normal leading-tight text-black sm:text-5xl">File management</h2>
-        <p className="mt-2 text-base text-black/55">Organize, manage, and access your secure files.</p>
+    <section className="relative bg-[#0b0b10] px-5 py-7 sm:px-8 lg:px-9">
+      <div className="relative mb-8 overflow-hidden border-b border-white/10 pb-7">
+        <SectionLabel>Secure workspace</SectionLabel>
+        <h2 className="mt-3 font-serif text-4xl font-normal leading-tight text-white sm:text-5xl">File <span className={portfolioClasses.gradientText}>management</span></h2>
+        <p className="mt-2 text-base text-white/58">Organize, manage, and access your secure files.</p>
+        <Scribble className="pointer-events-none absolute -right-8 -top-5 hidden w-52 text-[#60a5fa]/22 sm:block" />
       </div>
 
       {error ? (
-        <div className="mb-6 rounded-[10px] border border-red-900/25 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
+        <div className="mb-6 rounded-[8px] border border-red-300/25 bg-red-400/10 px-4 py-3 text-sm text-red-200" role="alert">
           {error}
         </div>
       ) : null}
@@ -515,14 +516,14 @@ function FilesView({
       <div className="grid gap-5 xl:grid-cols-[300px_minmax(0,1fr)] 2xl:grid-cols-[360px_minmax(0,1fr)]">
         <aside className={`${panelClass} p-5 sm:p-6`}>
           <p className={labelClass}>Create new</p>
-          <div className="mt-5 rounded-[10px] border border-black/10 bg-white/45 p-4">
+          <div className={`${portfolioClasses.insetPanel} mt-5 p-4`}>
             <div className="flex gap-4">
-              <div className="grid h-14 w-14 shrink-0 place-items-center rounded-full border border-black/8 bg-black/[0.03]">
+              <div className="grid h-14 w-14 shrink-0 place-items-center rounded-[8px] border border-[#c084fc]/30 bg-[#c084fc]/10 text-[#e9d5ff]">
                 <FolderGlyph />
               </div>
               <div>
-                <h3 className="text-base font-semibold">New Folder</h3>
-                <p className="mt-1 text-sm leading-5 text-black/55">Create a new folder in your drive.</p>
+                <h3 className="text-base font-semibold text-white">New Folder</h3>
+                <p className="mt-1 text-sm leading-5 text-white/52">Create a new folder in your drive.</p>
               </div>
             </div>
             <input
@@ -538,23 +539,23 @@ function FilesView({
           </div>
 
           <div className="my-5 flex items-center gap-4">
-            <div className="h-px flex-1 bg-black/10" />
-            <span className="text-xs uppercase tracking-[0.22em] text-black/45">Or</span>
-            <div className="h-px flex-1 bg-black/10" />
+            <div className="h-px flex-1 bg-white/10" />
+            <span className="text-xs uppercase tracking-[0.22em] text-white/35">Or</span>
+            <div className="h-px flex-1 bg-white/10" />
           </div>
 
           <p className={labelClass}>Upload files</p>
-          <div className="mt-5 rounded-[10px] border border-black/10 bg-white/45 p-4">
+          <div className={`${portfolioClasses.insetPanel} mt-5 p-4`}>
             <div className="flex gap-4">
-              <div className="grid h-14 w-14 shrink-0 place-items-center rounded-full border border-black/8 bg-black/[0.03]">
+              <div className="grid h-14 w-14 shrink-0 place-items-center rounded-[8px] border border-[#60a5fa]/30 bg-[#60a5fa]/10 text-[#bfdbfe]">
                 <UploadGlyph />
               </div>
               <div>
-                <h3 className="text-base font-semibold">Upload Files</h3>
-                <p className="mt-1 text-sm leading-5 text-black/55">Add files to your drive. Supported formats below.</p>
+                <h3 className="text-base font-semibold text-white">Upload Files</h3>
+                <p className="mt-1 text-sm leading-5 text-white/52">Add files to your drive. Supported formats below.</p>
               </div>
             </div>
-            <label className="mt-5 flex min-h-[136px] cursor-pointer flex-col items-center justify-center rounded-[10px] border border-dashed border-black/22 bg-white/30 px-4 text-center text-sm text-black/55 transition hover:border-black/45 hover:bg-white/60">
+            <label className="mt-5 flex min-h-[136px] cursor-pointer flex-col items-center justify-center rounded-[8px] border border-dashed border-white/20 bg-white/[0.025] px-4 text-center text-sm text-white/52 transition hover:border-[#60a5fa]/55 hover:bg-[#60a5fa]/[0.06] hover:text-white/75">
               <DocumentGlyph />
               <span className="mt-3">Drag and drop files here or click to browse</span>
               <input
@@ -577,46 +578,46 @@ function FilesView({
             </label>
           </div>
 
-          <div className="mt-5 flex gap-3 rounded-[9px] border border-black/10 bg-white/45 p-4">
+          <div className="mt-5 flex gap-3 rounded-[8px] border border-white/10 bg-white/[0.025] p-4 text-[#bfdbfe]">
             <InfoGlyph />
-            <p className="text-sm leading-5 text-black/60">
-              <span className="block font-semibold text-black">Supported formats</span>
+            <p className="text-sm leading-5 text-white/55">
+              <span className="block font-semibold text-white/82">Supported formats</span>
               PDF, Markdown, and plain text.
             </p>
           </div>
         </aside>
 
         <section className={`${panelClass} overflow-hidden`}>
-          <div className="flex flex-col gap-5 border-b border-black/10 px-5 py-5 sm:px-7 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex flex-col gap-5 border-b border-white/10 bg-white/[0.018] px-5 py-5 sm:px-7 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <p className={labelClass}>Your files</p>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 {breadcrumbs.map((item, index) => (
                   <button
                     key={`${item.id ?? "root"}-${index}`}
-                    className="text-base text-black transition hover:text-black/55"
+                    className="text-base text-white/72 transition hover:text-[#e9d5ff]"
                     onClick={() => onGoToBreadcrumb(index)}
                     type="button"
                   >
                     {item.name}
-                    {index < breadcrumbs.length - 1 ? <span className="ml-2 text-black/35">/</span> : null}
+                    {index < breadcrumbs.length - 1 ? <span className="ml-2 text-white/25">/</span> : null}
                   </button>
                 ))}
               </div>
             </div>
             <div className="flex w-full flex-col gap-3 sm:flex-row lg:w-auto">
-              <div className="flex min-w-0 flex-1 items-center gap-2 rounded-[12px] border border-black/12 bg-white/55 px-4 py-3 text-sm text-black/40 lg:w-[270px]">
+              <div className="flex min-w-0 flex-1 items-center gap-2 rounded-[8px] border border-white/10 bg-white/[0.035] px-4 py-3 text-sm text-white/32 lg:w-[270px]">
                 <SearchGlyph />
                 <span>Search files...</span>
               </div>
-              <div className="grid grid-cols-2 gap-1 rounded-[12px] border border-black/12 bg-white/55 p-1">
-                <span className="grid h-10 w-10 place-items-center rounded-[9px] bg-white text-black" aria-hidden="true">=</span>
-                <span className="grid h-10 w-10 place-items-center text-black/55" aria-hidden="true">#</span>
+              <div className="grid grid-cols-2 gap-1 rounded-[8px] border border-white/10 bg-white/[0.035] p-1">
+                <span className="grid h-10 w-10 place-items-center rounded-[6px] bg-[#c084fc]/12 text-[#e9d5ff]" aria-hidden="true">=</span>
+                <span className="grid h-10 w-10 place-items-center text-white/42" aria-hidden="true">#</span>
               </div>
             </div>
           </div>
 
-          <div className="hidden border-b border-black/10 px-7 py-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-black/50 xl:grid xl:grid-cols-[minmax(160px,1fr)_70px_75px_130px_300px] xl:gap-3 2xl:grid-cols-[minmax(220px,1fr)_100px_100px_180px_310px] 2xl:gap-4">
+          <div className="hidden border-b border-white/10 px-7 py-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/38 xl:grid xl:grid-cols-[minmax(160px,1fr)_70px_75px_130px_300px] xl:gap-3 2xl:grid-cols-[minmax(220px,1fr)_100px_100px_180px_310px] 2xl:gap-4">
             <span>Name</span>
             <span>Type</span>
             <span>Size</span>
@@ -625,28 +626,28 @@ function FilesView({
           </div>
 
           {isLoading ? (
-            <div className="p-8 text-sm text-black/60">Loading drive contents...</div>
+            <div className="p-8 text-sm text-white/52">Loading drive contents...</div>
           ) : (
-            <div className="min-h-[420px] divide-y divide-black/10">
+            <div className="min-h-[420px] divide-y divide-white/[0.08]">
               {contents?.folders.map((folder) => (
-                <div key={folder.id} className="grid gap-4 px-5 py-5 sm:px-7 xl:grid-cols-[minmax(160px,1fr)_70px_75px_130px_300px] xl:items-center xl:gap-3 2xl:grid-cols-[minmax(220px,1fr)_100px_100px_180px_310px] 2xl:gap-4">
+                <div key={folder.id} className="grid gap-4 px-5 py-5 transition hover:bg-white/[0.025] sm:px-7 xl:grid-cols-[minmax(160px,1fr)_70px_75px_130px_300px] xl:items-center xl:gap-3 2xl:grid-cols-[minmax(220px,1fr)_100px_100px_180px_310px] 2xl:gap-4">
                   <button className="flex min-w-0 items-center gap-4 text-left" onClick={() => onEnterFolder(folder)} type="button">
-                    <span className="grid h-14 w-14 shrink-0 place-items-center rounded-[10px] border border-black/10 bg-white/55">
+                    <span className="grid h-14 w-14 shrink-0 place-items-center rounded-[8px] border border-[#c084fc]/25 bg-[#c084fc]/[0.07] text-[#e9d5ff]">
                       <FolderGlyph />
                     </span>
                     <span className="min-w-0">
-                      <span className="block truncate font-semibold text-black">{folder.name}</span>
-                      <span className="mt-1 block text-sm text-black/50" aria-hidden="true">Folder</span>
+                      <span className="block truncate font-semibold text-white/88">{folder.name}</span>
+                      <span className="mt-1 block text-sm text-white/42" aria-hidden="true">Folder</span>
                     </span>
                   </button>
-                  <span className="text-sm text-black/60 xl:block">Folder</span>
-                  <span className="text-sm text-black/60">--</span>
-                  <span className="text-sm leading-5 text-black/60">{formatDate(folder.updatedAt)}</span>
+                  <span className="text-sm text-white/52 xl:block">Folder</span>
+                  <span className="text-sm text-white/52">--</span>
+                  <span className="text-sm leading-5 text-white/52">{formatDate(folder.updatedAt)}</span>
                   <div className="flex flex-wrap gap-2">
                     <button className={iconButtonClass} onClick={() => onRenameFolder(folder)} type="button" aria-label="Rename folder">
                       <PencilGlyph />
                     </button>
-                    <button className={`${iconButtonClass} text-red-700`} onClick={() => onDeleteFolder(folder)} type="button" aria-label="Delete folder">
+                    <button className={`${iconButtonClass} text-red-300 hover:border-red-300/45 hover:bg-red-400/10`} onClick={() => onDeleteFolder(folder)} type="button" aria-label="Delete folder">
                       <TrashGlyph />
                     </button>
                   </div>
@@ -654,19 +655,19 @@ function FilesView({
               ))}
 
               {contents?.files.map((file) => (
-                <div key={file.id} className="grid gap-4 px-5 py-5 sm:px-7 xl:grid-cols-[minmax(160px,1fr)_70px_75px_130px_300px] xl:items-center xl:gap-3 2xl:grid-cols-[minmax(220px,1fr)_100px_100px_180px_310px] 2xl:gap-4">
+                <div key={file.id} className="grid gap-4 px-5 py-5 transition hover:bg-white/[0.025] sm:px-7 xl:grid-cols-[minmax(160px,1fr)_70px_75px_130px_300px] xl:items-center xl:gap-3 2xl:grid-cols-[minmax(220px,1fr)_100px_100px_180px_310px] 2xl:gap-4">
                   <div className="flex min-w-0 items-center gap-4">
-                    <span className="grid h-14 w-14 shrink-0 place-items-center rounded-[10px] border border-black/10 bg-white/55">
+                    <span className="grid h-14 w-14 shrink-0 place-items-center rounded-[8px] border border-[#60a5fa]/25 bg-[#60a5fa]/[0.07] text-[#bfdbfe]">
                       <DocumentGlyph />
                     </span>
                     <div className="min-w-0">
-                      <p className="truncate font-semibold text-black">{file.originalFileName}</p>
-                      <p className="mt-1 text-sm text-black/50">{friendlyContentType(file.contentType)}</p>
+                      <p className="truncate font-semibold text-white/88">{file.originalFileName}</p>
+                      <p className="mt-1 text-sm text-white/42">{friendlyContentType(file.contentType)}</p>
                     </div>
                   </div>
-                  <span className="w-fit rounded-[8px] border border-black/10 bg-white/55 px-3 py-2 text-xs text-black">{fileExtension(file.originalFileName)}</span>
-                  <span className="text-sm text-black/60">{formatBytes(file.sizeBytes)}</span>
-                  <span className="text-sm leading-5 text-black/60">{formatDate(file.updatedAt)}</span>
+                  <span className="w-fit rounded-[8px] border border-[#f472b6]/25 bg-[#f472b6]/[0.07] px-3 py-2 text-xs text-[#fbcfe8]">{fileExtension(file.originalFileName)}</span>
+                  <span className="text-sm text-white/52">{formatBytes(file.sizeBytes)}</span>
+                  <span className="text-sm leading-5 text-white/52">{formatDate(file.updatedAt)}</span>
                   <div className="flex flex-wrap gap-2">
                     <button className={iconButtonClass} onClick={() => onDownloadFile(file)} type="button" aria-label={`Download ${file.originalFileName}`}>
                       <DownloadGlyph />
@@ -681,7 +682,7 @@ function FilesView({
                       onMoveTargetChange={onMoveTargetChange}
                       onMoveFile={onMoveFile}
                     />
-                    <button className={`${iconButtonClass} text-red-700`} onClick={() => onDeleteFile(file)} type="button" aria-label={`Delete ${file.originalFileName}`}>
+                    <button className={`${iconButtonClass} text-red-300 hover:border-red-300/45 hover:bg-red-400/10`} onClick={() => onDeleteFile(file)} type="button" aria-label={`Delete ${file.originalFileName}`}>
                       <TrashGlyph />
                     </button>
                   </div>
@@ -689,12 +690,12 @@ function FilesView({
               ))}
 
               {contents && contents.folders.length === 0 && contents.files.length === 0 ? (
-                <div className="flex min-h-[320px] items-center justify-center p-8 text-center text-sm text-black/60">This folder is empty.</div>
+                <div className="flex min-h-[320px] items-center justify-center p-8 text-center text-sm text-white/48">This folder is empty.</div>
               ) : null}
             </div>
           )}
 
-          <div className="flex flex-col gap-4 border-t border-black/10 px-5 py-5 text-sm text-black/55 sm:flex-row sm:items-center sm:justify-between sm:px-7">
+          <div className="flex flex-col gap-4 border-t border-white/10 bg-white/[0.018] px-5 py-5 text-sm text-white/48 sm:flex-row sm:items-center sm:justify-between sm:px-7">
             <span>
               Showing {firstItem} to {lastItem} of {totalItems} items
             </span>
@@ -702,7 +703,7 @@ function FilesView({
               <button className={iconButtonClass} disabled={currentPage <= 1 || isLoading} onClick={() => onPageChange((value) => Math.max(1, value - 1))} type="button" aria-label="Previous page">
                 &lt;
               </button>
-              <span className="grid h-11 w-11 place-items-center rounded-[11px] bg-black text-sm font-semibold text-white">{contents?.page ?? currentPage}</span>
+              <span className="grid h-11 w-11 place-items-center rounded-[8px] bg-gradient-to-br from-[#c084fc] via-[#f472b6] to-[#60a5fa] text-sm font-semibold text-[#060608]">{contents?.page ?? currentPage}</span>
               <button
                 className={iconButtonClass}
                 disabled={isLoading || totalItems < pageSize}
@@ -758,164 +759,165 @@ function KnowledgeView({
   onSearchQueryChange: (value: string) => void;
 }) {
   return (
-    <section className="px-5 py-7 sm:px-8 lg:px-9">
-      <div className="mb-7 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <section className="bg-[#020203] px-5 py-7 sm:px-8 lg:px-9">
+      <div className="relative mb-7 flex flex-col gap-4 overflow-hidden border-b border-white/10 pb-7 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className={labelClass}>Amanah Drive</p>
-          <h2 className="mt-2 font-serif text-4xl font-normal leading-tight text-black sm:text-5xl">Search & Chat</h2>
+          <SectionLabel>Amanah Drive</SectionLabel>
+          <h2 className="mt-2 font-serif text-4xl font-normal leading-tight text-white sm:text-5xl">Search <span className={portfolioClasses.gradientText}>& Chat</span></h2>
         </div>
+        <Scribble className="pointer-events-none absolute -right-8 -top-6 hidden w-52 text-[#f472b6]/22 sm:block" />
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,0.86fr)_minmax(0,1.14fr)]">
         <section className={`${panelClass} flex min-h-[650px] flex-col p-5 sm:p-6`}>
           <div>
             <p className={labelClass}>Semantic search</p>
-            <h3 className="mt-3 font-serif text-3xl font-normal leading-tight text-black">Find document passages</h3>
+            <h3 className="mt-3 font-serif text-3xl font-normal leading-tight text-white/92">Find document passages</h3>
           </div>
 
-          <form className="mt-6 rounded-[10px] border border-black/10 bg-white/35 p-4" onSubmit={onSearch}>
+          <form className="mt-6 rounded-[8px] border border-white/10 bg-[#0d0c13] p-4" onSubmit={onSearch}>
             <label className={labelClass} htmlFor="search-documents">
               Search documents
             </label>
             <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-              <div className="flex min-w-0 flex-1 items-center gap-3 rounded-full border border-black/12 bg-white/65 px-4">
+              <div className="flex min-w-0 flex-1 items-center gap-3 rounded-[8px] border border-white/12 bg-white/[0.045] px-4 text-white/55 transition focus-within:border-[#c084fc]/70 focus-within:ring-2 focus-within:ring-[#c084fc]/20">
                 <SearchGlyph />
                 <input
                   id="search-documents"
-                  className="min-h-12 min-w-0 flex-1 bg-transparent text-sm text-black outline-none placeholder:text-black/35"
+                  className="min-h-12 min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/32"
                   value={searchQuery}
                   onChange={(event) => onSearchQueryChange(event.target.value)}
                   placeholder="what is Amanah Drive"
                 />
               </div>
-              <button className="rounded-full bg-black px-6 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-black/80 disabled:cursor-not-allowed disabled:bg-black/35" disabled={searchLoading} type="submit">
+              <button className={primaryButtonClass} disabled={searchLoading} type="submit">
                 {searchLoading ? "Searching" : "Search"}
               </button>
             </div>
           </form>
 
-          <div className="mt-6 flex items-center justify-between gap-4 text-sm text-black/50">
+          <div className="mt-6 flex items-center justify-between gap-4 text-sm text-white/42">
             <span>{searchResults.length} result{searchResults.length === 1 ? "" : "s"} found</span>
             <span>Sorted by relevance</span>
           </div>
 
           <div className="mt-6 min-h-[350px] flex-1 space-y-4">
             {searchError ? (
-              <div className="rounded-[10px] border border-red-900/25 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
+              <div className="rounded-[8px] border border-red-300/25 bg-red-400/10 px-4 py-3 text-sm text-red-200" role="alert">
                 {searchError}
               </div>
             ) : null}
-            {searchLoading ? <p className="text-sm text-black/60">Searching processed document chunks...</p> : null}
-            {!searchLoading && hasSearched && !searchError && searchResults.length === 0 ? <p className="text-sm text-black/60">No matching document sections found.</p> : null}
-            {!searchLoading && !hasSearched ? <p className="text-sm leading-6 text-black/60">Search processed PDFs, Markdown, and text files by meaning, not just filenames.</p> : null}
+            {searchLoading ? <p className="text-sm text-white/52">Searching processed document chunks...</p> : null}
+            {!searchLoading && hasSearched && !searchError && searchResults.length === 0 ? <p className="text-sm text-white/52">No matching document sections found.</p> : null}
+            {!searchLoading && !hasSearched ? <p className="text-sm leading-6 text-white/52">Search processed PDFs, Markdown, and text files by meaning, not just filenames.</p> : null}
             {searchResults.map((result) => (
-              <article key={result.chunkId} className="rounded-[10px] border border-black/10 bg-white/35 p-4 sm:p-5">
+              <article key={result.chunkId} className="rounded-[8px] border border-white/10 bg-white/[0.025] p-4 transition hover:border-[#60a5fa]/30 hover:bg-[#60a5fa]/[0.04] sm:p-5">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex min-w-0 gap-4">
-                    <span className="mt-1 grid h-11 w-11 shrink-0 place-items-center rounded-[9px] border border-black/10 bg-white/55">
+                    <span className="mt-1 grid h-11 w-11 shrink-0 place-items-center rounded-[8px] border border-[#60a5fa]/25 bg-[#60a5fa]/10 text-[#bfdbfe]">
                       <DocumentGlyph />
                     </span>
                     <div className="min-w-0">
-                      <h4 className="truncate font-serif text-2xl font-normal">{result.fileName}</h4>
-                      <p className="mt-2 text-xs uppercase tracking-[0.14em] text-black/45">Semantic match</p>
+                      <h4 className="truncate font-serif text-2xl font-normal text-white/90">{result.fileName}</h4>
+                      <p className="mt-2 text-xs uppercase tracking-[0.14em] text-white/38">Semantic match</p>
                     </div>
                   </div>
-                  <button className="rounded-full border border-black/12 bg-white/35 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-black transition hover:border-black/35" onClick={() => onDownloadSearchResult(result)} type="button">
+                  <button className={secondaryButtonClass} onClick={() => onDownloadSearchResult(result)} type="button">
                     Download <span aria-hidden="true" className="ml-2">v</span>
                   </button>
                 </div>
                 <div className="mt-5 flex items-center gap-3">
                   <span className={labelClass}>Relevance</span>
-                  <span className="h-1.5 flex-1 rounded-full bg-black/8">
-                    <span className="block h-full rounded-full bg-black" style={{ width: `${Math.max(8, Math.min(100, result.score * 100))}%` }} />
+                  <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.08]">
+                    <span className="block h-full rounded-full bg-gradient-to-r from-[#c084fc] via-[#f472b6] to-[#60a5fa]" style={{ width: `${Math.max(8, Math.min(100, result.score * 100))}%` }} />
                   </span>
-                  <span className="text-sm text-black/55">{formatScore(result.score)}</span>
+                  <span className="text-sm text-white/55">{formatScore(result.score)}</span>
                 </div>
-                <p className="mt-5 text-sm leading-7 text-black/65">{result.snippet}</p>
-                <p className="mt-4 text-xs uppercase tracking-[0.14em] text-black/40">Chunk {result.chunkIndex} / Score {formatScore(result.score)}</p>
+                <p className="mt-5 text-sm leading-7 text-white/68">{result.snippet}</p>
+                <p className="mt-4 text-xs uppercase tracking-[0.14em] text-white/35">Chunk {result.chunkIndex} / Score {formatScore(result.score)}</p>
               </article>
             ))}
           </div>
 
-          <div className="mt-6 flex gap-3 rounded-[10px] border border-black/10 bg-white/35 p-4">
+          <div className="mt-6 flex gap-3 rounded-[8px] border border-white/10 bg-white/[0.025] p-4 text-[#bfdbfe]">
             <InfoGlyph />
-            <p className="text-sm leading-6 text-black/60">
-              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-black">Search tips</span>
+            <p className="text-sm leading-6 text-white/55">
+              <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-white/82">Search tips</span>
               Use natural language to find information in your documents.
             </p>
           </div>
         </section>
 
         <section className={`${panelClass} flex min-h-[650px] flex-col overflow-hidden`}>
-          <div className="flex flex-col gap-4 border-b border-black/10 p-5 sm:flex-row sm:items-start sm:justify-between sm:p-6">
+          <div className="flex flex-col gap-4 border-b border-white/10 bg-white/[0.018] p-5 sm:flex-row sm:items-start sm:justify-between sm:p-6">
             <div>
               <p className={labelClass}>AI chat</p>
-              <h3 className="mt-3 font-serif text-3xl font-normal leading-tight text-black">Ask your drive</h3>
-              <p className="mt-2 text-sm text-black/50">Get answers from your documents using AI.</p>
-              {conversationId ? <p className="mt-2 text-xs uppercase tracking-[0.14em] text-black/40">Conversation active</p> : null}
+              <h3 className="mt-3 font-serif text-3xl font-normal leading-tight text-white/92">Ask your drive</h3>
+              <p className="mt-2 text-sm text-white/48">Get answers from your documents using AI.</p>
+              {conversationId ? <p className="mt-2 text-xs uppercase tracking-[0.14em] text-[#fbcfe8]">Conversation active</p> : null}
             </div>
-            <button className="rounded-full border border-black/35 bg-white/35 px-5 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-black transition hover:bg-white" onClick={onNewConversation} type="button">
+            <button className={secondaryButtonClass} onClick={onNewConversation} type="button">
               New conversation <span aria-hidden="true" className="ml-2">+</span>
             </button>
           </div>
 
           <div className="flex-1 space-y-5 overflow-x-hidden px-5 py-6 sm:px-8">
             {chatEntries.length === 0 ? (
-              <div className="mx-auto max-w-[620px] rounded-[10px] border border-black/10 bg-white/35 p-5 text-sm leading-6 text-black/60">
+              <div className="mx-auto max-w-[620px] rounded-[8px] border border-white/10 bg-white/[0.025] p-5 text-sm leading-6 text-white/52">
                 Ask a question after your files finish processing. Answers stay grounded in retrieved chunks and include source citations when available.
               </div>
             ) : null}
             {chatEntries.map((entry) => (
-              <article key={entry.id} className={entry.role === "user" ? "ml-auto max-w-[760px] rounded-[10px] bg-black px-5 py-4 text-white shadow-[0_18px_35px_rgba(0,0,0,0.18)]" : "mr-auto max-w-[760px] rounded-[10px] border border-black/10 bg-white/45 px-5 py-4"}>
+              <article key={entry.id} className={entry.role === "user" ? "ml-auto max-w-[760px] rounded-[8px] border border-[#c084fc]/35 bg-gradient-to-br from-[#c084fc]/20 via-[#f472b6]/12 to-[#60a5fa]/15 px-5 py-4 text-white shadow-[0_18px_35px_rgba(0,0,0,0.28)]" : "mr-auto max-w-[760px] rounded-[8px] border border-white/10 bg-white/[0.045] px-5 py-4 text-white/76"}>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] opacity-65">{entry.role === "user" ? "You" : "Amanah Drive"}</p>
                 {entry.role === "assistant" ? <ChatAnswer content={entry.content} /> : <p className="mt-3 whitespace-pre-wrap text-sm leading-7">{entry.content}</p>}
                 {entry.citations && entry.citations.length > 0 ? (
-                  <div className="mt-5 space-y-3 border-t border-black/10 pt-4">
+                  <div className="mt-5 space-y-3 border-t border-white/10 pt-4">
                     <p className={labelClass}>Sources & citations</p>
                     {entry.citations.map((citation) => (
-                      <div key={`${citation.chunkId}-${citation.fileId ?? "none"}`} className="rounded-[8px] border border-black/10 bg-[#f8f7f2] p-3">
+                      <div key={`${citation.chunkId}-${citation.fileId ?? "none"}`} className="rounded-[8px] border border-[#60a5fa]/20 bg-[#60a5fa]/[0.05] p-3">
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                          <p className="text-sm font-semibold">{citation.fileName}</p>
-                          <button className="text-xs font-semibold uppercase tracking-[0.14em] text-black/60 hover:text-black" onClick={() => onDownloadCitation(citation)} type="button">
+                          <p className="text-sm font-semibold text-white/85">{citation.fileName}</p>
+                          <button className="text-xs font-semibold uppercase tracking-[0.14em] text-[#bfdbfe] transition hover:text-white" onClick={() => onDownloadCitation(citation)} type="button">
                             Download
                           </button>
                         </div>
-                        <p className="mt-2 text-sm leading-6 text-black/60">{citation.snippet}</p>
+                        <p className="mt-2 text-sm leading-6 text-white/55">{citation.snippet}</p>
                       </div>
                     ))}
                   </div>
                 ) : null}
               </article>
             ))}
-            {chatLoading ? <p className="text-sm text-black/60">Waiting for a grounded answer...</p> : null}
+            {chatLoading ? <p className="text-sm text-white/52">Waiting for a grounded answer...</p> : null}
             {chatError ? (
-              <div className="rounded-[10px] border border-red-900/25 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
+              <div className="rounded-[8px] border border-red-300/25 bg-red-400/10 px-4 py-3 text-sm text-red-200" role="alert">
                 {chatError}
               </div>
             ) : null}
           </div>
 
-          <form className="border-t border-black/10 p-5 sm:p-6" onSubmit={onAskQuestion}>
+          <form className="border-t border-white/10 bg-white/[0.018] p-5 sm:p-6" onSubmit={onAskQuestion}>
             <label className="sr-only" htmlFor="chat-question">
               Ask a question
             </label>
-            <div className="rounded-[22px] border border-black/14 bg-white/55 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
+            <div className="rounded-[8px] border border-white/12 bg-white/[0.045] p-3 transition focus-within:border-[#f472b6]/60 focus-within:ring-2 focus-within:ring-[#f472b6]/15">
               <textarea
                 id="chat-question"
-                className="min-h-16 w-full resize-none bg-transparent px-2 py-2 text-sm text-black outline-none placeholder:text-black/35"
+                className="min-h-16 w-full resize-none bg-transparent px-2 py-2 text-sm text-white outline-none placeholder:text-white/32"
                 value={chatQuestion}
                 onChange={(event) => onChatQuestionChange(event.target.value)}
                 placeholder="Ask a follow-up question..."
               />
               <div className="flex items-center justify-between">
-                <span className="text-black/45" aria-hidden="true">@</span>
-                <button className="grid h-12 w-12 place-items-center rounded-full bg-black text-white transition hover:bg-black/80 disabled:cursor-not-allowed disabled:bg-black/35" disabled={chatLoading} type="submit">
+                <span className="text-white/35" aria-hidden="true">@</span>
+                <button className="grid h-12 w-12 place-items-center rounded-[8px] bg-gradient-to-br from-[#c084fc] via-[#f472b6] to-[#60a5fa] text-[#060608] transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f472b6] disabled:cursor-not-allowed disabled:opacity-35" disabled={chatLoading} type="submit">
                   <span className="sr-only">{chatLoading ? "Thinking" : "Send"}</span>
                   <SendGlyph />
                 </button>
               </div>
             </div>
-            <p className="mt-3 text-center text-xs text-black/45">Answers are generated from your documents. Verify important information.</p>
+            <p className="mt-3 text-center text-xs text-white/35">Answers are generated from your documents. Verify important information.</p>
           </form>
         </section>
       </div>
@@ -1018,22 +1020,23 @@ function ObservabilityView() {
   const requestChart = snapshot?.requests.map((point) => ({ ...point, label: formatMetricBucket(point.timestamp, range) })) ?? [];
   const aiChart = snapshot?.aiUsage.map((point) => ({ ...point, label: formatMetricBucket(point.timestamp, range) })) ?? [];
   const securityChart = snapshot?.security.map((point) => ({ ...point, label: formatMetricBucket(point.timestamp, range) })) ?? [];
-  const tooltipStyle = { backgroundColor: "#101016", border: "1px solid rgba(255,255,255,0.14)", borderRadius: 8, color: "#fff" };
+  const tooltipStyle = { backgroundColor: portfolioPalette.raised, border: "1px solid rgba(255,255,255,0.14)", borderRadius: 8, color: "#fff" };
   const chartAxis = { fill: "rgba(255,255,255,0.45)", fontSize: 11 };
 
   return (
-    <section className="min-h-[calc(100vh-118px)] bg-[#060608] px-4 py-7 text-white sm:px-7 lg:px-9 lg:py-10">
+    <section className="min-h-[calc(100vh-118px)] bg-[#030305] px-4 py-7 text-white sm:px-7 lg:px-9 lg:py-10">
       <div className="mx-auto max-w-[1380px]">
-        <div className="flex flex-col gap-6 border-b border-white/10 pb-8 lg:flex-row lg:items-end lg:justify-between">
+        <div className="relative flex flex-col gap-6 overflow-hidden border-b border-white/10 pb-8 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#c084fc]">Administration / observability</p>
-            <h2 className="mt-3 font-serif text-4xl font-normal leading-tight sm:text-6xl">System signals</h2>
+            <SectionLabel className="text-[#c084fc]">Administration / observability</SectionLabel>
+            <h2 className="mt-3 font-serif text-4xl font-normal leading-tight text-white sm:text-6xl">System <span className={portfolioClasses.gradientText}>signals</span></h2>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-white/48">Request health, security events, AI usage, activity, and retained structured logs.</p>
           </div>
+          <Scribble className="pointer-events-none absolute -right-8 -top-8 hidden w-52 text-[#c084fc]/20 md:block" />
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex rounded-[8px] border border-white/12 bg-white/[0.035] p-1" aria-label="Metrics range">
               {(["24h", "7d", "30d"] as const).map((option) => (
-                <button key={option} className={`rounded-[6px] px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition ${range === option ? "bg-white text-black" : "text-white/50 hover:text-white"}`} onClick={() => setRange(option)} type="button">
+                <button key={option} className={`rounded-[6px] border px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition ${range === option ? "border-[#c084fc]/45 bg-[#c084fc]/12 text-[#e9d5ff]" : "border-transparent text-white/50 hover:text-white"}`} onClick={() => setRange(option)} type="button">
                   {option}
                 </button>
               ))}
@@ -1067,8 +1070,8 @@ function ObservabilityView() {
                 <YAxis yAxisId="requests" tick={chartAxis} axisLine={false} tickLine={false} allowDecimals={false} />
                 <YAxis yAxisId="rate" orientation="right" tick={chartAxis} axisLine={false} tickLine={false} unit="%" />
                 <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: "#fff" }} />
-                <Bar yAxisId="requests" dataKey="requests" fill="#60a5fa" radius={[3, 3, 0, 0]} maxBarSize={24} />
-                <Line yAxisId="rate" type="monotone" dataKey="errorRatePercent" name="5xx rate %" stroke="#fb7185" strokeWidth={2} dot={false} />
+                <Bar yAxisId="requests" dataKey="requests" fill={portfolioPalette.blue} radius={[3, 3, 0, 0]} maxBarSize={24} />
+                <Line yAxisId="rate" type="monotone" dataKey="errorRatePercent" name="5xx rate %" stroke={portfolioPalette.pink} strokeWidth={2} dot={false} />
               </ComposedChart>
             </ResponsiveContainer>
           </ChartPanel>
@@ -1076,12 +1079,12 @@ function ObservabilityView() {
           <ChartPanel eyebrow="Log mix" title="Level distribution">
             <ResponsiveContainer width="100%" height={270}>
               <AreaChart data={snapshot?.logLevels ?? []} margin={{ top: 10, right: 4, left: -24, bottom: 0 }}>
-                <defs><linearGradient id="levelFill" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#c084fc" stopOpacity={0.7} /><stop offset="95%" stopColor="#c084fc" stopOpacity={0.04} /></linearGradient></defs>
+                <defs><linearGradient id="levelFill" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={portfolioPalette.purple} stopOpacity={0.7} /><stop offset="95%" stopColor={portfolioPalette.purple} stopOpacity={0.04} /></linearGradient></defs>
                 <CartesianGrid stroke="rgba(255,255,255,0.07)" vertical={false} />
                 <XAxis dataKey="level" tick={chartAxis} axisLine={false} tickLine={false} />
                 <YAxis tick={chartAxis} axisLine={false} tickLine={false} allowDecimals={false} />
                 <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: "#fff" }} />
-                <Area type="monotone" dataKey="count" stroke="#c084fc" fill="url(#levelFill)" strokeWidth={2} />
+                <Area type="monotone" dataKey="count" stroke={portfolioPalette.purple} fill="url(#levelFill)" strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
           </ChartPanel>
@@ -1094,8 +1097,8 @@ function ObservabilityView() {
                 <YAxis yAxisId="tokens" tick={chartAxis} axisLine={false} tickLine={false} allowDecimals={false} />
                 <YAxis yAxisId="cost" orientation="right" tick={chartAxis} axisLine={false} tickLine={false} tickFormatter={(value) => `$${Number(value).toFixed(3)}`} />
                 <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: "#fff" }} />
-                <Area yAxisId="tokens" type="monotone" dataKey="inputTokens" name="Input tokens" stackId="tokens" stroke="#60a5fa" fill="#60a5fa" fillOpacity={0.42} />
-                <Area yAxisId="tokens" type="monotone" dataKey="outputTokens" name="Output tokens" stackId="tokens" stroke="#f472b6" fill="#f472b6" fillOpacity={0.42} />
+                <Area yAxisId="tokens" type="monotone" dataKey="inputTokens" name="Input tokens" stackId="tokens" stroke={portfolioPalette.blue} fill={portfolioPalette.blue} fillOpacity={0.42} />
+                <Area yAxisId="tokens" type="monotone" dataKey="outputTokens" name="Output tokens" stackId="tokens" stroke={portfolioPalette.pink} fill={portfolioPalette.pink} fillOpacity={0.42} />
                 <Line yAxisId="cost" type="monotone" dataKey="estimatedCostUsd" name="Estimated cost (USD)" stroke="#fde68a" strokeWidth={2} dot={false} />
               </ComposedChart>
             </ResponsiveContainer>
@@ -1108,7 +1111,7 @@ function ObservabilityView() {
                 <XAxis dataKey="label" tick={chartAxis} axisLine={false} tickLine={false} minTickGap={24} />
                 <YAxis tick={chartAxis} axisLine={false} tickLine={false} allowDecimals={false} />
                 <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: "#fff" }} />
-                <Area type="stepAfter" dataKey="events" stroke="#fb7185" fill="#fb7185" fillOpacity={0.22} strokeWidth={2} />
+                <Area type="stepAfter" dataKey="events" stroke={portfolioPalette.pink} fill={portfolioPalette.pink} fillOpacity={0.22} strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
           </ChartPanel>
@@ -1142,7 +1145,7 @@ function ObservabilityView() {
               ["activity", "Activity"],
               ["errors", "Errors"],
             ] as const).map(([value, label]) => (
-              <button key={value} role="tab" aria-selected={category === value} className={`shrink-0 rounded-full border px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] transition ${category === value ? "border-white bg-white text-black" : "border-white/14 text-white/50 hover:border-white/30 hover:text-white"}`} onClick={() => selectCategory(value)} type="button">
+              <button key={value} role="tab" aria-selected={category === value} className={`shrink-0 rounded-[8px] border px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] transition ${category === value ? "border-[#c084fc]/45 bg-gradient-to-r from-[#c084fc]/15 via-[#f472b6]/10 to-[#60a5fa]/15 text-white" : "border-white/14 text-white/50 hover:border-white/30 hover:text-white"}`} onClick={() => selectCategory(value)} type="button">
                 {label}
               </button>
             ))}
@@ -1158,7 +1161,7 @@ function ObservabilityView() {
                 <label className="block"><span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/38">Search logs</span><input className="mt-2 w-full rounded-[7px] border border-white/12 bg-black/25 px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/25 focus:border-[#c084fc]/70" value={filters.search} onChange={(event) => setFilters({ ...filters, search: event.target.value })} placeholder="Message, path, source..." /></label>
                 <DarkDate label="From" value={filters.from} onChange={(value) => setFilters({ ...filters, from: value })} />
                 <DarkDate label="To" value={filters.to} onChange={(value) => setFilters({ ...filters, to: value })} />
-                <button className="rounded-[7px] bg-white px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-black transition hover:bg-[#e9d5ff] disabled:opacity-50" disabled={logLoading} type="submit">Apply</button>
+                <button className={primaryButtonClass} disabled={logLoading} type="submit">Apply</button>
               </form>
 
               {logError ? <div className="m-5 rounded-[8px] border border-red-400/25 bg-red-500/10 px-4 py-3 text-sm text-red-200" role="alert">{logError}</div> : null}
@@ -1244,10 +1247,10 @@ function FileMoveControl({
   onMoveFile: (file: FileItem) => Promise<void>;
 }) {
   return (
-    <div className="flex rounded-[11px] border border-black/12 bg-white/55">
+    <div className="flex rounded-[8px] border border-white/12 bg-white/[0.035]">
       <select
         aria-label={`Move ${file.originalFileName} to folder`}
-        className="max-w-[92px] rounded-l-[11px] bg-transparent px-2 text-xs text-black outline-none"
+        className="max-w-[92px] rounded-l-[8px] bg-[#0d0c13] px-2 text-xs text-white/72 outline-none focus:text-white"
         value={target}
         onChange={(event) => onMoveTargetChange(file.id, event.target.value)}
       >
@@ -1258,7 +1261,7 @@ function FileMoveControl({
           </option>
         ))}
       </select>
-      <button className="grid h-11 w-11 place-items-center border-l border-black/10 text-black transition hover:bg-white" onClick={() => onMoveFile(file)} type="button" aria-label={`Move ${file.originalFileName}`}>
+      <button className="grid h-11 w-11 place-items-center border-l border-white/10 text-white/72 transition hover:bg-[#c084fc]/10 hover:text-[#e9d5ff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c084fc]/70" onClick={() => onMoveFile(file)} type="button" aria-label={`Move ${file.originalFileName}`}>
         <FolderGlyph />
       </button>
     </div>
@@ -1267,7 +1270,7 @@ function FileMoveControl({
 
 function ShieldMark() {
   return (
-    <span className="grid h-9 w-9 place-items-center rounded-[7px] border-2 border-black" aria-hidden="true">
+    <span className="grid h-9 w-9 place-items-center rounded-[7px] border border-[#c084fc]/55 bg-[#c084fc]/10 text-[#e9d5ff]" aria-hidden="true">
       <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none">
         <path d="M12 3l7 2.8v5.4c0 4.4-2.8 7.9-7 9.8-4.2-1.9-7-5.4-7-9.8V5.8L12 3z" stroke="currentColor" strokeWidth="1.8" />
         <path d="M12 8v7m-3.2-3.2L12 15l4.2-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />

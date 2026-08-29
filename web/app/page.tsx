@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 
+import { Scribble, SectionLabel } from "@/components/portfolio-theme";
 import { ContactForm } from "./contact-form";
 
 const navigation = [
@@ -58,23 +59,6 @@ const achievements = [
   "7th Place, IEEE AI Hackathon: ranked among leading participants in an AI-focused competition.",
   "Graduation project: full marks and A grade in both Graduation Project I and II for an AI-focused project.",
 ];
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/48">{children}</p>;
-}
-
-function Scribble({ className = "" }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 240 90" fill="none" aria-hidden="true">
-      <path
-        d="M4 46C27 6 44 80 66 38C85 3 104 80 126 39C144 6 167 73 188 37C204 10 220 22 236 50"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
 
 function PortfolioNav() {
   return (
