@@ -362,10 +362,8 @@ CSRF posture in V1: application mutations require a bearer access token, while r
 ## Future Improvements
 
 - Object storage implementation for S3, Cloudflare R2, or MinIO behind `IFileStorage`.
-- Multi-user support, roles, and per-user sharing.
 - File previews.
 - OCR and additional document formats.
-- Local LLM support.
 - End-to-end encryption.
 - Mobile app.
 - Real-time synchronization.

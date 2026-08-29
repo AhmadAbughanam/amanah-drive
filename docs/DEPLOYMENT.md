@@ -210,27 +210,62 @@ List them on the VPS with `docker volume ls | grep amanah-drive`. A deploy (`up 
 
 ## How backups work
 
-There is no automated backup configured yet — set this up before you rely on this being the only copy of anything real. The two things worth backing up:
+Automated nightly backups run at 2 AM via cron, dumping the database and uploaded files and shipping both off-box to a Cloudflare R2 bucket (`amanah-drive-backups`) using `rclone`. This is genuinely off-VPS — a disk failure on the VPS itself doesn't touch R2.
 
-**Database** (`pg_dump`, run from the VPS):
-
-```bash
-mkdir -p /opt/amanah-drive/backups
-docker exec amanah-drive-postgres-1 pg_dump -U amanah_drive amanah_drive | gzip > /opt/amanah-drive/backups/db-$(date +%Y%m%d-%H%M%S).sql.gz
-```
-
-Wire this to a daily cron job (`crontab -e` on the VPS) and copy the resulting files off the VPS periodically (e.g. `scp` to your own machine, or a cheap object-storage bucket) — a backup that only lives on the same disk as the database doesn't protect against disk failure.
-
-**Uploaded files**: back up the `api_storage` volume's contents:
+**The script** (`/opt/amanah-drive/backup.sh`):
 
 ```bash
-docker run --rm -v amanah-drive_api_storage:/data -v /opt/amanah-drive/backups:/backup alpine \
-  tar czf /backup/storage-$(date +%Y%m%d-%H%M%S).tar.gz -C /data .
+#!/usr/bin/env bash
+set -euo pipefail
+
+BACKUP_DIR="/opt/amanah-drive/backups"
+TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+R2_REMOTE="r2:amanah-drive-backups"
+RETAIN_DAYS=14
+
+mkdir -p "$BACKUP_DIR"
+
+# Database dump
+docker exec amanah-drive-postgres-1 pg_dump -U amanah_drive amanah_drive \
+  | gzip > "$BACKUP_DIR/db-$TIMESTAMP.sql.gz"
+
+# Uploaded files
+docker run --rm \
+  -v amanah-drive_api_storage:/data \
+  -v "$BACKUP_DIR":/backup \
+  alpine tar czf "/backup/storage-$TIMESTAMP.tar.gz" -C /data .
+
+# Upload both to R2 (--s3-disable-checksum works around R2 not supporting
+# the CRC32 checksum header newer AWS SDKs / rclone send by default)
+rclone copy --s3-disable-checksum "$BACKUP_DIR/db-$TIMESTAMP.sql.gz" "$R2_REMOTE/db/"
+rclone copy --s3-disable-checksum "$BACKUP_DIR/storage-$TIMESTAMP.tar.gz" "$R2_REMOTE/storage/"
+
+# Prune local copies older than RETAIN_DAYS (R2 keeps the full history)
+find "$BACKUP_DIR" -name "db-*.sql.gz" -mtime "+$RETAIN_DAYS" -delete
+find "$BACKUP_DIR" -name "storage-*.tar.gz" -mtime "+$RETAIN_DAYS" -delete
+
+echo "Backup complete: db-$TIMESTAMP.sql.gz, storage-$TIMESTAMP.tar.gz"
 ```
+
+**Scheduling** (cron, installed on the VPS):
+
+```bash
+0 2 * * * /opt/amanah-drive/backup.sh >> /var/log/amanah-drive-backup.log 2>&1
+```
+
+Check `/var/log/amanah-drive-backup.log` periodically to confirm the nightly run is still firing and clean.
+
+**R2 setup**: `rclone` is configured via `/root/.config/rclone/rclone.conf` (`chmod 600`, root-only) with an R2 API token scoped to the `amanah-drive-backups` bucket. `rclone` must be a current release (`curl https://rclone.org/install.sh | sudo bash`) — older versions predate R2-specific compatibility fixes and will intermittently fail with checksum-related `NotImplemented` errors.
+
+**Retention**: local copies on the VPS are pruned after 14 days; R2 retains everything unless you add a bucket lifecycle rule (Cloudflare dashboard → bucket → Lifecycle rules) to auto-expire older objects.
 
 **Restore** (verify this works before you need it for real):
 
 ```bash
+# Pull a backup down from R2 first
+rclone copy r2:amanah-drive-backups/db/db-<timestamp>.sql.gz /opt/amanah-drive/backups/
+rclone copy r2:amanah-drive-backups/storage/storage-<timestamp>.tar.gz /opt/amanah-drive/backups/
+
 # Database
 gunzip -c /opt/amanah-drive/backups/db-<timestamp>.sql.gz | docker exec -i amanah-drive-postgres-1 psql -U amanah_drive amanah_drive
 
@@ -239,7 +274,7 @@ docker run --rm -v amanah-drive_api_storage:/data -v /opt/amanah-drive/backups:/
   sh -c "cd /data && tar xzf /backup/storage-<timestamp>.tar.gz"
 ```
 
-This project intentionally does not build a more elaborate backup platform than this — see [ADR 0006](decisions/0006-deferring-horizontal-scaling-investment.md) for the same "don't build infrastructure the current scale doesn't need" reasoning applied here. A cron job and an off-box copy is the right amount of backup for a single-admin app.
+See [ADR 0006](decisions/0006-deferring-horizontal-scaling-investment.md) for the same "don't build infrastructure the current scale doesn't need" reasoning applied more broadly — cron + R2 is the right amount of backup infrastructure for a single-admin app, without standing up a dedicated backup platform.
 
 ## How to renew or change secrets
 
