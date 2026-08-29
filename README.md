@@ -364,11 +364,9 @@ CSRF posture in V1: application mutations require a bearer access token, while r
 - Object storage implementation for S3, Cloudflare R2, or MinIO behind `IFileStorage`.
 - File previews.
 - OCR and additional document formats.
-- End-to-end encryption.
 - Mobile app.
 - Real-time synchronization.
 - Separately deployable processing worker when background load justifies it.
-- Broader observability and scaling work: Prometheus/Grafana, alerting, external trace retention, distributed rate limiting, and multiple stateless API replicas behind a load balancer.
 - Sustained-load and larger-dataset load testing (the [Phase 18 load test](docs/performance/load-test-2026-08-17.md) covered short interactive bursts against a small dataset only).
 
 ## References
