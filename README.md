@@ -14,7 +14,11 @@ The project is intentionally scoped as a single-admin V1. The backend is structu
 | --- | --- |
 | ![Drive file management shell](docs/screenshots/drive-files.png) | ![Semantic search and AI chat with citations](docs/screenshots/drive-search-chat.png) |
 
-The search and chat screenshot was taken against the implemented embedding and generation pipeline, not a mocked UI.
+| Observability dashboard |
+| --- |
+| ![Authenticated observability dashboard with request, error, security, and AI usage metrics](docs/screenshots/observability.png) |
+
+The interface screenshots use deterministic sample data so the repository images stay stable. API integration tests and the documented load test exercise the real PostgreSQL and service paths independently.
 
 ## Built Scope
 
@@ -23,12 +27,12 @@ The search and chat screenshot was taken against the implemented embedding and g
 - Asynchronous document processing: extraction, chunking, embedding, and pgvector storage.
 - Semantic search over stored document chunks.
 - RAG chat with citations and persisted conversation history.
-- Authenticated Next.js dashboard for file management, search, chat, activity, and logs.
+- Authenticated Next.js dashboard for file management, search, chat, activity, logs, and operational metrics.
 - Portfolio landing page and login flow.
 - Docker Compose environment for PostgreSQL, API, AI service, and web app.
 - CI jobs for API, AI service, and web build/test checks, dependency audits, and CodeQL analysis.
 - Interactive OpenAPI documentation for the API at `/docs` when enabled.
-- Durable rolling API logs and an authenticated in-app log viewer.
+- Durable rolling API logs and an authenticated observability dashboard for request health, errors, security events, activity, and measured AI usage/cost.
 - Non-critical in-process domain notifications projected into an authenticated activity feed.
 - Connected API-to-AI-service traces in a local in-memory Jaeger instance.
 - Retry, timeout, and circuit-breaker resilience around API-to-AI-service and AI-service-to-Hugging-Face calls.
@@ -134,6 +138,7 @@ sequenceDiagram
 - React
 - TypeScript
 - Tailwind CSS
+- Recharts for authenticated observability charts
 - Playwright tests with mocked API routes
 
 ### API

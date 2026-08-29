@@ -283,10 +283,10 @@ function ProjectsSection() {
         <article className="mt-14 grid items-center gap-14 border-t border-white/12 pt-12 lg:grid-cols-[1.08fr_0.92fr] lg:gap-20">
           <div className="grid gap-4 sm:relative sm:min-h-[520px]">
             <figure className="overflow-hidden rounded-[8px] border border-white/12 bg-[#101016] shadow-[0_24px_70px_rgba(0,0,0,0.42)] sm:absolute sm:left-0 sm:top-0 sm:w-[86%]">
-              <Image src="/drive-files.png" alt="Amanah Drive file management dashboard" width={1440} height={900} className="h-auto w-full" />
+              <Image src="/drive-files-dark.png" alt="Amanah Drive file management dashboard" width={1440} height={900} className="h-auto w-full" />
             </figure>
             <figure className="overflow-hidden rounded-[8px] border border-[#c084fc]/35 bg-[#101016] shadow-[0_24px_70px_rgba(0,0,0,0.5)] sm:absolute sm:bottom-0 sm:right-0 sm:w-[76%]">
-              <Image src="/drive-search-chat.png" alt="Amanah Drive semantic search and AI chat dashboard" width={1440} height={900} className="h-auto w-full" />
+              <Image src="/drive-search-chat-dark.png" alt="Amanah Drive semantic search and AI chat dashboard" width={1440} height={900} className="h-auto w-full" />
             </figure>
           </div>
 

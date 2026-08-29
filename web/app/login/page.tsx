@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { portfolioClasses, Scribble, SectionLabel } from "@/components/portfolio-theme";
 import { ApiError } from "@/lib/api";
 import { useAuth } from "../auth-provider";
 
@@ -36,45 +37,52 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#080808] px-3 py-7 text-[#0b0b0b] md:px-8 md:py-10">
-      <section className="mx-auto flex min-h-[calc(100vh-56px)] max-w-[430px] flex-col overflow-hidden rounded-[48px] border-[9px] border-[#151515] bg-[#f7f7f5] shadow-[0_18px_60px_rgba(0,0,0,0.65)] md:min-h-[calc(100vh-80px)] md:max-w-[1280px] md:rounded-[18px] md:border-0">
-        <header className="flex items-center justify-between px-9 pt-10 md:px-24 md:pt-12">
+    <main className="min-h-screen bg-[#060608] px-3 py-3 text-white sm:px-6 sm:py-6">
+      <section className="relative mx-auto flex min-h-[calc(100vh-1.5rem)] max-w-[1280px] flex-col overflow-hidden rounded-[8px] border border-white/10 bg-[#0b0b10] shadow-[0_34px_120px_rgba(0,0,0,0.65)] sm:min-h-[calc(100vh-3rem)]">
+        <Scribble className="pointer-events-none absolute -right-10 -top-7 w-52 text-[#c084fc]/20 sm:w-64" />
+        <header className="relative z-10 flex items-center justify-between border-b border-white/10 bg-[#0d0c13] px-6 py-6 sm:px-10 lg:px-14">
           <Link
             href="/"
-            className="font-serif text-[46px] leading-none text-black outline-none transition hover:text-black/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-black md:text-[54px]"
+            className="group flex items-center gap-3 outline-none focus-visible:ring-2 focus-visible:ring-[#c084fc]"
             aria-label="Ahmad Abughanam"
           >
-            AA
+            <span className="grid h-10 w-10 place-items-center rounded-full border border-[#c084fc]/55 text-sm font-semibold text-white transition group-hover:bg-[#c084fc]/10">AA</span>
+            <span className="hidden text-xs font-semibold uppercase tracking-[0.22em] text-white/76 sm:block">Ahmad Abughanam</span>
           </Link>
           <Link
             href="/"
-            className="inline-flex flex-col gap-2 text-xs font-semibold uppercase text-black outline-none transition hover:text-black/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-black"
+            className="group inline-flex flex-col gap-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/58 outline-none transition hover:text-white focus-visible:ring-2 focus-visible:ring-[#60a5fa]"
           >
             <span>Back to portfolio</span>
-            <span className="h-px w-full bg-black" aria-hidden="true" />
+            <span className="h-px w-full origin-left bg-gradient-to-r from-[#c084fc] via-[#f472b6] to-[#60a5fa] transition-transform group-hover:scale-x-75" aria-hidden="true" />
           </Link>
         </header>
 
-        <div className="grid flex-1 px-9 py-12 md:grid-cols-[1fr_460px] md:items-center md:gap-20 md:px-24 md:py-16">
-          <div className="max-w-[590px]">
-            <p className="text-sm font-semibold uppercase text-black md:text-base">Admin Access</p>
-            <h1 className="mt-7 font-serif text-[42px] font-normal leading-[1.08] text-black md:text-[72px]">
+        <div className="relative grid flex-1 gap-12 px-6 py-12 sm:px-10 md:grid-cols-[minmax(0,1fr)_minmax(360px,460px)] md:items-center md:gap-16 lg:px-20 lg:py-16">
+          <div className="relative max-w-[590px]">
+            <SectionLabel>Admin access</SectionLabel>
+            <h1 className="mt-7 font-serif text-[48px] font-normal leading-[1.02] text-white sm:text-[64px] lg:text-[78px]">
               Amanah
               <br />
-              Drive
+              <span className={portfolioClasses.gradientText}>Drive</span>
             </h1>
-            <div className="mt-8 h-px w-14 bg-black/80 md:mt-10" />
-            <p className="mt-7 max-w-[330px] text-[15px] leading-7 text-black/72 md:mt-10 md:text-base">
+            <div className="mt-8 h-px w-16 bg-gradient-to-r from-[#c084fc] to-[#60a5fa] md:mt-10" />
+            <p className="mt-7 max-w-[410px] text-[15px] leading-7 text-white/62 md:mt-9 md:text-base">
               Sign in with the single admin account. Registration is handled separately during bootstrap.
             </p>
+            <Scribble className="mt-8 w-44 text-[#f472b6]/55" />
           </div>
 
-          <form className="mt-12 border-t border-black/20 pt-8 md:mt-0 md:border-t-0 md:border-l md:pl-12 md:pt-0" onSubmit={onSubmit}>
+          <form className="rounded-[8px] border border-white/10 bg-white/[0.035] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.32)] sm:p-8" onSubmit={onSubmit}>
+            <div className="border-b border-white/10 pb-6">
+              <p className={portfolioClasses.label}>Secure sign in</p>
+              <h2 className="mt-3 font-serif text-3xl text-white/92">Welcome back</h2>
+            </div>
             <div className="space-y-6">
-              <label className="block">
-                <span className="text-xs font-semibold uppercase text-black/60">Email</span>
+              <label className="mt-7 block">
+                <span className={portfolioClasses.label}>Email</span>
                 <input
-                  className="mt-3 w-full border-0 border-b border-black/25 bg-transparent px-0 py-3 text-base text-black outline-none transition placeholder:text-black/35 focus:border-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-black"
+                  className={`${portfolioClasses.field} mt-3`}
                   type="email"
                   value={email}
                   onChange={(event) => setEmail(event.target.value)}
@@ -83,9 +91,9 @@ export default function LoginPage() {
                 />
               </label>
               <label className="block">
-                <span className="text-xs font-semibold uppercase text-black/60">Password</span>
+                <span className={portfolioClasses.label}>Password</span>
                 <input
-                  className="mt-3 w-full border-0 border-b border-black/25 bg-transparent px-0 py-3 text-base text-black outline-none transition placeholder:text-black/35 focus:border-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-black"
+                  className={`${portfolioClasses.field} mt-3`}
                   type="password"
                   value={password}
                   onChange={(event) => setPassword(event.target.value)}
@@ -95,13 +103,13 @@ export default function LoginPage() {
               </label>
 
               {error ? (
-                <div className="border border-black bg-[#080808] px-4 py-3 text-sm leading-6 text-white" role="alert">
+                <div className="rounded-[8px] border border-red-300/25 bg-red-400/10 px-4 py-3 text-sm leading-6 text-red-200" role="alert">
                   {error}
                 </div>
               ) : null}
 
               <button
-                className="inline-flex w-full items-center justify-between bg-[#080808] px-5 py-4 text-sm font-semibold uppercase text-white outline-none transition hover:bg-black/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-black disabled:cursor-not-allowed disabled:bg-black/35 md:w-auto md:min-w-56"
+                className={`${portfolioClasses.primaryButton} inline-flex w-full items-center justify-between py-4`}
                 type="submit"
                 disabled={isSubmitting}
               >
