@@ -1,5 +1,6 @@
 using AmanahDrive.Api.Modules.Drive.Endpoints;
 using AmanahDrive.Api.Modules.Drive.Options;
+using AmanahDrive.Api.Modules.Drive.Services;
 using AmanahDrive.Api.Modules.Drive.Storage;
 using Microsoft.AspNetCore.Http.Features;
 
@@ -33,6 +34,7 @@ public static class DriveModule
         });
 
         services.AddScoped<IFileStorage, LocalFileStorage>();
+        services.AddScoped<IDriveService, DriveService>();
         return services;
     }
 

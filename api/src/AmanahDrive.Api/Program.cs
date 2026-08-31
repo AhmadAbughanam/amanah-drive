@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using AmanahDrive.Api.Modules.Admin;
+using AmanahDrive.Api.Modules.AgentTools;
 using AmanahDrive.Api.Modules.Auth;
 using AmanahDrive.Api.Modules.Drive;
 using AmanahDrive.Api.Modules.Processing;
@@ -44,7 +45,8 @@ builder.Services
     .AddAuthModule(builder.Configuration)
     .AddDriveModule(builder.Configuration)
     .AddProcessingModule(builder.Configuration)
-    .AddSearchChatModule(builder.Configuration);
+    .AddSearchChatModule(builder.Configuration)
+    .AddAgentToolsModule();
 
 builder.Services.AddOpenApi(options =>
 {
