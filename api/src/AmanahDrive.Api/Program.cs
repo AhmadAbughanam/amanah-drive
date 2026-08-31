@@ -28,7 +28,7 @@ builder.Host.UseSerilog((context, loggerConfiguration) =>
         .Enrich.FromLogContext()
         .WriteTo.Console()
         .WriteTo.File(
-            new CompactJsonFormatter(),
+            new RenderedCompactJsonFormatter(),
             fileLoggingOptions.GetRollingFilePath(),
             rollingInterval: RollingInterval.Day,
             retainedFileCountLimit: fileLoggingOptions.RetainedFileCountLimit,
