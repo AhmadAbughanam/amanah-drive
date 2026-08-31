@@ -194,7 +194,7 @@ public sealed class AgentRunService(
         catch (Exception exception)
         {
             run.Status = AgentRunStatus.Failed;
-            run.FailureReason = exception.GetType().Name;
+            run.FailureReason = DescribeFailure(exception);
             run.UpdatedAt = DateTimeOffset.UtcNow;
             try
             {
@@ -227,6 +227,21 @@ public sealed class AgentRunService(
     private static string DescribeConcurrencyConflict(DbUpdateConcurrencyException exception) =>
         "DbUpdateConcurrencyException involved: " + string.Join(" | ", exception.Entries.Select(entry =>
             $"{entry.Entity.GetType().Name}(State={entry.State}, {string.Join(", ", entry.Properties.Select(property => $"{property.Metadata.Name}={property.CurrentValue}"))})"));
+
+    // Previously this only stored exception.GetType().Name (e.g. just "AiServiceException"),
+    // which told nobody - not the server logs, and not the run itself, surfaced through
+    // GET /agent/runs/{id} and the Agent UI's transcript - what actually went wrong.
+    // AiServiceException's own message already contains the real HTTP status code and
+    // response body from ai-service; that's exactly the detail that was missing when a run
+    // failed with no way to diagnose it short of raw container logs. AgentRunConfiguration
+    // caps FailureReason at 512 characters, so this truncates defensively.
+    private static string DescribeFailure(Exception exception)
+    {
+        var message = string.IsNullOrWhiteSpace(exception.Message)
+            ? exception.GetType().Name
+            : $"{exception.GetType().Name}: {exception.Message}";
+        return message.Length <= 500 ? message : message[..500] + "...";
+    }
 
     private async Task ExecuteToolAsync(AgentRun run, AgentRunStep step, CancellationToken cancellationToken)
     {

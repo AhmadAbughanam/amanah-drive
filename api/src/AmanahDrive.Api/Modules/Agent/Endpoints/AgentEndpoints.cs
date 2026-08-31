@@ -16,7 +16,7 @@ public static class AgentEndpoints
     {
         var group = app.MapGroup("/agent/runs").RequireAuthorization().RequireRateLimiting("ai").WithTags("Agent");
 
-        group.MapPost("", async (StartAgentRunRequest request, ClaimsPrincipal user, IAgentRunService service, CancellationToken cancellationToken) =>
+        group.MapPost("", async (StartAgentRunRequest request, ClaimsPrincipal user, IAgentRunService service, ILogger<Program> logger, CancellationToken cancellationToken) =>
         {
             if (string.IsNullOrWhiteSpace(request.Question) || request.Question.Length > 4000)
             {
@@ -34,13 +34,14 @@ public static class AgentEndpoints
                 var run = await service.StartAsync(userId.Value, request.Question, cancellationToken);
                 return Results.Created($"/agent/runs/{run.Id}", ToResponse(run));
             }
-            catch (AiServiceException)
+            catch (AiServiceException exception)
             {
+                logger.LogError(exception, "Agent run failed to start: {Message}", exception.Message);
                 return Results.StatusCode(StatusCodes.Status502BadGateway);
             }
         }).Produces<AgentRunResponse>(StatusCodes.Status201Created);
 
-        group.MapPost("/{runId:guid}/approve", async (Guid runId, ClaimsPrincipal user, IAgentRunService service, CancellationToken cancellationToken) =>
+        group.MapPost("/{runId:guid}/approve", async (Guid runId, ClaimsPrincipal user, IAgentRunService service, ILogger<Program> logger, CancellationToken cancellationToken) =>
         {
             var userId = GetUserId(user);
             if (userId is null) return Results.Unauthorized();
@@ -49,13 +50,14 @@ public static class AgentEndpoints
                 var run = await service.ApproveAsync(userId.Value, runId, cancellationToken);
                 return run is null ? Results.NotFound() : Results.Ok(ToResponse(run));
             }
-            catch (AiServiceException)
+            catch (AiServiceException exception)
             {
+                logger.LogError(exception, "Agent run approval failed for run {RunId}: {Message}", runId, exception.Message);
                 return Results.StatusCode(StatusCodes.Status502BadGateway);
             }
         }).Produces<AgentRunResponse>(StatusCodes.Status200OK);
 
-        group.MapPost("/{runId:guid}/reject", async (Guid runId, ClaimsPrincipal user, IAgentRunService service, CancellationToken cancellationToken) =>
+        group.MapPost("/{runId:guid}/reject", async (Guid runId, ClaimsPrincipal user, IAgentRunService service, ILogger<Program> logger, CancellationToken cancellationToken) =>
         {
             var userId = GetUserId(user);
             if (userId is null) return Results.Unauthorized();
@@ -64,8 +66,9 @@ public static class AgentEndpoints
                 var run = await service.RejectAsync(userId.Value, runId, cancellationToken);
                 return run is null ? Results.NotFound() : Results.Ok(ToResponse(run));
             }
-            catch (AiServiceException)
+            catch (AiServiceException exception)
             {
+                logger.LogError(exception, "Agent run rejection failed for run {RunId}: {Message}", runId, exception.Message);
                 return Results.StatusCode(StatusCodes.Status502BadGateway);
             }
         }).Produces<AgentRunResponse>(StatusCodes.Status200OK);
