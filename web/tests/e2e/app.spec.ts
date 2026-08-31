@@ -211,6 +211,72 @@ test("chat error state renders cleanly", async ({ page }) => {
   await expect(page.getByText("Request failed with status 502.")).toBeVisible();
 });
 
+test("agent run shows its transcript, approval, and completed markdown answer", async ({ page }) => {
+  const pendingRun = agentRun({
+    status: "AwaitingApproval",
+    pendingToolName: "rename_folder",
+    pendingActionSummary: "Rename a folder to “Invoices 2026”",
+    steps: [
+      agentStep(1, "user", { content: "Rename my invoices folder" }),
+      agentStep(2, "assistant"),
+      agentStep(3, "tool", { toolName: "rename_folder", argumentsSummary: "Rename a folder to “Invoices 2026”", resultSummary: "Waiting for your approval.", status: "PendingApproval", requiresApproval: true }),
+    ],
+  });
+  const completedRun = agentRun({
+    status: "Completed",
+    finalAnswer: "**Done.** The folder is ready.",
+    steps: [
+      ...pendingRun.steps.slice(0, 2),
+      agentStep(3, "tool", { toolName: "rename_folder", argumentsSummary: "Rename a folder to “Invoices 2026”", resultSummary: "Completed.", status: "Executed", requiresApproval: true }),
+      agentStep(4, "assistant", { content: "The rename completed." }),
+    ],
+  });
+  await mockApi(page, { loginSucceeds: true, agentStartResponse: pendingRun, agentApproveResponse: completedRun });
+
+  await signIn(page);
+  await page.getByRole("button", { name: "Agent" }).click();
+  await page.getByLabel("Instruction").fill("Rename my invoices folder");
+  await page.getByRole("button", { name: "Run agent" }).click();
+
+  await expect(page.getByText("Rename a folder to “Invoices 2026”?" )).toBeVisible();
+  await expect(page.getByText("Tool · rename folder")).toBeVisible();
+  await page.getByRole("button", { name: "Approve" }).click();
+
+  await expect(page.getByText("Completed", { exact: true })).toBeVisible();
+  await expect(page.getByText("Done.", { exact: true })).toBeVisible();
+  await expect(page.getByText("The folder is ready.")).toBeVisible();
+});
+
+test("agent rejection resumes the run and shows the returned answer", async ({ page }) => {
+  const pendingRun = agentRun({
+    status: "AwaitingApproval",
+    pendingToolName: "move_file",
+    pendingActionSummary: "Move a file to a folder",
+    steps: [
+      agentStep(1, "user", { content: "Move the report" }),
+      agentStep(2, "tool", { toolName: "move_file", argumentsSummary: "Move a file to a folder", resultSummary: "Waiting for your approval.", status: "PendingApproval", requiresApproval: true }),
+    ],
+  });
+  const completedRun = agentRun({
+    status: "Completed",
+    finalAnswer: "I left the file where it was.",
+    steps: [
+      agentStep(1, "user", { content: "Move the report" }),
+      agentStep(2, "tool", { toolName: "move_file", argumentsSummary: "Move a file to a folder", resultSummary: "You rejected this action.", status: "Rejected", requiresApproval: true }),
+    ],
+  });
+  await mockApi(page, { loginSucceeds: true, agentStartResponse: pendingRun, agentRejectResponse: completedRun });
+
+  await signIn(page);
+  await page.getByRole("button", { name: "Agent" }).click();
+  await page.getByLabel("Instruction").fill("Move the report");
+  await page.getByRole("button", { name: "Run agent" }).click();
+  await page.getByRole("button", { name: "Reject" }).click();
+
+  await expect(page.getByText("You rejected this action.")).toBeVisible();
+  await expect(page.getByText("I left the file where it was.")).toBeVisible();
+});
+
 test("invalid login shows an error and stays on login", async ({ page }) => {
   await mockApi(page, { loginSucceeds: false });
 
@@ -290,6 +356,9 @@ async function mockApi(
       }>;
     };
     observability?: Record<string, unknown>;
+    agentStartResponse?: Record<string, unknown>;
+    agentApproveResponse?: Record<string, unknown>;
+    agentRejectResponse?: Record<string, unknown>;
   },
 ) {
   await page.route(`${apiBaseUrl}/auth/login`, async (route) => {
@@ -441,4 +510,43 @@ async function mockApi(
       },
     });
   });
+
+  await page.route(`${apiBaseUrl}/agent/runs`, async (route) => {
+    await route.fulfill({ status: 201, json: options.agentStartResponse ?? agentRun({ status: "Completed", finalAnswer: "Default agent answer." }) });
+  });
+
+  await page.route(`${apiBaseUrl}/agent/runs/**`, async (route) => {
+    const action = route.request().url().endsWith("/approve") ? options.agentApproveResponse : options.agentRejectResponse;
+    await route.fulfill({ status: 200, json: action ?? agentRun({ status: "Completed", finalAnswer: "Default agent answer." }) });
+  });
+}
+
+function agentRun(overrides: Record<string, unknown>) {
+  return {
+    id: "66666666-6666-6666-6666-666666666666",
+    status: "Completed",
+    finalAnswer: null,
+    failureReason: null,
+    pendingToolName: null,
+    pendingActionSummary: null,
+    steps: [],
+    createdAt: "2026-08-31T00:00:00Z",
+    updatedAt: "2026-08-31T00:00:00Z",
+    ...overrides,
+  };
+}
+
+function agentStep(sequence: number, role: string, overrides: Record<string, unknown> = {}) {
+  return {
+    sequence,
+    role,
+    content: null,
+    toolName: null,
+    argumentsSummary: null,
+    resultSummary: null,
+    status: null,
+    requiresApproval: false,
+    createdAt: "2026-08-31T00:00:00Z",
+    ...overrides,
+  };
 }

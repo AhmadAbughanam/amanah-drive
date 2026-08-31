@@ -7,11 +7,11 @@ import ReactMarkdown from "react-markdown";
 import { Area, AreaChart, Bar, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { portfolioClasses, portfolioPalette, Scribble, SectionLabel } from "@/components/portfolio-theme";
 import { apiFetch, apiJson, errorMessage } from "@/lib/api";
-import type { ActivityResponse, AdminLogResponse, ChatCitation, ChatHistoryResponse, ChatMessageResponse, ChatResponse, FileItem, Folder, FolderContents, ObservabilitySnapshot, SearchResponse, SearchResult } from "@/lib/types";
+import type { ActivityResponse, AdminLogResponse, AgentRunResponse, AgentRunStepResponse, ChatCitation, ChatHistoryResponse, ChatMessageResponse, ChatResponse, FileItem, Folder, FolderContents, ObservabilitySnapshot, SearchResponse, SearchResult } from "@/lib/types";
 import { useAuth } from "../auth-provider";
 
 type Breadcrumb = { id: string | null; name: string };
-type AppView = "files" | "knowledge" | "logs";
+type AppView = "files" | "knowledge" | "logs" | "agent";
 type ObservabilityCategory = "api" | "security" | "ai" | "activity" | "errors";
 type LogFilters = { level: string; search: string; source: string; from: string; to: string };
 type ChatEntry = {
@@ -189,6 +189,7 @@ export default function DrivePage() {
   const [chatEntries, setChatEntries] = useState<ChatEntry[]>([]);
   const [chatLoading, setChatLoading] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
+  const [agentRun, setAgentRun] = useState<AgentRunResponse | null>(null);
 
   const folderQuery = useMemo(() => {
     const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
@@ -483,7 +484,7 @@ export default function DrivePage() {
               </div>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between lg:justify-end">
-              <nav className="grid grid-cols-3 rounded-[8px] border border-white/10 bg-white/[0.025] p-1 sm:min-w-[390px]" aria-label="Drive sections">
+              <nav className="grid grid-cols-2 rounded-[8px] border border-white/10 bg-white/[0.025] p-1 sm:grid-cols-4 sm:min-w-[520px]" aria-label="Drive sections">
                 <button
                   className={`rounded-[6px] px-3 py-3 text-xs font-semibold uppercase tracking-[0.12em] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c084fc]/70 sm:px-4 ${activeView === "files" ? "border border-[#c084fc]/45 bg-[#c084fc]/12 text-[#e9d5ff]" : "border border-transparent text-white/52 hover:bg-white/[0.05] hover:text-white"}`}
                   type="button"
@@ -504,6 +505,13 @@ export default function DrivePage() {
                   onClick={() => setActiveView("logs")}
                 >
                   Logs
+                </button>
+                <button
+                  className={`rounded-[6px] px-3 py-3 text-xs font-semibold uppercase tracking-[0.12em] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#34d399]/70 sm:px-4 ${activeView === "agent" ? "border border-[#34d399]/45 bg-[#34d399]/12 text-[#a7f3d0]" : "border border-transparent text-white/52 hover:bg-white/[0.05] hover:text-white"}`}
+                  type="button"
+                  onClick={() => setActiveView("agent")}
+                >
+                  Agent
                 </button>
               </nav>
               <button className={secondaryButtonClass} onClick={signOut} type="button">
@@ -558,12 +566,152 @@ export default function DrivePage() {
             onSearch={runSearch}
             onSearchQueryChange={setSearchQuery}
           />
-        ) : (
+        ) : activeView === "logs" ? (
           <ObservabilityView />
+        ) : (
+          <AgentView run={agentRun} onRunChange={setAgentRun} />
         )}
       </div>
     </main>
   );
+}
+
+function AgentView({ run, onRunChange }: { run: AgentRunResponse | null; onRunChange: (run: AgentRunResponse) => void }) {
+  const [instruction, setInstruction] = useState("");
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSubmitting, setSubmitting] = useState(false);
+  const [approvalAction, setApprovalAction] = useState<"approve" | "reject" | null>(null);
+
+  async function startRun(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const question = instruction.trim();
+    setSubmitError(null);
+    if (!question) {
+      setSubmitError("Describe what you would like the agent to do.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      onRunChange(await apiJson<AgentRunResponse>("/agent/runs", {
+        method: "POST",
+        body: JSON.stringify({ question }),
+      }));
+      setInstruction("");
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "The agent could not start. Try again in a moment.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function resolveApproval(action: "approve" | "reject") {
+    if (!run) return;
+    setSubmitError(null);
+    setApprovalAction(action);
+    try {
+      onRunChange(await apiJson<AgentRunResponse>(`/agent/runs/${run.id}/${action}`, { method: "POST" }));
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "The agent action could not be completed.");
+    } finally {
+      setApprovalAction(null);
+    }
+  }
+
+  const isAwaitingApproval = run?.status === "AwaitingApproval";
+  const isBusy = isSubmitting || approvalAction !== null;
+  const pendingAction = run?.pendingActionSummary ?? run?.steps.find((step) => step.status === "PendingApproval")?.argumentsSummary;
+
+  return (
+    <section className="grid gap-5 px-5 py-6 sm:px-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:px-9">
+      <div className={`${panelClass} h-fit p-5`}>
+        <SectionLabel className="text-[#a7f3d0]">File agent</SectionLabel>
+        <h1 className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-white">Ask the agent to work with your files.</h1>
+        <p className="mt-2 text-sm leading-6 text-white/55">It can inspect your drive immediately and will ask before making a rename or move.</p>
+        <form className="mt-5 space-y-3" onSubmit={startRun}>
+          <label className="block text-xs font-semibold uppercase tracking-[0.12em] text-white/58" htmlFor="agent-instruction">Instruction</label>
+          <textarea
+            className={`${fieldClass} min-h-32 resize-y py-3`}
+            disabled={isBusy || isAwaitingApproval}
+            id="agent-instruction"
+            maxLength={4000}
+            onChange={(event) => setInstruction(event.target.value)}
+            placeholder="For example: find the latest invoice and move a copy into Finance."
+            value={instruction}
+          />
+          <button className={`${primaryButtonClass} w-full`} disabled={isBusy || isAwaitingApproval || !instruction.trim()} type="submit">
+            {isSubmitting ? "Agent is working…" : "Run agent"}
+          </button>
+        </form>
+        {isAwaitingApproval ? <p className="mt-3 text-xs leading-5 text-white/45">Resolve the pending action before starting another run.</p> : null}
+        {submitError ? <p className="mt-4 rounded-[6px] border border-red-300/20 bg-red-400/10 px-3 py-2 text-sm text-red-100" role="alert">{submitError}</p> : null}
+
+        {run?.status === "AwaitingApproval" ? (
+          <div className="mt-5 rounded-[7px] border border-amber-200/25 bg-amber-300/10 p-4">
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-amber-100">Approval needed</p>
+            <p className="mt-2 text-sm leading-6 text-white">{pendingAction ?? "The agent is ready to make a change."}?</p>
+            <p className="mt-1 text-xs text-white/52">This action will only run if you approve it.</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button className={primaryButtonClass} disabled={isBusy} onClick={() => void resolveApproval("approve")} type="button">
+                {approvalAction === "approve" ? "Approving…" : "Approve"}
+              </button>
+              <button className={secondaryButtonClass} disabled={isBusy} onClick={() => void resolveApproval("reject")} type="button">
+                {approvalAction === "reject" ? "Rejecting…" : "Reject"}
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </div>
+
+      <div className={`${panelClass} min-h-[430px] p-5`}>
+        <SectionLabel className="text-[#a7f3d0]">Run transcript</SectionLabel>
+        {!run ? (
+          <div className="flex min-h-80 items-center justify-center text-center text-sm leading-6 text-white/45">Your active agent run will appear here.</div>
+        ) : (
+          <div className="mt-4 space-y-3">
+            {run.steps.map((step) => <AgentTranscriptStep key={step.sequence} step={step} />)}
+            {run.status === "Completed" ? (
+              <div className="rounded-[7px] border border-emerald-200/20 bg-emerald-300/[0.07] px-4 py-3">
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#a7f3d0]">Completed</p>
+                <ChatAnswer content={run.finalAnswer ?? "The agent completed its run."} citations={[]} onCitationClick={() => undefined} />
+              </div>
+            ) : null}
+            {run.status === "Failed" ? <p className="rounded-[7px] border border-red-300/20 bg-red-400/10 px-4 py-3 text-sm text-red-100" role="alert">The agent stopped: {run.failureReason ?? "an unexpected error occurred."}</p> : null}
+            {run.status === "IterationLimitReached" ? <p className="rounded-[7px] border border-amber-200/20 bg-amber-300/[0.08] px-4 py-3 text-sm leading-6 text-amber-50">The agent stopped after its safety limit of tool steps. You can start a new run with a more specific instruction.</p> : null}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function AgentTranscriptStep({ step }: { step: AgentRunStepResponse }) {
+  if (step.role === "user") {
+    return <div className="ml-auto max-w-[88%] rounded-[7px] border border-[#c084fc]/30 bg-[#c084fc]/10 px-4 py-3 text-sm leading-6 text-[#f3e8ff]"><p className="mb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#d8b4fe]">You</p>{step.content}</div>;
+  }
+
+  if (step.role === "assistant") {
+    return step.content ? <div className="max-w-[88%] rounded-[7px] border border-white/10 bg-white/[0.035] px-4 py-3 text-sm leading-6 text-white/75"><p className="mb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white/45">Agent</p>{step.content}</div> : null;
+  }
+
+  return (
+    <div className="rounded-[7px] border border-[#34d399]/25 bg-[#34d399]/10 px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#a7f3d0]">Tool · {formatToolName(step.toolName)}</p>
+        {step.status ? <span className="rounded-full border border-white/10 bg-black/15 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-white/60">{formatToolStatus(step.status)}</span> : null}
+      </div>
+      {step.argumentsSummary ? <p className="mt-2 text-sm text-white/85">{step.argumentsSummary}</p> : null}
+      {step.resultSummary ? <p className="mt-1 text-xs leading-5 text-white/52">{step.resultSummary}</p> : null}
+    </div>
+  );
+}
+
+function formatToolName(name: string | null) {
+  return (name ?? "agent action").replaceAll("_", " ");
+}
+
+function formatToolStatus(status: string) {
+  return status.replace(/([a-z])([A-Z])/g, "$1 $2");
 }
 
 function FilesView({

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace AmanahDrive.Api.Modules.AgentTools;
 
@@ -31,7 +32,16 @@ public sealed class AgentToolRegistry(IEnumerable<IAgentToolInvoker> tools) : IA
 
 public sealed class AgentToolInvoker<TRequest, TResult>(IAgentTool<TRequest, TResult> tool) : IAgentToolInvoker
 {
-    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
+    // AgentToolStatus (and any other enum in a tool's result) must serialize as its name, not
+    // its numeric value - AgentEndpoints.DescribeToolResult reads this JSON back and switches
+    // on the status as a string to build a human-readable transcript summary. Without this
+    // converter, "NotFound"/"Conflict"/"Invalid" all serialize as plain integers, which the
+    // string-based switch can never match, silently mislabeling every non-success outcome as
+    // "Completed." in the UI.
+    private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        Converters = { new JsonStringEnumConverter() }
+    };
 
     public AgentToolMetadata Metadata => tool.Metadata;
 

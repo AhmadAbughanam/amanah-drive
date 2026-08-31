@@ -74,6 +74,30 @@ export type ChatHistoryResponse = {
   messages: ChatMessageResponse[];
 };
 
+export type AgentRunStepResponse = {
+  sequence: number;
+  role: string;
+  content: string | null;
+  toolName: string | null;
+  argumentsSummary: string | null;
+  resultSummary: string | null;
+  status: string | null;
+  requiresApproval: boolean;
+  createdAt: string;
+};
+
+export type AgentRunResponse = {
+  id: string;
+  status: "AwaitingApproval" | "Completed" | "IterationLimitReached" | "Failed";
+  finalAnswer: string | null;
+  failureReason: string | null;
+  pendingToolName: string | null;
+  pendingActionSummary: string | null;
+  steps: AgentRunStepResponse[];
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type AdminLogEntry = {
   timestamp: string;
   level: string;
