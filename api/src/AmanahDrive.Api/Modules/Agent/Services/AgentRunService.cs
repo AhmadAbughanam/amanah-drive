@@ -196,7 +196,19 @@ public sealed class AgentRunService(
             run.Status = AgentRunStatus.Failed;
             run.FailureReason = exception.GetType().Name;
             run.UpdatedAt = DateTimeOffset.UtcNow;
-            await dbContext.SaveChangesAsync(CancellationToken.None);
+            try
+            {
+                await dbContext.SaveChangesAsync(CancellationToken.None);
+            }
+            catch (Exception saveException)
+            {
+                // Recording the failure is best-effort: if it can't be persisted (e.g. a
+                // concurrency conflict on `run` itself, or the DB being the reason the loop
+                // failed in the first place), that must never replace or hide the original
+                // exception that actually explains what went wrong.
+                throw new AggregateException(exception, saveException);
+            }
+
             throw;
         }
     }
