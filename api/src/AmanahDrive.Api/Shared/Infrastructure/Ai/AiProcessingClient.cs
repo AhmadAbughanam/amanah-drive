@@ -111,6 +111,26 @@ public sealed class AiProcessingClient(
             response.Usage?.OutputTokens));
     }
 
+    public async Task<AgentCompletionResponse> CompleteAgentAsync(AgentCompletionRequest requestBody, CancellationToken cancellationToken)
+    {
+        return await TrackAsync("agent", "huggingface", async () =>
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/agent/complete")
+            {
+                Content = JsonContent.Create(requestBody, options: JsonOptions)
+            };
+
+            AddServiceToken(request);
+            using var response = await SendAsync(request, cancellationToken);
+            await EnsureSuccessAsync(response, cancellationToken);
+            return await ReadJsonAsync<AgentCompletionResponse>(response, cancellationToken);
+        }, _options.ChatModel, response => new AiUsageMetadata(
+            response.Usage?.Provider ?? "huggingface",
+            response.Model,
+            response.Usage?.InputTokens,
+            response.Usage?.OutputTokens));
+    }
+
     private async Task<T> TrackAsync<T>(
         string operation,
         string defaultProvider,

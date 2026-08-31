@@ -306,6 +306,40 @@ def test_hugging_face_call_does_not_retry_non_transient_client_error(monkeypatch
     assert attempts == 1
 
 
+def test_agent_completion_forwards_tools_and_parses_tool_calls(monkeypatch):
+    monkeypatch.setenv("HF_API_TOKEN", "tests-only-hf-token")
+    captured = {}
+
+    def fake_post(*_args, **kwargs):
+        captured.update(kwargs["json"])
+        return httpx.Response(
+            200,
+            json={
+                "choices": [{"message": {"content": None, "tool_calls": [{
+                    "id": "call-1",
+                    "type": "function",
+                    "function": {"name": "list_folder", "arguments": "{\"parentFolderId\":null}"},
+                }]}}],
+                "usage": {"prompt_tokens": 12, "completion_tokens": 4},
+            },
+        )
+
+    monkeypatch.setattr("app.services.agent.httpx.post", fake_post)
+    response = client().post(
+        "/agent/complete",
+        headers=headers(),
+        json={
+            "messages": [{"role": "system", "content": "Use tools safely."}, {"role": "user", "content": "List root."}],
+            "tools": [{"type": "function", "function": {"name": "list_folder", "description": "List files.", "parameters": {"type": "object"}}}],
+        },
+    )
+
+    assert response.status_code == 200
+    assert captured["tool_choice"] == "auto"
+    assert captured["tools"][0]["function"]["name"] == "list_folder"
+    assert response.json()["message"]["toolCalls"][0]["function"]["name"] == "list_folder"
+
+
 def rag_request_json() -> dict:
     return {
         "question": "What is the renewal rule?",

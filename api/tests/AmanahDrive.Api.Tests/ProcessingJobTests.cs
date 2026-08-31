@@ -266,5 +266,8 @@ public sealed class ProcessingJobTests : IAsyncLifetime
 
         public Task<RagAnswerResponse> AnswerAsync(RagAnswerRequest request, CancellationToken cancellationToken) =>
             Task.FromResult(new RagAnswerResponse("unused", "fake", []));
+
+        public Task<AgentCompletionResponse> CompleteAgentAsync(AgentCompletionRequest request, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
     }
 }

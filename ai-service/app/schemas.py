@@ -66,3 +66,43 @@ class RagAnswerResponse(BaseModel):
     model: str
     citations: List[RagCitation]
     usage: Optional[ModelUsage] = None
+
+
+class AgentToolFunction(BaseModel):
+    name: str
+    description: str
+    parameters: dict
+
+
+class AgentToolDefinition(BaseModel):
+    type: str = "function"
+    function: AgentToolFunction
+
+
+class AgentToolCallFunction(BaseModel):
+    name: str
+    arguments: str
+
+
+class AgentToolCall(BaseModel):
+    id: str
+    type: str = "function"
+    function: AgentToolCallFunction
+
+
+class AgentMessage(BaseModel):
+    role: str
+    content: Optional[str] = None
+    toolCallId: Optional[str] = None
+    toolCalls: List[AgentToolCall] = Field(default_factory=list)
+
+
+class AgentCompletionRequest(BaseModel):
+    messages: List[AgentMessage]
+    tools: List[AgentToolDefinition]
+
+
+class AgentCompletionResponse(BaseModel):
+    message: AgentMessage
+    model: str
+    usage: Optional[ModelUsage] = None

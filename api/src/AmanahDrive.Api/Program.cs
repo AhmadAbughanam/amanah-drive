@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using AmanahDrive.Api.Modules.Admin;
+using AmanahDrive.Api.Modules.Agent;
 using AmanahDrive.Api.Modules.AgentTools;
 using AmanahDrive.Api.Modules.Auth;
 using AmanahDrive.Api.Modules.Drive;
@@ -42,6 +43,7 @@ builder.WebHost.ConfigureDriveHost(builder.Configuration);
 builder.Services
     .AddInfrastructure(builder.Configuration, builder.Environment)
     .AddAdminModule(builder.Configuration)
+    .AddAgentModule(builder.Configuration)
     .AddAuthModule(builder.Configuration)
     .AddDriveModule(builder.Configuration)
     .AddProcessingModule(builder.Configuration)
@@ -104,6 +106,7 @@ app.MapGet("/health", ReadinessAsync)
     .Produces<HealthResponse>(StatusCodes.Status200OK)
     .Produces<HealthResponse>(StatusCodes.Status503ServiceUnavailable);
 app.MapAdminModule();
+app.MapAgentModule();
 app.MapAuthModule();
 app.MapDriveModule();
 app.MapProcessingModule();

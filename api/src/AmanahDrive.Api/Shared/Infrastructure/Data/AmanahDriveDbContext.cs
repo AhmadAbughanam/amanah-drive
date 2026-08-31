@@ -1,4 +1,5 @@
 using AmanahDrive.Api.Modules.Admin.Models;
+using AmanahDrive.Api.Modules.Agent.Models;
 using AmanahDrive.Api.Modules.Auth.Models;
 using AmanahDrive.Api.Modules.Drive.Models;
 using AmanahDrive.Api.Modules.Processing.Models;
@@ -28,6 +29,10 @@ public sealed class AmanahDriveDbContext(DbContextOptions<AmanahDriveDbContext> 
     public DbSet<Conversation> Conversations => Set<Conversation>();
 
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
+
+    public DbSet<AgentRun> AgentRuns => Set<AgentRun>();
+
+    public DbSet<AgentRunStep> AgentRunSteps => Set<AgentRunStep>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

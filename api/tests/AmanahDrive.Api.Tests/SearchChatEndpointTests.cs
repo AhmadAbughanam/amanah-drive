@@ -445,5 +445,8 @@ public sealed class SearchChatEndpointTests : IAsyncLifetime
                     new RagCitation(CitationReference, citedChunk.FileName, citedChunk.Text)
                 ]));
         }
+
+        public Task<AgentCompletionResponse> CompleteAgentAsync(AgentCompletionRequest request, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
     }
 }
