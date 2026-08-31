@@ -94,7 +94,13 @@ class AgentMessage(BaseModel):
     role: str
     content: Optional[str] = None
     toolCallId: Optional[str] = None
-    toolCalls: List[AgentToolCall] = Field(default_factory=list)
+    # Optional, not just defaulted: the .NET API explicitly sends `null` for messages with
+    # no tool calls (system/user/plain-text-assistant messages), rather than omitting the
+    # field. A plain `List[...] = Field(default_factory=list)` only applies its default when
+    # the field is *missing* - Pydantic v2 still rejects an explicit `null` against a
+    # non-Optional list type ("Input should be a valid list"). Downstream code already treats
+    # None the same as an empty list (`if message.toolCalls else {}`), so this is safe.
+    toolCalls: Optional[List[AgentToolCall]] = None
 
 
 class AgentCompletionRequest(BaseModel):
