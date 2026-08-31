@@ -206,12 +206,27 @@ public sealed class AgentRunService(
                 // concurrency conflict on `run` itself, or the DB being the reason the loop
                 // failed in the first place), that must never replace or hide the original
                 // exception that actually explains what went wrong.
-                throw new AggregateException(exception, saveException);
+                throw new AggregateException(Enrich(exception), Enrich(saveException));
             }
 
-            throw;
+            throw Enrich(exception);
         }
     }
+
+    // Temporary diagnostic aid: DbUpdateConcurrencyException's own message never says which
+    // entities were actually involved, only that "0 rows" were affected somewhere in the batch.
+    // This surfaces exactly which tracked entities (type, state, and current property values)
+    // were part of the failed SaveChanges call, so a real concurrency conflict is
+    // distinguishable at a glance from - as suspected here - something else entirely being
+    // misreported as one.
+    private static Exception Enrich(Exception exception) =>
+        exception is DbUpdateConcurrencyException concurrencyException
+            ? new InvalidOperationException(DescribeConcurrencyConflict(concurrencyException), concurrencyException)
+            : exception;
+
+    private static string DescribeConcurrencyConflict(DbUpdateConcurrencyException exception) =>
+        "DbUpdateConcurrencyException involved: " + string.Join(" | ", exception.Entries.Select(entry =>
+            $"{entry.Entity.GetType().Name}(State={entry.State}, {string.Join(", ", entry.Properties.Select(property => $"{property.Metadata.Name}={property.CurrentValue}"))})"));
 
     private async Task ExecuteToolAsync(AgentRun run, AgentRunStep step, CancellationToken cancellationToken)
     {
