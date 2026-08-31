@@ -144,7 +144,7 @@ public sealed class AgentRunService(
                     assistantStep.ToolArgumentsJson = JsonSerializer.Serialize(toolCalls, JsonOptions);
                 }
 
-                run.Steps.Add(assistantStep);
+                AddStep(run, assistantStep);
                 run.UpdatedAt = now;
 
                 if (toolCalls.Count == 0)
@@ -169,7 +169,7 @@ public sealed class AgentRunService(
                 toolStep.ToolCallId = toolCall.Id;
                 toolStep.ToolName = toolCall.Function.Name;
                 toolStep.ToolArgumentsJson = toolCall.Function.Arguments;
-                run.Steps.Add(toolStep);
+                AddStep(run, toolStep);
 
                 if (!toolRegistry.TryGet(toolCall.Function.Name, out var tool))
                 {
@@ -266,6 +266,21 @@ public sealed class AgentRunService(
         Content = content,
         CreatedAt = now
     };
+
+    // `run` here is always already tracked (Unchanged) from an earlier save - StartAsync's
+    // initial AddAsync(run) is the only place a whole graph gets added at once. Adding a new
+    // step to run.Steps and relying on DetectChanges to discover it via graph-traversal fixup
+    // is ambiguous for a client-generated, non-default Guid key: EF can't be certain it's new,
+    // and defaults to Modified rather than Added, producing an UPDATE by primary key for a row
+    // that was never inserted (0 rows affected, every time - this was the actual cause of the
+    // DbUpdateConcurrencyException surfaced by the diagnostic above). Adding the step directly
+    // to its tracked DbSet makes the Added state explicit and unambiguous.
+    private void AddStep(AgentRun run, AgentRunStep step)
+    {
+        step.AgentRunId = run.Id;
+        run.Steps.Add(step);
+        dbContext.AgentRunSteps.Add(step);
+    }
 
     private static int NextSequence(AgentRun run) => run.Steps.Count == 0 ? 0 : run.Steps.Max(step => step.Sequence) + 1;
 }
