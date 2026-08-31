@@ -85,19 +85,83 @@ def test_extract_rejects_missing_service_token():
     assert response.status_code == 401
 
 
-def test_chunk_fixed_size_with_overlap():
+def test_chunk_respects_word_boundaries_with_overlap():
     response = client().post(
         "/chunk",
         headers=headers(),
-        json={"text": "abcdefghij", "chunkSize": 4, "overlap": 1},
+        json={"text": "alpha beta gamma delta", "chunkSize": 12, "overlap": 4},
     )
 
     assert response.status_code == 200
     assert response.json()["chunks"] == [
-        {"index": 0, "text": "abcd", "startOffset": 0, "endOffset": 4},
-        {"index": 1, "text": "defg", "startOffset": 3, "endOffset": 7},
-        {"index": 2, "text": "ghij", "startOffset": 6, "endOffset": 10},
+        {"index": 0, "text": "alpha beta ", "startOffset": 0, "endOffset": 11},
+        {"index": 1, "text": "beta gamma ", "startOffset": 6, "endOffset": 17},
+        {"index": 2, "text": "gamma delta", "startOffset": 11, "endOffset": 22},
     ]
+
+
+def test_chunk_prefers_paragraph_boundaries():
+    text = "Alpha paragraph.\n\nBeta paragraph.\n\nGamma paragraph."
+
+    response = client().post(
+        "/chunk",
+        headers=headers(),
+        json={"text": text, "chunkSize": 35, "overlap": 0},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["chunks"] == [
+        {"index": 0, "text": text[:35], "startOffset": 0, "endOffset": 35},
+        {"index": 1, "text": text[35:], "startOffset": 35, "endOffset": len(text)},
+    ]
+
+
+def test_chunk_falls_back_to_sentence_boundaries_for_long_paragraph():
+    text = "First sentence. Second sentence. Third sentence."
+
+    response = client().post(
+        "/chunk",
+        headers=headers(),
+        json={"text": text, "chunkSize": 34, "overlap": 0},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["chunks"] == [
+        {"index": 0, "text": text[:33], "startOffset": 0, "endOffset": 33},
+        {"index": 1, "text": text[33:], "startOffset": 33, "endOffset": len(text)},
+    ]
+
+
+def test_chunk_keeps_single_long_word_intact():
+    text = "x" * 2500
+
+    response = client().post(
+        "/chunk",
+        headers=headers(),
+        json={"text": text, "chunkSize": 1000, "overlap": 200},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["chunks"] == [
+        {"index": 0, "text": text, "startOffset": 0, "endOffset": len(text)},
+    ]
+
+
+@pytest.mark.parametrize("text", ["", "short text"])
+def test_chunk_handles_empty_and_short_text(text):
+    response = client().post(
+        "/chunk",
+        headers=headers(),
+        json={"text": text, "chunkSize": 1000, "overlap": 200},
+    )
+
+    assert response.status_code == 200
+    expected = (
+        []
+        if not text
+        else [{"index": 0, "text": text, "startOffset": 0, "endOffset": len(text)}]
+    )
+    assert response.json()["chunks"] == expected
 
 
 def test_embed_returns_expected_shape():
