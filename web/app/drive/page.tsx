@@ -569,18 +569,36 @@ export default function DrivePage() {
         ) : activeView === "logs" ? (
           <ObservabilityView />
         ) : (
-          <AgentView run={agentRun} onRunChange={setAgentRun} />
+          <AgentView run={agentRun} onRunChange={setAgentRun} onFilesChanged={loadContents} />
         )}
       </div>
     </main>
   );
 }
 
-function AgentView({ run, onRunChange }: { run: AgentRunResponse | null; onRunChange: (run: AgentRunResponse) => void }) {
+function AgentView({
+  run,
+  onRunChange,
+  onFilesChanged,
+}: {
+  run: AgentRunResponse | null;
+  onRunChange: (run: AgentRunResponse) => void;
+  onFilesChanged: () => void | Promise<void>;
+}) {
   const [instruction, setInstruction] = useState("");
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setSubmitting] = useState(false);
   const [approvalAction, setApprovalAction] = useState<"approve" | "reject" | null>(null);
+
+  function applyRun(nextRun: AgentRunResponse) {
+    onRunChange(nextRun);
+    // The agent's file-mutating tools (create/rename/move/copy) only take effect once a run
+    // reaches Completed - refresh the Files view in the background so newly changed files show
+    // up there without the user having to manually reload or re-switch tabs.
+    if (nextRun.status === "Completed") {
+      void onFilesChanged();
+    }
+  }
 
   async function startRun(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -593,7 +611,7 @@ function AgentView({ run, onRunChange }: { run: AgentRunResponse | null; onRunCh
 
     setSubmitting(true);
     try {
-      onRunChange(await apiJson<AgentRunResponse>("/agent/runs", {
+      applyRun(await apiJson<AgentRunResponse>("/agent/runs", {
         method: "POST",
         body: JSON.stringify({ question }),
       }));
@@ -610,8 +628,11 @@ function AgentView({ run, onRunChange }: { run: AgentRunResponse | null; onRunCh
     setSubmitError(null);
     setApprovalAction(action);
     try {
-      onRunChange(await apiJson<AgentRunResponse>(`/agent/runs/${run.id}/${action}`, { method: "POST" }));
+      applyRun(await apiJson<AgentRunResponse>(`/agent/runs/${run.id}/${action}`, { method: "POST" }));
     } catch (err) {
+      // Left `run` untouched on failure - it's still AwaitingApproval, so the prompt and
+      // buttons below reappear automatically (approvalAction resets in `finally`) instead of
+      // leaving the user stuck with no way to retry.
       setSubmitError(err instanceof Error ? err.message : "The agent action could not be completed.");
     } finally {
       setApprovalAction(null);
@@ -648,17 +669,26 @@ function AgentView({ run, onRunChange }: { run: AgentRunResponse | null; onRunCh
 
         {run?.status === "AwaitingApproval" ? (
           <div className="mt-5 rounded-[7px] border border-amber-200/25 bg-amber-300/10 p-4">
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-amber-100">Approval needed</p>
-            <p className="mt-2 text-sm leading-6 text-white">{pendingAction ?? "The agent is ready to make a change."}?</p>
-            <p className="mt-1 text-xs text-white/52">This action will only run if you approve it.</p>
-            <div className="mt-4 flex flex-wrap gap-2">
-              <button className={primaryButtonClass} disabled={isBusy} onClick={() => void resolveApproval("approve")} type="button">
-                {approvalAction === "approve" ? "Approving…" : "Approve"}
-              </button>
-              <button className={secondaryButtonClass} disabled={isBusy} onClick={() => void resolveApproval("reject")} type="button">
-                {approvalAction === "reject" ? "Rejecting…" : "Reject"}
-              </button>
-            </div>
+            {approvalAction ? (
+              // The prompt and buttons disappear the instant a decision is clicked, replaced by
+              // this transitional state, rather than lingering (disabled) until the round-trip
+              // finishes - it reappears automatically below only if the request actually fails.
+              <p className="text-sm leading-6 text-white/80">{approvalAction === "approve" ? "Applying your approval…" : "Applying your rejection…"}</p>
+            ) : (
+              <>
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-amber-100">Approval needed</p>
+                <p className="mt-2 text-sm leading-6 text-white">{pendingAction ?? "The agent is ready to make a change."}?</p>
+                <p className="mt-1 text-xs text-white/52">This action will only run if you approve it.</p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button className={primaryButtonClass} disabled={isBusy} onClick={() => void resolveApproval("approve")} type="button">
+                    Approve
+                  </button>
+                  <button className={secondaryButtonClass} disabled={isBusy} onClick={() => void resolveApproval("reject")} type="button">
+                    Reject
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         ) : null}
       </div>
