@@ -103,6 +103,7 @@ public sealed class SearchChatEndpointTests : IAsyncLifetime
         Assert.NotEqual(Guid.Empty, body.ConversationId);
         Assert.Equal("Grounded answer from retrieved chunks.", body.Answer);
         Assert.Single(body.Citations);
+        Assert.Equal(1, body.Citations[0].Reference);
         Assert.Equal(chunks.LeaseChunkId, body.Citations[0].ChunkId);
         Assert.Equal("lease.pdf", body.Citations[0].FileName);
 
@@ -128,8 +129,30 @@ public sealed class SearchChatEndpointTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await ReadJsonAsync<ChatResponseDto>(response);
         Assert.Single(body.Citations);
+        Assert.Equal(2, body.Citations[0].Reference);
         Assert.Equal(chunks.PolicyChunkId, body.Citations[0].ChunkId);
         Assert.Equal("policy.md", body.Citations[0].FileName);
+    }
+
+    [Theory]
+    [InlineData("not-a-number")]
+    [InlineData("99")]
+    public async Task Chat_UsesSequentialReferenceWhenCitationReferenceIsInvalid(string citationReference)
+    {
+        var client = await CreateAuthorizedClientAsync();
+        await SeedChunksAsync();
+        _aiClient.CitationReference = citationReference;
+        _aiClient.CitedChunkIndex = 1;
+
+        var response = await client.PostAsJsonAsync("/chat", new
+        {
+            Question = "What is the renewal rule?"
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await ReadJsonAsync<ChatResponseDto>(response);
+        Assert.Single(body.Citations);
+        Assert.Equal(1, body.Citations[0].Reference);
     }
 
     [Fact]
@@ -208,6 +231,7 @@ public sealed class SearchChatEndpointTests : IAsyncLifetime
         Assert.Equal("assistant", history.Messages[1].Role);
         Assert.Equal("Grounded answer from retrieved chunks.", history.Messages[1].Content);
         Assert.Single(history.Messages[1].Citations);
+        Assert.Equal(1, history.Messages[1].Citations[0].Reference);
     }
 
     [Fact]
@@ -380,7 +404,7 @@ public sealed class SearchChatEndpointTests : IAsyncLifetime
 
     private sealed record ChatResponseDto(Guid ConversationId, string Answer, IReadOnlyList<ChatCitationDto> Citations);
 
-    private sealed record ChatCitationDto(Guid ChunkId, Guid? FileId, string FileName, string Snippet);
+    private sealed record ChatCitationDto(int Reference, Guid ChunkId, Guid? FileId, string FileName, string Snippet);
 
     private sealed record ChatHistoryResponseDto(Guid ConversationId, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, int Page, int PageSize, IReadOnlyList<ChatMessageDto> Messages);
 
@@ -391,6 +415,8 @@ public sealed class SearchChatEndpointTests : IAsyncLifetime
         public List<RagAnswerRequest> AnswerRequests { get; } = [];
 
         public string CitationReference { get; set; } = "1";
+
+        public int? CitedChunkIndex { get; set; }
 
         public Task<ExtractResponse> ExtractAsync(string fileName, string contentType, Stream fileStream, CancellationToken cancellationToken) =>
             Task.FromResult(new ExtractResponse("unused", contentType, 6));
@@ -410,7 +436,7 @@ public sealed class SearchChatEndpointTests : IAsyncLifetime
         public Task<RagAnswerResponse> AnswerAsync(RagAnswerRequest request, CancellationToken cancellationToken)
         {
             AnswerRequests.Add(request);
-            var citationIndex = int.Parse(CitationReference) - 1;
+            var citationIndex = CitedChunkIndex ?? int.Parse(CitationReference) - 1;
             var citedChunk = request.Chunks.ElementAt(citationIndex);
             return Task.FromResult(new RagAnswerResponse(
                 "Grounded answer from retrieved chunks.",

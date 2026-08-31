@@ -156,7 +156,7 @@ public static class SearchChatEndpoints
         }
 
         var citations = answer.Citations
-            .Select(citation => ToChatCitation(citation, retrievedChunks, options.Value.SnippetLength))
+            .Select((citation, index) => ToChatCitation(citation, retrievedChunks, options.Value.SnippetLength, index + 1))
             .ToList();
 
         var userMessage = new ChatMessage
@@ -257,15 +257,16 @@ public static class SearchChatEndpoints
     private static SearchResult ToSearchResult(RetrievedChunk chunk, int snippetLength) =>
         new(chunk.ChunkId, chunk.FileId, chunk.FileName, chunk.ChunkIndex, CreateSnippet(chunk.Text, snippetLength), chunk.Score);
 
-    private static ChatCitation ToChatCitation(RagCitation citation, IReadOnlyList<RetrievedChunk> retrievedChunks, int snippetLength)
+    private static ChatCitation ToChatCitation(RagCitation citation, IReadOnlyList<RetrievedChunk> retrievedChunks, int snippetLength, int fallbackReference)
     {
-        var matchedChunk = int.TryParse(citation.Reference, NumberStyles.None, CultureInfo.InvariantCulture, out var reference)
-            && reference >= 1
-            && reference <= retrievedChunks.Count
-                ? retrievedChunks[reference - 1]
-                : null;
+        var hasValidReference = int.TryParse(citation.Reference, NumberStyles.None, CultureInfo.InvariantCulture, out var parsedReference)
+            && parsedReference >= 1
+            && parsedReference <= retrievedChunks.Count;
+        var reference = hasValidReference ? parsedReference : fallbackReference;
+        var matchedChunk = hasValidReference ? retrievedChunks[parsedReference - 1] : null;
 
         return new ChatCitation(
+            reference,
             matchedChunk?.ChunkId ?? Guid.Empty,
             matchedChunk?.FileId,
             matchedChunk?.FileName ?? citation.FileName,
@@ -292,7 +293,10 @@ public static class SearchChatEndpoints
             return [];
         }
 
-        return JsonSerializer.Deserialize<IReadOnlyCollection<ChatCitation>>(citationsJson, JsonOptions) ?? [];
+        var citations = JsonSerializer.Deserialize<IReadOnlyCollection<ChatCitation>>(citationsJson, JsonOptions) ?? [];
+        return citations
+            .Select((citation, index) => citation.Reference > 0 ? citation : citation with { Reference = index + 1 })
+            .ToList();
     }
 
     private static int NormalizeTopK(int? requestedTopK, int configuredTopK)
@@ -356,7 +360,7 @@ public sealed record ChatRequest([Required, MaxLength(4000)] string Question, Gu
 
 public sealed record ChatResponse(Guid ConversationId, string Answer, IReadOnlyCollection<ChatCitation> Citations);
 
-public sealed record ChatCitation(Guid ChunkId, Guid? FileId, string FileName, string Snippet);
+public sealed record ChatCitation(int Reference, Guid ChunkId, Guid? FileId, string FileName, string Snippet);
 
 public sealed record ChatHistoryResponse(Guid ConversationId, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, int Page, int PageSize, IReadOnlyCollection<ChatMessageResponse> Messages);
 

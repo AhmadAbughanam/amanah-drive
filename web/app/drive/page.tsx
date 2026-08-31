@@ -1,13 +1,13 @@
 "use client";
 
 import type { ChangeEvent, FormEvent } from "react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import { Area, AreaChart, Bar, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { portfolioClasses, portfolioPalette, Scribble, SectionLabel } from "@/components/portfolio-theme";
 import { apiFetch, apiJson, errorMessage } from "@/lib/api";
-import type { ActivityResponse, AdminLogResponse, ChatCitation, ChatResponse, FileItem, Folder, FolderContents, ObservabilitySnapshot, SearchResponse, SearchResult } from "@/lib/types";
+import type { ActivityResponse, AdminLogResponse, ChatCitation, ChatHistoryResponse, ChatMessageResponse, ChatResponse, FileItem, Folder, FolderContents, ObservabilitySnapshot, SearchResponse, SearchResult } from "@/lib/types";
 import { useAuth } from "../auth-provider";
 
 type Breadcrumb = { id: string | null; name: string };
@@ -27,16 +27,120 @@ const primaryButtonClass = portfolioClasses.primaryButton;
 const secondaryButtonClass = portfolioClasses.secondaryButton;
 const iconButtonClass = portfolioClasses.iconButton;
 const panelClass = portfolioClasses.panel;
-const chatMarkdownElements = ["p", "strong", "em", "ul", "ol", "li", "code", "br"];
+const chatMarkdownElements = ["p", "strong", "em", "ul", "ol", "li", "code", "br", "a"];
 
-function ChatAnswer({ content }: { content: string }) {
+type MarkdownNode = {
+  type: string;
+  value?: string;
+  url?: string;
+  children?: MarkdownNode[];
+};
+
+function remarkCitationMarkers() {
+  return (tree: MarkdownNode) => {
+    transformMarkdownChildren(tree);
+  };
+}
+
+function transformMarkdownChildren(node: MarkdownNode) {
+  if (!node.children || node.type === "code" || node.type === "inlineCode") {
+    return;
+  }
+
+  node.children = node.children.flatMap((child) => {
+    if (child.type === "text" && typeof child.value === "string") {
+      return splitCitationMarkers(child.value);
+    }
+
+    transformMarkdownChildren(child);
+    return child;
+  });
+}
+
+function splitCitationMarkers(value: string): MarkdownNode[] {
+  const parts: MarkdownNode[] = [];
+  const markerPattern = /\[(\d+)\]/g;
+  let lastIndex = 0;
+
+  for (const match of value.matchAll(markerPattern)) {
+    const index = match.index ?? 0;
+    if (index > lastIndex) {
+      parts.push({ type: "text", value: value.slice(lastIndex, index) });
+    }
+    parts.push({
+      type: "link",
+      url: `#citation-${match[1]}`,
+      children: [{ type: "text", value: match[0] }],
+    });
+    lastIndex = index + match[0].length;
+  }
+
+  if (lastIndex === 0) {
+    return [{ type: "text", value }];
+  }
+  if (lastIndex < value.length) {
+    parts.push({ type: "text", value: value.slice(lastIndex) });
+  }
+
+  return parts;
+}
+
+function citationReferenceFromHref(href: string | undefined): number | null {
+  const match = /^#citation-(\d+)$/.exec(href ?? "");
+  if (!match) {
+    return null;
+  }
+
+  const reference = Number(match[1]);
+  return Number.isSafeInteger(reference) && reference > 0 ? reference : null;
+}
+
+function ChatAnswer({
+  content,
+  citations,
+  onCitationClick,
+}: {
+  content: string;
+  citations: ChatCitation[];
+  onCitationClick: (citation: ChatCitation) => void;
+}) {
+  const citationsByReference = new Map<number, ChatCitation>();
+  for (const citation of citations) {
+    if (!citationsByReference.has(citation.reference)) {
+      citationsByReference.set(citation.reference, citation);
+    }
+  }
+
   return (
     <div className="mt-3 text-sm leading-7">
       <ReactMarkdown
         allowedElements={chatMarkdownElements}
+        allowElement={(element) =>
+          element.tagName !== "a" ||
+          (typeof element.properties.href === "string" && element.properties.href.startsWith("#citation-"))
+        }
         skipHtml
         unwrapDisallowed
+        remarkPlugins={[remarkCitationMarkers]}
         components={{
+          a: ({ href, children }) => {
+            const reference = citationReferenceFromHref(href);
+            const citation = reference === null ? undefined : citationsByReference.get(reference);
+            if (!citation || reference === null) {
+              return <>{children}</>;
+            }
+
+            return (
+              <button
+                aria-label={`Open citation ${reference}`}
+                className="mx-0.5 inline-flex min-w-5 items-center justify-center rounded-[4px] border border-[#f472b6]/45 bg-[#f472b6]/15 px-1.5 py-0.5 text-xs font-bold leading-none text-[#fbcfe8] transition hover:border-[#f472b6]/80 hover:bg-[#f472b6]/25 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f472b6]/70"
+                onClick={() => onCitationClick(citation)}
+                type="button"
+              >
+                {children}
+              </button>
+            );
+          },
           p: ({ children }) => <p className="whitespace-pre-wrap [&:not(:first-child)]:mt-3">{children}</p>,
           strong: ({ children }) => <strong className="font-semibold text-white">{children}</strong>,
           em: ({ children }) => <em className="italic">{children}</em>,
@@ -50,6 +154,15 @@ function ChatAnswer({ content }: { content: string }) {
       </ReactMarkdown>
     </div>
   );
+}
+
+function toChatEntry(message: ChatMessageResponse): ChatEntry {
+  return {
+    id: message.id,
+    role: message.role === "assistant" ? "assistant" : "user",
+    content: message.content,
+    citations: message.citations,
+  };
 }
 
 export default function DrivePage() {
@@ -328,6 +441,12 @@ export default function DrivePage() {
           citations: response.citations,
         },
       ]);
+      try {
+        const history = await apiJson<ChatHistoryResponse>(`/chat/${response.conversationId}`);
+        setChatEntries(history.messages.map(toChatEntry));
+      } catch {
+        // Keep the immediately rendered answer when history hydration is unavailable.
+      }
     } catch (err) {
       setChatError(err instanceof Error ? err.message : "Chat failed. Try again in a moment.");
     } finally {
@@ -758,6 +877,28 @@ function KnowledgeView({
   onSearch: (event: FormEvent<HTMLFormElement>) => Promise<void>;
   onSearchQueryChange: (value: string) => void;
 }) {
+  const citationCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [activeCitationCard, setActiveCitationCard] = useState<string | null>(null);
+  const [selectedCitation, setSelectedCitation] = useState<ChatCitation | null>(null);
+
+  function citationCardKey(entryId: string, reference: number) {
+    return `${entryId}-${reference}`;
+  }
+
+  function openCitation(entryId: string, citation: ChatCitation) {
+    const cardKey = citationCardKey(entryId, citation.reference);
+    setActiveCitationCard(cardKey);
+    setSelectedCitation(citation);
+    requestAnimationFrame(() => {
+      citationCardRefs.current[cardKey]?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    });
+  }
+
+  function closeCitationDialog() {
+    setSelectedCitation(null);
+    setActiveCitationCard(null);
+  }
+
   return (
     <section className="bg-[#020203] px-5 py-7 sm:px-8 lg:px-9">
       <div className="relative mb-7 flex flex-col gap-4 overflow-hidden border-b border-white/10 pb-7 lg:flex-row lg:items-end lg:justify-between">
@@ -870,21 +1011,33 @@ function KnowledgeView({
             {chatEntries.map((entry) => (
               <article key={entry.id} className={entry.role === "user" ? "ml-auto max-w-[760px] rounded-[8px] border border-[#c084fc]/35 bg-gradient-to-br from-[#c084fc]/20 via-[#f472b6]/12 to-[#60a5fa]/15 px-5 py-4 text-white shadow-[0_18px_35px_rgba(0,0,0,0.28)]" : "mr-auto max-w-[760px] rounded-[8px] border border-white/10 bg-white/[0.045] px-5 py-4 text-white/76"}>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] opacity-65">{entry.role === "user" ? "You" : "Amanah Drive"}</p>
-                {entry.role === "assistant" ? <ChatAnswer content={entry.content} /> : <p className="mt-3 whitespace-pre-wrap text-sm leading-7">{entry.content}</p>}
+                {entry.role === "assistant" ? <ChatAnswer content={entry.content} citations={entry.citations ?? []} onCitationClick={(citation) => openCitation(entry.id, citation)} /> : <p className="mt-3 whitespace-pre-wrap text-sm leading-7">{entry.content}</p>}
                 {entry.citations && entry.citations.length > 0 ? (
                   <div className="mt-5 space-y-3 border-t border-white/10 pt-4">
                     <p className={labelClass}>Sources & citations</p>
-                    {entry.citations.map((citation) => (
-                      <div key={`${citation.chunkId}-${citation.fileId ?? "none"}`} className="rounded-[8px] border border-[#60a5fa]/20 bg-[#60a5fa]/[0.05] p-3">
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                          <p className="text-sm font-semibold text-white/85">{citation.fileName}</p>
-                          <button className="text-xs font-semibold uppercase tracking-[0.14em] text-[#bfdbfe] transition hover:text-white" onClick={() => onDownloadCitation(citation)} type="button">
-                            Download
-                          </button>
+                    {entry.citations.map((citation, index) => {
+                      const cardKey = citationCardKey(entry.id, citation.reference);
+                      const isActive = activeCitationCard === cardKey;
+
+                      return (
+                        <div
+                          key={`${citation.chunkId}-${citation.fileId ?? "none"}-${citation.reference}-${index}`}
+                          ref={(node) => {
+                            citationCardRefs.current[cardKey] = node;
+                          }}
+                          className={`rounded-[8px] border bg-[#60a5fa]/[0.05] p-3 transition ${isActive ? "border-[#f472b6]/65 ring-1 ring-[#f472b6]/40" : "border-[#60a5fa]/20"}`}
+                          data-citation-active={isActive ? "true" : undefined}
+                        >
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <p className="text-sm font-semibold text-white/85">[{citation.reference}] {citation.fileName}</p>
+                            <button className="text-xs font-semibold uppercase tracking-[0.14em] text-[#bfdbfe] transition hover:text-white" onClick={() => onDownloadCitation(citation)} type="button">
+                              Download
+                            </button>
+                          </div>
+                          <p className="mt-2 text-sm leading-6 text-white/55">{citation.snippet}</p>
                         </div>
-                        <p className="mt-2 text-sm leading-6 text-white/55">{citation.snippet}</p>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 ) : null}
               </article>
@@ -921,7 +1074,56 @@ function KnowledgeView({
           </form>
         </section>
       </div>
+      {selectedCitation ? <CitationSnippetDialog citation={selectedCitation} onClose={closeCitationDialog} onDownload={() => onDownloadCitation(selectedCitation)} /> : null}
     </section>
+  );
+}
+
+function CitationSnippetDialog({ citation, onClose, onDownload }: { citation: ChatCitation; onClose: () => void; onDownload: () => void }) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog || dialog.open) {
+      return;
+    }
+
+    dialog.showModal();
+  }, []);
+
+  return (
+    <dialog
+      ref={dialogRef}
+      aria-labelledby="citation-dialog-title"
+      className="w-[min(92vw,620px)] rounded-[10px] border border-[#f472b6]/35 bg-[#0d0c13] p-0 text-white shadow-[0_28px_90px_rgba(0,0,0,0.7)] backdrop:bg-black/75"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) {
+          dialogRef.current?.close();
+        }
+      }}
+      onClose={onClose}
+    >
+      <div className="p-5 sm:p-6">
+        <div className="flex items-start justify-between gap-5">
+          <div>
+            <p className={labelClass}>Citation [{citation.reference}]</p>
+            <h4 id="citation-dialog-title" className="mt-2 break-words font-serif text-3xl font-normal text-white/92">{citation.fileName}</h4>
+          </div>
+          <button className={iconButtonClass} onClick={() => dialogRef.current?.close()} type="button" aria-label="Close citation">
+            ×
+          </button>
+        </div>
+        <p className="mt-5 rounded-[8px] border border-white/10 bg-white/[0.035] p-4 text-sm leading-7 text-white/68">{citation.snippet}</p>
+        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <button className={secondaryButtonClass} onClick={() => dialogRef.current?.close()} type="button">
+            Close
+          </button>
+          <button className={primaryButtonClass} onClick={onDownload} type="button">
+            Download source
+          </button>
+        </div>
+      </div>
+    </dialog>
   );
 }
 

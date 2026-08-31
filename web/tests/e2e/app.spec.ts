@@ -168,9 +168,10 @@ test("chat answer with citation renders", async ({ page }) => {
     loginSucceeds: true,
     chatResponse: {
       conversationId: "44444444-4444-4444-4444-444444444444",
-      answer: "Amanah Drive uses retrieved chunks to ground answers.",
+      answer: "Amanah Drive uses retrieved chunks to ground answers.[1] It can cite the same source twice.[1] Inline code `[1]` stays literal.",
       citations: [
         {
+          reference: 1,
           chunkId: "33333333-3333-3333-3333-333333333333",
           fileId: "22222222-2222-2222-2222-222222222222",
           fileName: "notes.txt",
@@ -188,6 +189,15 @@ test("chat answer with citation renders", async ({ page }) => {
   await expect(page.getByText("How are answers grounded?")).toBeVisible();
   await expect(page.getByText("Amanah Drive uses retrieved chunks to ground answers.")).toBeVisible();
   await expect(page.getByText("Retrieved chunks are passed to the AI service with the user question.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Open citation 1" })).toHaveCount(2);
+  await expect(page.locator("code").getByText("[1]")).toBeVisible();
+
+  await page.getByRole("button", { name: "Open citation 1" }).first().click();
+
+  await expect(page.locator('[data-citation-active="true"]')).toContainText("notes.txt");
+  const dialog = page.getByRole("dialog", { name: "notes.txt" });
+  await expect(dialog).toContainText("Retrieved chunks are passed to the AI service with the user question.");
+  await expect(dialog.getByRole("button", { name: "Download source" })).toBeVisible();
 });
 
 test("chat error state renders cleanly", async ({ page }) => {
@@ -246,6 +256,7 @@ async function mockApi(
       conversationId: string;
       answer: string;
       citations: Array<{
+        reference: number;
         chunkId: string;
         fileId: string | null;
         fileName: string;
@@ -393,21 +404,41 @@ async function mockApi(
     });
   });
 
+  let lastChatQuestion = "";
+  const chatResponse = options.chatResponse ?? {
+    conversationId: "44444444-4444-4444-4444-444444444444",
+    answer: "Default mocked answer.",
+    citations: [],
+  };
+
   await page.route(`${apiBaseUrl}/chat`, async (route) => {
     if (options.chatStatus && options.chatStatus >= 400) {
       await route.fulfill({ status: options.chatStatus });
       return;
     }
 
+    lastChatQuestion = String(route.request().postDataJSON()?.question ?? "");
+
     await route.fulfill({
       status: 200,
-      json:
-        options.chatResponse ??
-        {
-          conversationId: "44444444-4444-4444-4444-444444444444",
-          answer: "Default mocked answer.",
-          citations: [],
-        },
+      json: chatResponse,
+    });
+  });
+
+  await page.route(`${apiBaseUrl}/chat/**`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      json: {
+        conversationId: chatResponse.conversationId,
+        createdAt: "2026-08-31T00:00:00Z",
+        updatedAt: "2026-08-31T00:00:00Z",
+        page: 1,
+        pageSize: 20,
+        messages: [
+          { id: "history-user", role: "user", content: lastChatQuestion, citations: [], createdAt: "2026-08-31T00:00:00Z" },
+          { id: "history-assistant", role: "assistant", content: chatResponse.answer, citations: chatResponse.citations, createdAt: "2026-08-31T00:00:01Z" },
+        ],
+      },
     });
   });
 }

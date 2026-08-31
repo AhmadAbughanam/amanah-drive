@@ -44,6 +44,7 @@ export type SearchResponse = {
 };
 
 export type ChatCitation = {
+  reference: number;
   chunkId: string;
   fileId: string | null;
   fileName: string;
