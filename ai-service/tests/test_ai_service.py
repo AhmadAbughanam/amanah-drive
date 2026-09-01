@@ -12,6 +12,8 @@ from app.config import EMBEDDING_DIMENSION, HF_DEFAULT_MODEL
 from app.main import app
 from app.schemas import RagAnswerResponse, RagCitation
 from app.services import extraction
+from app.services import youtube
+from app.routers import youtube as youtube_router
 from app.services.rag import HuggingFaceUpstreamError, build_grounded_prompt, call_hugging_face, create_citations
 
 TOKEN = "tests-only-service-token"
@@ -164,6 +166,61 @@ def test_extract_rejects_missing_service_token():
     )
 
     assert response.status_code == 401
+
+
+def test_youtube_transcript_returns_caption_text(monkeypatch):
+    monkeypatch.setattr(youtube_router, "fetch_transcript", lambda _url: "first caption\nsecond caption")
+
+    response = client().post(
+        "/youtube/transcript",
+        headers=headers(),
+        json={"sourceUrl": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"text": "first caption\nsecond caption", "characterCount": 28}
+
+
+def test_youtube_transcript_returns_clear_caption_error(monkeypatch):
+    def no_captions(_url):
+        raise youtube.YouTubeTranscriptError("YouTube captions are disabled for this video.")
+
+    monkeypatch.setattr(youtube_router, "fetch_transcript", no_captions)
+    response = client().post(
+        "/youtube/transcript",
+        headers=headers(),
+        json={"sourceUrl": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"},
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "YouTube captions are disabled for this video."
+
+
+def test_youtube_url_rejects_invalid_video_id():
+    with pytest.raises(youtube.YouTubeTranscriptError, match="valid YouTube"):
+        youtube.extract_video_id("https://www.youtube.com/watch?v=not-a-video!")
+
+
+def test_youtube_transcript_prefers_manual_captions_over_auto_generated(monkeypatch):
+    class Snippet:
+        def __init__(self, text):
+            self.text = text
+
+    class Track:
+        def __init__(self, generated, text):
+            self.is_generated = generated
+            self._text = text
+
+        def fetch(self):
+            return [Snippet(self._text)]
+
+    class TranscriptApi:
+        def list(self, _video_id):
+            return [Track(True, "automatic"), Track(False, "manual")]
+
+    monkeypatch.setattr(youtube, "YouTubeTranscriptApi", TranscriptApi)
+
+    assert youtube.fetch_transcript("https://www.youtube.com/watch?v=dQw4w9WgXcQ") == "manual"
 
 
 def test_chunk_respects_word_boundaries_with_overlap():

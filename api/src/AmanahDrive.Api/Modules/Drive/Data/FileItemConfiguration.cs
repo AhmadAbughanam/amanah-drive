@@ -11,7 +11,9 @@ public sealed class FileItemConfiguration : IEntityTypeConfiguration<FileItem>
         entity.ToTable("file_items");
         entity.HasKey(file => file.Id);
         entity.Property(file => file.OriginalFileName).HasMaxLength(255).IsRequired();
-        entity.Property(file => file.StorageKey).HasMaxLength(128).IsRequired();
+        entity.Property(file => file.StorageKey).HasMaxLength(128);
+        entity.Property(file => file.Source).HasConversion<string>().HasMaxLength(32).HasDefaultValue(FileSource.Upload).IsRequired();
+        entity.Property(file => file.SourceUrl).HasMaxLength(2048);
         entity.Property(file => file.ContentType).HasMaxLength(255).IsRequired();
         entity.Property(file => file.ChecksumSha256).HasMaxLength(64).IsRequired();
         entity.HasIndex(file => file.UserId);

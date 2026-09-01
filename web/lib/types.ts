@@ -17,6 +17,8 @@ export type FileItem = {
   contentType: string;
   sizeBytes: number;
   checksumSha256: string;
+  source: "Upload" | "YouTube";
+  sourceUrl: string | null;
   processingJobId: string | null;
   createdAt: string;
   updatedAt: string;

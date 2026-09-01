@@ -175,6 +175,7 @@ export default function DrivePage() {
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
   const [newFolderName, setNewFolderName] = useState("");
+  const [youTubeUrl, setYouTubeUrl] = useState("");
   const [isLoading, setLoading] = useState(true);
   const [isWorking, setWorking] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -321,6 +322,21 @@ export default function DrivePage() {
     });
   }
 
+  async function addYouTube() {
+    const url = youTubeUrl.trim();
+    if (!url) {
+      return;
+    }
+
+    await runAction(async () => {
+      await apiJson<FileItem>("/drive/youtube", {
+        method: "POST",
+        body: JSON.stringify({ url, folderId: currentFolderId }),
+      });
+      setYouTubeUrl("");
+    });
+  }
+
   async function renameFile(file: FileItem) {
     const name = window.prompt("Rename file", file.originalFileName)?.trim();
     if (!name || name === file.originalFileName) {
@@ -385,6 +401,10 @@ export default function DrivePage() {
   }
 
   async function downloadFile(file: FileItem) {
+    if (file.source === "YouTube" && file.sourceUrl) {
+      window.open(file.sourceUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
     await downloadSource(file.id, file.originalFileName, setError);
   }
 
@@ -531,6 +551,7 @@ export default function DrivePage() {
             isWorking={isWorking}
             moveTargets={moveTargets}
             newFolderName={newFolderName}
+            youTubeUrl={youTubeUrl}
             pageSize={pageSize}
             onCreateFolder={createFolder}
             onDeleteFile={deleteFile}
@@ -545,6 +566,8 @@ export default function DrivePage() {
             onRenameFolder={renameFolder}
             onUploadFile={uploadFile}
             onNewFolderNameChange={setNewFolderName}
+            onAddYouTube={addYouTube}
+            onYouTubeUrlChange={setYouTubeUrl}
           />
         ) : activeView === "knowledge" ? (
           <KnowledgeView
@@ -753,6 +776,7 @@ function FilesView({
   isWorking,
   moveTargets,
   newFolderName,
+  youTubeUrl,
   pageSize,
   onCreateFolder,
   onDeleteFile,
@@ -767,6 +791,8 @@ function FilesView({
   onRenameFile,
   onRenameFolder,
   onUploadFile,
+  onAddYouTube,
+  onYouTubeUrlChange,
 }: {
   breadcrumbs: Breadcrumb[];
   contents: FolderContents | null;
@@ -776,6 +802,7 @@ function FilesView({
   isWorking: boolean;
   moveTargets: Record<string, string>;
   newFolderName: string;
+  youTubeUrl: string;
   pageSize: number;
   onCreateFolder: () => Promise<void>;
   onDeleteFile: (file: FileItem) => Promise<void>;
@@ -790,6 +817,8 @@ function FilesView({
   onRenameFile: (file: FileItem) => Promise<void>;
   onRenameFolder: (folder: Folder) => Promise<void>;
   onUploadFile: (event: ChangeEvent<HTMLInputElement>) => Promise<void>;
+  onAddYouTube: () => Promise<void>;
+  onYouTubeUrlChange: (value: string) => void;
 }) {
   const totalItems = (contents?.folders.length ?? 0) + (contents?.files.length ?? 0);
   const firstItem = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
@@ -832,6 +861,22 @@ function FilesView({
             />
             <button className={`${primaryButtonClass} mt-3 w-full normal-case tracking-normal`} onClick={onCreateFolder} disabled={isWorking} type="button">
               Create Folder
+            </button>
+          </div>
+
+          <div className={`${portfolioClasses.insetPanel} mt-5 p-4`}>
+            <p className="text-base font-semibold text-white">Add from YouTube</p>
+            <p className="mt-1 text-sm leading-5 text-white/52">Import an existing caption track. No video or audio is downloaded.</p>
+            <input
+              aria-label="YouTube video URL"
+              className={`${fieldClass} mt-4`}
+              value={youTubeUrl}
+              onChange={(event) => onYouTubeUrlChange(event.target.value)}
+              placeholder="https://www.youtube.com/watch?v=..."
+              disabled={isWorking}
+            />
+            <button className={`${primaryButtonClass} mt-3 w-full normal-case tracking-normal`} onClick={onAddYouTube} disabled={isWorking || !youTubeUrl.trim()} type="button">
+              Add YouTube video
             </button>
           </div>
 
@@ -959,7 +1004,10 @@ function FilesView({
                     </span>
                     <div className="min-w-0">
                       <p className="truncate font-semibold text-white/88">{file.originalFileName}</p>
-                      <p className="mt-1 text-sm text-white/42">{friendlyContentType(file.contentType)}</p>
+                      <p className="mt-1 flex items-center gap-2 text-sm text-white/42">
+                        {friendlyContentType(file.contentType)}
+                        {file.source === "YouTube" ? <span className="rounded border border-red-300/30 bg-red-400/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-red-200">YouTube</span> : null}
+                      </p>
                     </div>
                   </div>
                   <span className="w-fit rounded-[8px] border border-[#f472b6]/25 bg-[#f472b6]/[0.07] px-3 py-2 text-xs text-[#fbcfe8]">{fileExtension(file.originalFileName)}</span>

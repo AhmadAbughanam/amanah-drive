@@ -2,6 +2,7 @@ using System.Data;
 using AmanahDrive.Api.Shared.Infrastructure.Ai;
 using AmanahDrive.Api.Shared.Infrastructure.Data;
 using AmanahDrive.Api.Modules.Drive.Storage;
+using AmanahDrive.Api.Modules.Drive.Models;
 using AmanahDrive.Api.Modules.Processing.Models;
 using AmanahDrive.Api.Modules.Processing.Events;
 using AmanahDrive.Api.Shared.DomainEvents;
@@ -100,9 +101,15 @@ public sealed class ProcessingJobRunner(
     {
         try
         {
-            await using var fileStream = await storage.OpenReadAsync(job.FileItem.StorageKey, cancellationToken);
-            var extracted = await aiClient.ExtractAsync(job.FileItem.OriginalFileName, job.FileItem.ContentType, fileStream, cancellationToken);
-            var chunks = await aiClient.ChunkAsync(extracted.Text, _options.ChunkSize, _options.ChunkOverlap, cancellationToken);
+            var text = job.FileItem.Source switch
+            {
+                FileSource.Upload when job.FileItem.StorageKey is not null => await ExtractUploadTextAsync(job.FileItem, cancellationToken),
+                FileSource.YouTube when job.FileItem.SourceUrl is not null => (await aiClient.ExtractYouTubeTranscriptAsync(job.FileItem.SourceUrl, cancellationToken)).Text,
+                FileSource.Upload => throw new InvalidOperationException("Uploaded file has no stored content."),
+                FileSource.YouTube => throw new InvalidOperationException("YouTube file has no source URL."),
+                _ => throw new InvalidOperationException("File has an unsupported source.")
+            };
+            var chunks = await aiClient.ChunkAsync(text, _options.ChunkSize, _options.ChunkOverlap, cancellationToken);
 
             if (chunks.Chunks.Count == 0)
             {
@@ -168,5 +175,12 @@ public sealed class ProcessingJobRunner(
                 new ProcessingFailedEvent(job.FileItemId, job.FileItem.OriginalFileName, job.FailedAt.Value),
                 CancellationToken.None);
         }
+    }
+
+    private async Task<string> ExtractUploadTextAsync(FileItem fileItem, CancellationToken cancellationToken)
+    {
+        await using var fileStream = await storage.OpenReadAsync(fileItem.StorageKey!, cancellationToken);
+        var extracted = await aiClient.ExtractAsync(fileItem.OriginalFileName, fileItem.ContentType, fileStream, cancellationToken);
+        return extracted.Text;
     }
 }

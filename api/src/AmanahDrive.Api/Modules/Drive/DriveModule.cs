@@ -2,6 +2,7 @@ using AmanahDrive.Api.Modules.Drive.Endpoints;
 using AmanahDrive.Api.Modules.Drive.Options;
 using AmanahDrive.Api.Modules.Drive.Services;
 using AmanahDrive.Api.Modules.Drive.Storage;
+using AmanahDrive.Api.Modules.Drive.YouTube;
 using Microsoft.AspNetCore.Http.Features;
 
 namespace AmanahDrive.Api.Modules.Drive;
@@ -35,6 +36,11 @@ public static class DriveModule
 
         services.AddScoped<IFileStorage, LocalFileStorage>();
         services.AddScoped<IDriveService, DriveService>();
+        services.AddHttpClient<IYouTubeOEmbedClient, YouTubeOEmbedClient>(client =>
+        {
+            client.BaseAddress = new Uri("https://www.youtube.com/");
+            client.Timeout = TimeSpan.FromSeconds(10);
+        });
         return services;
     }
 

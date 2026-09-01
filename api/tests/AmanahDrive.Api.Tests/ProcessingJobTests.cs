@@ -5,6 +5,8 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using AmanahDrive.Api.Modules.Admin.Activity;
+using AmanahDrive.Api.Modules.Auth.Models;
+using AmanahDrive.Api.Modules.Drive.Models;
 using AmanahDrive.Api.Modules.Processing;
 using AmanahDrive.Api.Modules.Processing.Models;
 using AmanahDrive.Api.Shared.Infrastructure.Ai;
@@ -134,6 +136,52 @@ public sealed class ProcessingJobTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Worker_ForYouTubeItem_FetchesTranscriptWithoutOpeningStoredFile()
+    {
+        await CreateAuthorizedClientAsync();
+        var now = DateTimeOffset.UtcNow;
+        var fileId = Guid.NewGuid();
+
+        using (var setupScope = _factory.Services.CreateScope())
+        {
+            var setupContext = setupScope.ServiceProvider.GetRequiredService<AmanahDriveDbContext>();
+            var user = await setupContext.AdminUsers.SingleAsync(user => user.Email == TestUsers.Email);
+            await setupContext.FileItems.AddAsync(new FileItem
+            {
+                Id = fileId,
+                UserId = user.Id,
+                OriginalFileName = "Video.youtube.txt",
+                Source = FileSource.YouTube,
+                SourceUrl = "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+                ContentType = "text/plain",
+                SizeBytes = 0,
+                ChecksumSha256 = string.Empty,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+            await setupContext.ProcessingJobs.AddAsync(new ProcessingJob
+            {
+                Id = Guid.NewGuid(),
+                FileItemId = fileId,
+                Status = ProcessingJobStatus.Pending,
+                CreatedAt = now,
+                UpdatedAt = now
+            });
+            await setupContext.SaveChangesAsync();
+        }
+
+        using var scope = _factory.Services.CreateScope();
+        var runner = scope.ServiceProvider.GetRequiredService<ProcessingJobRunner>();
+        Assert.True(await runner.ProcessNextPendingJobAsync(CancellationToken.None));
+
+        var dbContext = scope.ServiceProvider.GetRequiredService<AmanahDriveDbContext>();
+        var job = await dbContext.ProcessingJobs.SingleAsync(job => job.FileItemId == fileId);
+        Assert.Equal(ProcessingJobStatus.Completed, job.Status);
+        Assert.Equal(1, _aiClient.YouTubeTranscriptCalls);
+        Assert.Empty(_aiClient.ExtractCalls);
+    }
+
+    [Fact]
     public async Task Worker_WhenCalledConcurrently_ClaimsEachPendingJobOnlyOnce()
     {
         var client = await CreateAuthorizedClientAsync();
@@ -239,6 +287,8 @@ public sealed class ProcessingJobTests : IAsyncLifetime
 
         public TimeSpan ExtractDelay { get; set; }
 
+        public int YouTubeTranscriptCalls { get; private set; }
+
         public async Task<ExtractResponse> ExtractAsync(string fileName, string contentType, Stream fileStream, CancellationToken cancellationToken)
         {
             ExtractCalls.AddOrUpdate(fileName, 1, (_, calls) => calls + 1);
@@ -253,6 +303,12 @@ public sealed class ProcessingJobTests : IAsyncLifetime
             }
 
             return new ExtractResponse("alpha beta gamma", contentType, 16);
+        }
+
+        public Task<YouTubeTranscriptResponse> ExtractYouTubeTranscriptAsync(string sourceUrl, CancellationToken cancellationToken)
+        {
+            YouTubeTranscriptCalls++;
+            return Task.FromResult(new YouTubeTranscriptResponse("alpha beta gamma", 16));
         }
 
         public Task<ChunkResponse> ChunkAsync(string text, int chunkSize, int overlap, CancellationToken cancellationToken) =>

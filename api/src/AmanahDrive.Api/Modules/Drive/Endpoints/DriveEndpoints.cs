@@ -143,6 +143,34 @@ public static class DriveEndpoints
             .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
             .Produces<ErrorResponse>(StatusCodes.Status409Conflict);
 
+        group.MapPost("/youtube", async (
+            AddYouTubeRequest request,
+            ClaimsPrincipal user,
+            IDriveService driveService,
+            CancellationToken cancellationToken) =>
+        {
+            var validation = ValidateRequest(request);
+            if (validation is not null)
+            {
+                return validation;
+            }
+
+            var userId = GetUserId(user);
+            if (userId is null)
+            {
+                return Results.Unauthorized();
+            }
+
+            var result = await driveService.AddYouTubeAsync(userId.Value, new AddYouTubeCommand(request.Url, request.FolderId), cancellationToken);
+            return ToResult(result, fileItem => Results.Created($"/drive/files/{fileItem.Id}", fileItem));
+        })
+            .WithSummary("Add a YouTube video and create a transcript processing job.")
+            .Produces<FileItemResponse>(StatusCodes.Status201Created)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces<ErrorResponse>(StatusCodes.Status409Conflict);
+
         group.MapGet("/files/{fileId:guid}/download", async (
             Guid fileId,
             ClaimsPrincipal user,
@@ -156,9 +184,11 @@ public static class DriveEndpoints
             }
 
             var result = await driveService.OpenFileReadAsync(userId.Value, fileId, cancellationToken);
-            return result.File is null
-                ? Results.NotFound()
-                : Results.File(result.File.Content, result.File.ContentType, result.File.FileName);
+            return result.RedirectUrl is not null
+                ? Results.Redirect(result.RedirectUrl)
+                : result.File is null
+                    ? Results.NotFound()
+                    : Results.File(result.File.Content, result.File.ContentType, result.File.FileName);
         })
             .WithSummary("Download a stored file.")
             .Produces(StatusCodes.Status200OK, contentType: "application/octet-stream")
@@ -295,8 +325,12 @@ public sealed record RenameRequest(
 
 public sealed record MoveFileRequest(Guid? FolderId);
 
+public sealed record AddYouTubeRequest(
+    [Required, MaxLength(2048)] string Url,
+    Guid? FolderId);
+
 public sealed record FolderResponse(Guid Id, string Name, Guid? ParentFolderId, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
 
-public sealed record FileItemResponse(Guid Id, Guid? FolderId, string OriginalFileName, string ContentType, long SizeBytes, string ChecksumSha256, Guid? ProcessingJobId, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
+public sealed record FileItemResponse(Guid Id, Guid? FolderId, string OriginalFileName, string ContentType, long SizeBytes, string ChecksumSha256, string Source, string? SourceUrl, Guid? ProcessingJobId, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
 
 public sealed record FolderContentsResponse(Guid? ParentFolderId, int Page, int PageSize, IReadOnlyCollection<FolderResponse> Folders, IReadOnlyCollection<FileItemResponse> Files);

@@ -29,6 +29,11 @@ public interface IDriveService
         UploadFileCommand command,
         CancellationToken cancellationToken);
 
+    Task<DriveOperationResult<FileItemResponse>> AddYouTubeAsync(
+        Guid userId,
+        AddYouTubeCommand command,
+        CancellationToken cancellationToken);
+
     Task<FileReadResult> OpenFileReadAsync(Guid userId, Guid fileId, CancellationToken cancellationToken);
 
     Task<DriveOperationResult<FileItemResponse>> RenameFileAsync(
@@ -89,6 +94,8 @@ public sealed record UploadFileCommand(
 
 public sealed record CopyFileCommand(Guid SourceFileId, Guid? DestinationFolderId, string Name);
 
-public sealed record FileReadResult(FileReadResponse? File);
+public sealed record AddYouTubeCommand(string Url, Guid? FolderId);
+
+public sealed record FileReadResult(FileReadResponse? File, string? RedirectUrl = null);
 
 public sealed record FileReadResponse(Stream Content, string ContentType, string FileName);

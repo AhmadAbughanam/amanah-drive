@@ -44,6 +44,22 @@ public sealed class AiProcessingClient(
         }, null, _ => new AiUsageMetadata("local", null, null, null));
     }
 
+    public async Task<YouTubeTranscriptResponse> ExtractYouTubeTranscriptAsync(string sourceUrl, CancellationToken cancellationToken)
+    {
+        return await TrackAsync("extract.youtube", "youtube", async () =>
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/youtube/transcript")
+            {
+                Content = JsonContent.Create(new { sourceUrl }, options: JsonOptions)
+            };
+
+            AddServiceToken(request);
+            using var response = await SendAsync(request, cancellationToken);
+            await EnsureSuccessAsync(response, cancellationToken);
+            return await ReadJsonAsync<YouTubeTranscriptResponse>(response, cancellationToken);
+        }, null, _ => new AiUsageMetadata("youtube", null, null, null));
+    }
+
     public async Task<ChunkResponse> ChunkAsync(string text, int chunkSize, int overlap, CancellationToken cancellationToken)
     {
         return await TrackAsync("chunk", "local", async () =>
