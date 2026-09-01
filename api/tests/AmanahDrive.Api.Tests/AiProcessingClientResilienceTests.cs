@@ -94,25 +94,6 @@ public sealed class AiProcessingClientResilienceTests
         Assert.True(usage.LatencyMilliseconds >= 0);
     }
 
-    [Fact]
-    public async Task ExtractYouTubeTranscriptAsync_PostsOnlyTheSourceUrlAndRecordsYouTubeUsage()
-    {
-        var recorder = new CapturingUsageRecorder();
-        var handler = new CapturingHandler(JsonResponse(new YouTubeTranscriptResponse("caption text", 12)));
-        await using var services = BuildServices(handler, RetryOptions(maxRetryAttempts: 1, minimumThroughput: 4), recorder);
-        var client = services.GetRequiredService<IAiProcessingClient>();
-
-        var result = await client.ExtractYouTubeTranscriptAsync("https://www.youtube.com/watch?v=dQw4w9WgXcQ", CancellationToken.None);
-
-        Assert.Equal("caption text", result.Text);
-        Assert.Equal("/youtube/transcript", handler.RequestUri!.AbsolutePath);
-        Assert.Contains("dQw4w9WgXcQ", handler.Body);
-        Assert.Equal("tests-only-service-token", handler.ServiceToken);
-        var usage = Assert.Single(recorder.Measurements);
-        Assert.Equal("extract.youtube", usage.Operation);
-        Assert.Equal("youtube", usage.Provider);
-    }
-
     private static ServiceProvider BuildServices(
         HttpMessageHandler handler,
         AiServiceOptions options,
@@ -160,21 +141,6 @@ public sealed class AiProcessingClientResilienceTests
         {
             var call = Interlocked.Increment(ref _callCount);
             return Task.FromResult(responseFactory(call));
-        }
-    }
-
-    private sealed class CapturingHandler(HttpResponseMessage response) : HttpMessageHandler
-    {
-        public Uri? RequestUri { get; private set; }
-        public string Body { get; private set; } = string.Empty;
-        public string? ServiceToken { get; private set; }
-
-        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
-        {
-            RequestUri = request.RequestUri;
-            ServiceToken = request.Headers.GetValues("X-Service-Token").SingleOrDefault();
-            Body = request.Content is null ? string.Empty : await request.Content.ReadAsStringAsync(cancellationToken);
-            return response;
         }
     }
 

@@ -421,9 +421,6 @@ public sealed class SearchChatEndpointTests : IAsyncLifetime
         public Task<ExtractResponse> ExtractAsync(string fileName, string contentType, Stream fileStream, CancellationToken cancellationToken) =>
             Task.FromResult(new ExtractResponse("unused", contentType, 6));
 
-        public Task<YouTubeTranscriptResponse> ExtractYouTubeTranscriptAsync(string sourceUrl, CancellationToken cancellationToken) =>
-            Task.FromResult(new YouTubeTranscriptResponse("unused", 6));
-
         public Task<ChunkResponse> ChunkAsync(string text, int chunkSize, int overlap, CancellationToken cancellationToken) =>
             Task.FromResult(new ChunkResponse([]));
 

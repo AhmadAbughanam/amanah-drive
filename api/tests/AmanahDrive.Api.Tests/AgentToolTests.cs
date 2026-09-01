@@ -158,19 +158,6 @@ public sealed class AgentToolTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task CopyFile_YouTubeItem_ReturnsClearInvalidResultWithoutOpeningStorage()
-    {
-        var sourceFile = await SeedYouTubeFileAsync();
-        using var scope = _factory.Services.CreateScope();
-        var tool = scope.ServiceProvider.GetRequiredService<IAgentTool<CopyFileToolRequest, CopyFileToolResponse>>();
-
-        var result = await tool.ExecuteAsync(new AgentToolContext(_userId), new CopyFileToolRequest(sourceFile.Id, null, "copy.txt"), CancellationToken.None);
-
-        Assert.Equal(AgentToolStatus.Invalid, result.Status);
-        Assert.Equal("YouTube items cannot be copied because no source bytes are stored.", result.ErrorMessage);
-    }
-
-    [Fact]
     public void ToolApprovalFlags_AreDeclaredOnTheToolImplementations()
     {
         using var scope = _factory.Services.CreateScope();
@@ -230,26 +217,4 @@ public sealed class AgentToolTests : IAsyncLifetime
         await dbContext.SaveChangesAsync();
     }
 
-    private async Task<FileItem> SeedYouTubeFileAsync()
-    {
-        var file = new FileItem
-        {
-            Id = Guid.NewGuid(),
-            UserId = _userId,
-            OriginalFileName = "Video.youtube.txt",
-            Source = FileSource.YouTube,
-            SourceUrl = "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-            ContentType = "text/plain",
-            SizeBytes = 0,
-            ChecksumSha256 = string.Empty,
-            CreatedAt = DateTimeOffset.UtcNow,
-            UpdatedAt = DateTimeOffset.UtcNow
-        };
-
-        using var scope = _factory.Services.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<AmanahDriveDbContext>();
-        await dbContext.FileItems.AddAsync(file);
-        await dbContext.SaveChangesAsync();
-        return file;
-    }
 }

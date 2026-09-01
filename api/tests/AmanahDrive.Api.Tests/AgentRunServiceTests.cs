@@ -124,7 +124,6 @@ public sealed class AgentRunServiceTests : IAsyncLifetime
         public List<AgentCompletionRequest> AgentRequests { get; } = [];
         public void Enqueue(AgentCompletionResponse response) => _responses.Enqueue(response);
         public Task<ExtractResponse> ExtractAsync(string fileName, string contentType, Stream fileStream, CancellationToken cancellationToken) => throw new NotSupportedException();
-        public Task<YouTubeTranscriptResponse> ExtractYouTubeTranscriptAsync(string sourceUrl, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<ChunkResponse> ChunkAsync(string text, int chunkSize, int overlap, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<EmbedResponse> EmbedAsync(IReadOnlyCollection<string> texts, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<RagAnswerResponse> AnswerAsync(RagAnswerRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();

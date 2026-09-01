@@ -4,8 +4,6 @@ public interface IAiProcessingClient
 {
     Task<ExtractResponse> ExtractAsync(string fileName, string contentType, Stream fileStream, CancellationToken cancellationToken);
 
-    Task<YouTubeTranscriptResponse> ExtractYouTubeTranscriptAsync(string sourceUrl, CancellationToken cancellationToken);
-
     Task<ChunkResponse> ChunkAsync(string text, int chunkSize, int overlap, CancellationToken cancellationToken);
 
     Task<EmbedResponse> EmbedAsync(IReadOnlyCollection<string> texts, CancellationToken cancellationToken);
@@ -16,8 +14,6 @@ public interface IAiProcessingClient
 }
 
 public sealed record ExtractResponse(string Text, string ContentType, int CharacterCount);
-
-public sealed record YouTubeTranscriptResponse(string Text, int CharacterCount);
 
 public sealed record ChunkResponse(IReadOnlyCollection<ChunkDto> Chunks);
 

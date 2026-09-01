@@ -9,10 +9,6 @@ class ChunkRequest(BaseModel):
     overlap: int = Field(default=200, ge=0)
 
 
-class YouTubeTranscriptRequest(BaseModel):
-    sourceUrl: str = Field(min_length=1, max_length=2048)
-
-
 class ChunkDto(BaseModel):
     index: int
     text: str

@@ -3,7 +3,6 @@ using AmanahDrive.Api.Modules.Drive.Events;
 using AmanahDrive.Api.Modules.Drive.Models;
 using AmanahDrive.Api.Modules.Drive.Options;
 using AmanahDrive.Api.Modules.Drive.Storage;
-using AmanahDrive.Api.Modules.Drive.YouTube;
 using AmanahDrive.Api.Modules.Processing.Models;
 using AmanahDrive.Api.Shared.DomainEvents;
 using AmanahDrive.Api.Shared.Infrastructure.Data;
@@ -15,7 +14,6 @@ namespace AmanahDrive.Api.Modules.Drive.Services;
 public sealed class DriveService(
     AmanahDriveDbContext dbContext,
     IFileStorage storage,
-    IYouTubeOEmbedClient youTubeOEmbedClient,
     IDomainEventDispatcher eventDispatcher,
     IOptions<DriveOptions> options) : IDriveService
 {
@@ -48,7 +46,7 @@ public sealed class DriveService(
             .OrderBy(file => file.OriginalFileName)
             .Skip(skip)
             .Take(normalizedPageSize)
-            .Select(file => new FileItemResponse(file.Id, file.FolderId, file.OriginalFileName, file.ContentType, file.SizeBytes, file.ChecksumSha256, file.Source == FileSource.YouTube ? "YouTube" : "Upload", file.SourceUrl, file.ProcessingJob == null ? null : file.ProcessingJob.Id, file.CreatedAt, file.UpdatedAt))
+            .Select(file => new FileItemResponse(file.Id, file.FolderId, file.OriginalFileName, file.ContentType, file.SizeBytes, file.ChecksumSha256, file.ProcessingJob == null ? null : file.ProcessingJob.Id, file.CreatedAt, file.UpdatedAt))
             .ToListAsync(cancellationToken);
 
         return DriveOperationResult<FolderContentsResponse>.Success(
@@ -129,10 +127,7 @@ public sealed class DriveService(
 
         foreach (var file in files)
         {
-            if (file.StorageKey is not null)
-            {
-                await storage.DeleteAsync(file.StorageKey, cancellationToken);
-            }
+            await storage.DeleteAsync(file.StorageKey, cancellationToken);
         }
 
         dbContext.Folders.Remove(folder);
@@ -183,52 +178,10 @@ public sealed class DriveService(
             cancellationToken);
     }
 
-    public async Task<DriveOperationResult<FileItemResponse>> AddYouTubeAsync(Guid userId, AddYouTubeCommand command, CancellationToken cancellationToken)
-    {
-        if (!YouTubeUrl.TryNormalize(command.Url, out var sourceUrl))
-        {
-            return DriveOperationResult<FileItemResponse>.Invalid("Enter a valid YouTube video URL.");
-        }
-
-        if (command.FolderId is not null && !await FolderBelongsToUserAsync(command.FolderId.Value, userId, cancellationToken))
-        {
-            return DriveOperationResult<FileItemResponse>.NotFound();
-        }
-
-        var video = await youTubeOEmbedClient.GetVideoAsync(sourceUrl, cancellationToken);
-        if (!video.IsSuccess)
-        {
-            return DriveOperationResult<FileItemResponse>.Invalid(video.ErrorMessage!);
-        }
-
-        var fileName = $"{SanitizeYouTubeTitle(video.Title!)}.youtube.txt";
-        if (fileName.Length > 255)
-        {
-            fileName = fileName[..255];
-        }
-
-        if (await FileNameExistsAsync(userId, command.FolderId, fileName, cancellationToken))
-        {
-            return DriveOperationResult<FileItemResponse>.Conflict("A file with that name already exists in this location.");
-        }
-
-        return await CreateYouTubeFileAsync(userId, command.FolderId, fileName, sourceUrl, cancellationToken);
-    }
-
     public async Task<FileReadResult> OpenFileReadAsync(Guid userId, Guid fileId, CancellationToken cancellationToken)
     {
         var fileItem = await dbContext.FileItems.SingleOrDefaultAsync(file => file.Id == fileId && file.UserId == userId, cancellationToken);
         if (fileItem is null)
-        {
-            return new FileReadResult(null);
-        }
-
-        if (fileItem.Source == FileSource.YouTube)
-        {
-            return new FileReadResult(null, fileItem.SourceUrl);
-        }
-
-        if (fileItem.StorageKey is null)
         {
             return new FileReadResult(null);
         }
@@ -294,10 +247,7 @@ public sealed class DriveService(
             return DriveOperationResult.NotFound();
         }
 
-        if (fileItem.StorageKey is not null)
-        {
-            await storage.DeleteAsync(fileItem.StorageKey, cancellationToken);
-        }
+        await storage.DeleteAsync(fileItem.StorageKey, cancellationToken);
         dbContext.FileItems.Remove(fileItem);
         await dbContext.SaveChangesAsync(cancellationToken);
         return DriveOperationResult.Success();
@@ -317,11 +267,6 @@ public sealed class DriveService(
             return DriveOperationResult<FileItemResponse>.NotFound();
         }
 
-        if (sourceFile.Source == FileSource.YouTube)
-        {
-            return DriveOperationResult<FileItemResponse>.Invalid("YouTube items cannot be copied because no source bytes are stored.");
-        }
-
         if (command.DestinationFolderId is not null && !await FolderBelongsToUserAsync(command.DestinationFolderId.Value, userId, cancellationToken))
         {
             return DriveOperationResult<FileItemResponse>.NotFound();
@@ -332,7 +277,7 @@ public sealed class DriveService(
             return DriveOperationResult<FileItemResponse>.Conflict("A file with that name already exists in this location.");
         }
 
-        await using var sourceContent = await storage.OpenReadAsync(sourceFile.StorageKey!, cancellationToken);
+        await using var sourceContent = await storage.OpenReadAsync(sourceFile.StorageKey, cancellationToken);
         var storedFile = await storage.SaveAsync(sourceContent, cancellationToken);
         return await CreateStoredFileAsync(
             userId,
@@ -359,49 +304,9 @@ public sealed class DriveService(
             FolderId = folderId,
             OriginalFileName = fileName,
             StorageKey = storedFile.StorageKey,
-            Source = FileSource.Upload,
             ContentType = contentType,
             SizeBytes = storedFile.SizeBytes,
             ChecksumSha256 = storedFile.ChecksumSha256,
-            CreatedAt = now,
-            UpdatedAt = now
-        };
-
-        await dbContext.FileItems.AddAsync(fileItem, cancellationToken);
-        var processingJob = new ProcessingJob
-        {
-            Id = Guid.NewGuid(),
-            FileItemId = fileItem.Id,
-            Status = ProcessingJobStatus.Pending,
-            CreatedAt = now,
-            UpdatedAt = now
-        };
-
-        await dbContext.ProcessingJobs.AddAsync(processingJob, cancellationToken);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        await eventDispatcher.PublishAsync(new FileUploadedEvent(fileItem.Id, fileItem.OriginalFileName, now), cancellationToken);
-        return DriveOperationResult<FileItemResponse>.Success(ToFileItemResponse(fileItem, processingJob.Id));
-    }
-
-    private async Task<DriveOperationResult<FileItemResponse>> CreateYouTubeFileAsync(
-        Guid userId,
-        Guid? folderId,
-        string fileName,
-        string sourceUrl,
-        CancellationToken cancellationToken)
-    {
-        var now = DateTimeOffset.UtcNow;
-        var fileItem = new FileItem
-        {
-            Id = Guid.NewGuid(),
-            UserId = userId,
-            FolderId = folderId,
-            OriginalFileName = fileName,
-            Source = FileSource.YouTube,
-            SourceUrl = sourceUrl,
-            ContentType = "text/plain",
-            SizeBytes = 0,
-            ChecksumSha256 = string.Empty,
             CreatedAt = now,
             UpdatedAt = now
         };
@@ -426,7 +331,7 @@ public sealed class DriveService(
         new(folder.Id, folder.Name, folder.ParentFolderId, folder.CreatedAt, folder.UpdatedAt);
 
     private static FileItemResponse ToFileItemResponse(FileItem fileItem, Guid? processingJobId = null) =>
-        new(fileItem.Id, fileItem.FolderId, fileItem.OriginalFileName, fileItem.ContentType, fileItem.SizeBytes, fileItem.ChecksumSha256, fileItem.Source.ToString(), fileItem.SourceUrl, processingJobId ?? fileItem.ProcessingJob?.Id, fileItem.CreatedAt, fileItem.UpdatedAt);
+        new(fileItem.Id, fileItem.FolderId, fileItem.OriginalFileName, fileItem.ContentType, fileItem.SizeBytes, fileItem.ChecksumSha256, processingJobId ?? fileItem.ProcessingJob?.Id, fileItem.CreatedAt, fileItem.UpdatedAt);
 
     private static string? ValidateName(string name)
     {
@@ -446,13 +351,6 @@ public sealed class DriveService(
         }
 
         return null;
-    }
-
-    private static string SanitizeYouTubeTitle(string title)
-    {
-        var sanitized = new string(title.Trim().Select(character =>
-            character is '/' or '\\' || Array.IndexOf(Path.GetInvalidFileNameChars(), character) >= 0 ? ' ' : character).ToArray()).Trim();
-        return string.IsNullOrWhiteSpace(sanitized) ? "YouTube video" : sanitized;
     }
 
     private async Task<bool> FolderBelongsToUserAsync(Guid folderId, Guid userId, CancellationToken cancellationToken) =>

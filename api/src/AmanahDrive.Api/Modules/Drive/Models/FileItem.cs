@@ -21,11 +21,7 @@ public sealed class FileItem
 
     public required string OriginalFileName { get; set; }
 
-    public string? StorageKey { get; set; }
-
-    public FileSource Source { get; set; } = FileSource.Upload;
-
-    public string? SourceUrl { get; set; }
+    public required string StorageKey { get; set; }
 
     public required string ContentType { get; set; }
 
@@ -36,10 +32,4 @@ public sealed class FileItem
     public DateTimeOffset CreatedAt { get; set; }
 
     public DateTimeOffset UpdatedAt { get; set; }
-}
-
-public enum FileSource
-{
-    Upload,
-    YouTube
 }

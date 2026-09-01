@@ -71,18 +71,6 @@ test("valid login reaches drive", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Documents" })).toBeVisible();
 });
 
-test("YouTube URL input queues a caption-backed file", async ({ page }) => {
-  let requestBody: unknown;
-  await mockApi(page, { loginSucceeds: true, onYouTubeRequest: (body) => { requestBody = body; } });
-
-  await signIn(page);
-  await page.getByLabel("YouTube video URL").fill("https://youtu.be/dQw4w9WgXcQ");
-  await page.getByRole("button", { name: "Add YouTube video" }).click();
-
-  await expect.poll(() => requestBody).toEqual({ url: "https://youtu.be/dQw4w9WgXcQ", folderId: null });
-  await expect(page.getByLabel("YouTube video URL")).toHaveValue("");
-});
-
 test("authenticated admin log viewer renders persisted entries", async ({ page }) => {
   await mockApi(page, {
     loginSucceeds: true,
@@ -371,7 +359,6 @@ async function mockApi(
     agentStartResponse?: Record<string, unknown>;
     agentApproveResponse?: Record<string, unknown>;
     agentRejectResponse?: Record<string, unknown>;
-    onYouTubeRequest?: (body: unknown) => void;
   },
 ) {
   await page.route(`${apiBaseUrl}/auth/login`, async (route) => {
@@ -420,33 +407,11 @@ async function mockApi(
             contentType: "text/plain",
             sizeBytes: 42,
             checksumSha256: "abc",
-            source: "Upload",
-            sourceUrl: null,
             processingJobId: null,
             createdAt: "2026-08-11T00:00:00Z",
             updatedAt: "2026-08-11T00:00:00Z",
           },
         ],
-      },
-    });
-  });
-
-  await page.route(`${apiBaseUrl}/drive/youtube`, async (route) => {
-    options.onYouTubeRequest?.(route.request().postDataJSON());
-    await route.fulfill({
-      status: 201,
-      json: {
-        id: "33333333-3333-3333-3333-333333333333",
-        folderId: null,
-        originalFileName: "Video.youtube.txt",
-        contentType: "text/plain",
-        sizeBytes: 0,
-        checksumSha256: "",
-        source: "YouTube",
-        sourceUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-        processingJobId: "44444444-4444-4444-4444-444444444444",
-        createdAt: "2026-09-01T00:00:00Z",
-        updatedAt: "2026-09-01T00:00:00Z",
       },
     });
   });
