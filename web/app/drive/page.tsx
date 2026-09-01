@@ -1128,7 +1128,7 @@ function KnowledgeView({
             ) : null}
             {searchLoading ? <p className="text-sm text-white/52">Searching processed document chunks...</p> : null}
             {!searchLoading && hasSearched && !searchError && searchResults.length === 0 ? <p className="text-sm text-white/52">No matching document sections found.</p> : null}
-            {!searchLoading && !hasSearched ? <p className="text-sm leading-6 text-white/52">Search processed PDFs, Markdown, and text files by meaning, not just filenames.</p> : null}
+            {!searchLoading && !hasSearched ? <p className="text-sm leading-6 text-white/52">Search processed documents by meaning, not just filenames.</p> : null}
             {searchResults.map((result) => (
               <article key={result.chunkId} className="rounded-[8px] border border-white/10 bg-white/[0.025] p-4 transition hover:border-[#60a5fa]/30 hover:bg-[#60a5fa]/[0.04] sm:p-5">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">

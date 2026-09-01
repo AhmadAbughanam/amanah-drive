@@ -98,7 +98,7 @@ export type AgentRunResponse = {
   updatedAt: string;
 };
 
-export type AdminLogEntry = {
+type AdminLogEntry = {
   timestamp: string;
   level: string;
   message: string;
@@ -113,7 +113,7 @@ export type AdminLogResponse = {
   entries: AdminLogEntry[];
 };
 
-export type ActivityEntry = {
+type ActivityEntry = {
   id: string;
   type: string;
   summary: string;
@@ -129,7 +129,7 @@ export type ActivityResponse = {
   entries: ActivityEntry[];
 };
 
-export type ObservabilityStats = {
+type ObservabilityStats = {
   requestsToday: number;
   errorRatePercent: number;
   averageLatencyMilliseconds: number;
@@ -137,19 +137,19 @@ export type ObservabilityStats = {
   aiPricingComplete: boolean;
 };
 
-export type RequestMetricPoint = {
+type RequestMetricPoint = {
   timestamp: string;
   requests: number;
   errors: number;
   errorRatePercent: number;
 };
 
-export type LogLevelCount = {
+type LogLevelCount = {
   level: string;
   count: number;
 };
 
-export type AiUsageMetricPoint = {
+type AiUsageMetricPoint = {
   timestamp: string;
   inputTokens: number;
   outputTokens: number;
@@ -159,19 +159,19 @@ export type AiUsageMetricPoint = {
   unpricedOperations: number;
 };
 
-export type SecurityMetricPoint = {
+type SecurityMetricPoint = {
   timestamp: string;
   events: number;
 };
 
-export type SecurityEventSummary = {
+type SecurityEventSummary = {
   timestamp: string;
   event: string;
   message: string;
   source: string;
 };
 
-export type TopErrorSummary = {
+type TopErrorSummary = {
   signature: string;
   message: string;
   exceptionType: string | null;
