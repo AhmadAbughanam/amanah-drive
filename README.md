@@ -1,6 +1,6 @@
 # Amanah Drive
 
-Amanah Drive is a self-hosted personal knowledge drive for one administrator. It combines secure file storage, semantic search, and Retrieval-Augmented Generation (RAG) over uploaded PDF, Markdown, and plain-text documents.
+Amanah Drive is a self-hosted personal knowledge drive for one administrator. It combines secure file storage, semantic search, and Retrieval-Augmented Generation (RAG) over uploaded PDF, DOCX, CSV, Markdown, plain-text, PNG, and JPEG documents.
 
 The project is intentionally scoped as a single-admin V1. The backend is structured for maintainability and future extraction, but it remains a single deployable modular monolith until there is a concrete reason to split it.
 
@@ -24,10 +24,11 @@ The interface screenshots use deterministic sample data so the repository images
 
 - Single-admin authentication with JWT access tokens and refresh-token rotation.
 - Folder and file management backed by local filesystem storage.
-- Asynchronous document processing: extraction, chunking, embedding, and pgvector storage.
+- Asynchronous document processing: native PDF text, scanned-PDF and image OCR, DOCX/table text, CSV, Markdown, and plain-text extraction; chunking, embedding, and pgvector storage.
 - Semantic search over stored document chunks.
 - RAG chat with citations and persisted conversation history.
-- Authenticated Next.js dashboard for file management, search, chat, activity, logs, and operational metrics.
+- Approval-aware agent runs with persisted step history, eight Drive tools, and two read-only GitHub tools.
+- Authenticated Next.js dashboard for file management, search, chat, agent runs, activity, logs, and operational metrics.
 - Portfolio landing page and login flow.
 - Docker Compose environment for PostgreSQL, API, AI service, and web app.
 - CI jobs for API, AI service, and web build/test checks, dependency audits, and CodeQL analysis.
@@ -41,7 +42,7 @@ The interface screenshots use deterministic sample data so the repository images
 
 ## Architecture
 
-The ASP.NET Core API is a modular monolith: one deployable service, one PostgreSQL database, and vertical modules for `Auth`, `Drive`, `Processing`, `SearchChat`, and `Admin`. Modules communicate through explicit interfaces rather than direct cross-module data access. The Python FastAPI AI service is a separate stateless service for extraction, chunking, embeddings, and grounded answer generation.
+The ASP.NET Core API is a modular monolith: one deployable service, one PostgreSQL database, and vertical modules for `Auth`, `Drive`, `Processing`, `SearchChat`, `Agent`, `AgentTools`, and `Admin`. Modules communicate through explicit interfaces rather than direct cross-module data access. The Python FastAPI AI service is a separate stateless service for extraction, chunking, embeddings, grounded answer generation, and agent tool-call completion.
 
 See [Architecture Reference](docs/architecture.md) and [Architecture Decision Records](docs/decisions/README.md) for the detailed boundaries and tradeoffs.
 
@@ -54,6 +55,8 @@ flowchart TB
         Drive["Drive module"]
         Processing["Processing module"]
         SearchChat["SearchChat module"]
+        Agent["Agent module"]
+        AgentTools["AgentTools module"]
         Admin["Admin module"]
     end
 
@@ -66,6 +69,7 @@ flowchart TB
     Web -- "JWT + refresh cookie" --> Auth
     Web --> Drive
     Web --> SearchChat
+    Web --> Agent
     Web --> Admin
 
     Auth --> PG
@@ -75,6 +79,7 @@ flowchart TB
     Processing -- "extract / chunk / embed" --> AI
     SearchChat --> PG
     SearchChat -- "embed query, rag/answer" --> AI
+    Agent -- "agent/complete" --> AI
     AI -- "grounded generation" --> HF
     API -. "OTLP traces" .-> Jaeger
     AI -. "OTLP traces" .-> Jaeger
@@ -157,7 +162,7 @@ sequenceDiagram
 ### AI Service
 
 - Python FastAPI
-- pypdf for PDF extraction
+- pypdf, PyMuPDF, Pillow, Tesseract, and python-docx for document extraction and OCR
 - Sentence Transformers with `sentence-transformers/all-MiniLM-L6-v2` embeddings
 - Hugging Face Inference API for grounded generation
 - OpenTelemetry FastAPI and HTTPX tracing
@@ -359,11 +364,21 @@ CSRF posture in V1: application mutations require a bearer access token, while r
 - Added continuous deployment: every `main` push that passes CI is built, published to GHCR, and deployed to the VPS over SSH.
 - Full setup and maintenance process in [Deployment](docs/DEPLOYMENT.md); reasoning in [ADR 0010](docs/decisions/0010-production-deployment-architecture.md).
 
+### Phase 23 - Richer Ingestion and Citations
+
+- Added OCR for image uploads and scanned-PDF fallback, plus DOCX and CSV ingestion.
+- Made numbered citation markers in rendered chat answers clickable, with linked citation details and downloads.
+
+### Phase 24 - Approval-Aware Agent
+
+- Added persisted agent runs with bounded tool-calling, explicit approval/rejection for destructive operations, and usage tracking.
+- Added Drive and read-only GitHub tools, along with an Agent dashboard view that shows the run transcript and pending approvals.
+
 ## Future Improvements
 
 - Object storage implementation for S3, Cloudflare R2, or MinIO behind `IFileStorage`.
 - File previews.
-- OCR and additional document formats.
+- Additional document formats.
 - Mobile app.
 - Real-time synchronization.
 - Separately deployable processing worker when background load justifies it.

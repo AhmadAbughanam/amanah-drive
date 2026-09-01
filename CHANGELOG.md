@@ -163,3 +163,13 @@
 - Added `UseForwardedHeaders` to the API, required for correct client-IP-based rate limiting and refresh-token audit fields once requests pass through a reverse proxy.
 - Added continuous deployment: every push to `main` that passes CI is built, published to GHCR under a moving `main` tag and a permanent `sha-<short>` tag, and deployed to the production VPS over SSH, without building on the VPS itself.
 - Documented the full one-time setup, secret generation, backup/restore, rollback, and troubleshooting process in `docs/DEPLOYMENT.md`, and the architecture reasoning in ADR 0010.
+
+### Phase 23 - Richer Ingestion and Citations
+
+- Added OCR for image uploads and scanned-PDF fallback, plus DOCX and CSV ingestion.
+- Added clickable numbered citation markers that link rendered chat answers to their citation details and download flow.
+
+### Phase 24 - Approval-Aware Agent
+
+- Added persisted, iteration-bounded agent runs with tool-role message isolation, explicit approval/rejection, and usage recording.
+- Added Drive and read-only GitHub tools, plus an Agent dashboard for instructions, tool transcripts, and pending-approval decisions.

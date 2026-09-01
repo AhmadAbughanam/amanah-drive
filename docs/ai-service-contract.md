@@ -221,6 +221,14 @@ Error responses:
 * `503` when `HF_API_TOKEN` is not configured.
 * `504` when the Hugging Face request times out.
 
+## `POST /agent/complete`
+
+Completes one agent-model turn using the standard OpenAI-style tool-calling shape. The API supplies ordered `system`, `user`, `assistant`, and `tool` messages plus the available function definitions. The AI service returns one assistant message, which may contain final text or `toolCalls` for the API's persisted approval loop to handle.
+
+Tool results remain `tool`-role messages so document content returned by a tool is structurally separate from instructions.
+
+Error responses follow `POST /rag/answer`: `400` for invalid input, `401` for an invalid service token, `502` for an upstream error, `503` for a missing Hugging Face token, and `504` for an upstream timeout.
+
 ## Rules
 
 * The API owns authentication and authorization; the AI service trusts requests only from the API through the shared service token.

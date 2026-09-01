@@ -22,7 +22,7 @@ The browsable OpenAPI/Scalar UI is available at `/docs` in Development, or when 
 | POST | `/drive/folders` | Bearer JWT | Create a folder. |
 | PATCH | `/drive/folders/{folderId}/rename` | Bearer JWT | Rename a folder. |
 | DELETE | `/drive/folders/{folderId}` | Bearer JWT | Delete a folder, descendants, metadata, and stored files. |
-| POST | `/drive/files/upload` | Bearer JWT | Upload a PDF, Markdown, or plain text file and create a processing job. |
+| POST | `/drive/files/upload` | Bearer JWT | Upload a PDF, DOCX, CSV, Markdown, plain-text, PNG, or JPEG file and create a processing job. |
 | GET | `/drive/files/{fileId}/download` | Bearer JWT | Download a stored file. |
 | PATCH | `/drive/files/{fileId}/rename` | Bearer JWT | Rename a file. |
 | PATCH | `/drive/files/{fileId}/move` | Bearer JWT | Move a file to another folder or the root. |
@@ -30,3 +30,7 @@ The browsable OpenAPI/Scalar UI is available at `/docs` in Development, or when 
 | GET | `/search` | Bearer JWT | Semantic search over processed chunks with `query` and optional `topK`. |
 | POST | `/chat` | Bearer JWT | Retrieve relevant chunks, ask the AI service for a grounded answer, and persist the exchange. |
 | GET | `/chat/{conversationId}` | Bearer JWT | Return conversation message history with `page` and `pageSize`. |
+| POST | `/agent/runs` | Bearer JWT | Start a persisted, approval-aware agent run. |
+| GET | `/agent/runs/{runId}` | Bearer JWT | Return a run's current state and readable ordered step history. |
+| POST | `/agent/runs/{runId}/approve` | Bearer JWT | Approve the pending tool call and resume the run. |
+| POST | `/agent/runs/{runId}/reject` | Bearer JWT | Reject the pending tool call and resume the run with that result. |

@@ -27,6 +27,8 @@ flowchart TB
         Drive["Drive module"]
         Processing["Processing module"]
         SearchChat["SearchChat module"]
+        Agent["Agent module"]
+        AgentTools["AgentTools module"]
         Admin["Admin module"]
     end
 
@@ -39,6 +41,7 @@ flowchart TB
     Web -- "JWT + refresh cookie" --> Auth
     Web --> Drive
     Web --> SearchChat
+    Web --> Agent
     Web --> Admin
 
     Auth --> PG
@@ -48,6 +51,7 @@ flowchart TB
     Processing -- "extract / chunk / embed" --> AI
     SearchChat --> PG
     SearchChat -- "embed query, rag/answer" --> AI
+    Agent -- "agent/complete" --> AI
     AI -- "grounded generation" --> HF
     API -. "OTLP traces" .-> Jaeger
     AI -. "OTLP traces" .-> Jaeger
@@ -106,7 +110,7 @@ sequenceDiagram
 ## Repository Layout
 
 * `api/` — ASP.NET Core REST API (authentication, drive behavior, metadata, retrieval, orchestration)
-* `ai-service/` — Python FastAPI service (extraction, chunking, embeddings, grounded answer generation)
+* `ai-service/` — Python FastAPI service (extraction, chunking, embeddings, grounded answer generation, agent tool-call completion)
 * `web/` — Next.js portfolio, login, and authenticated dashboard
 * `infra/` — Docker Compose, the Caddy reverse-proxy config, and deployment configuration
 
@@ -129,6 +133,8 @@ The API is a modular monolith: one deployable ASP.NET Core service, one physical
 - `Modules/Drive` owns folders, file metadata, drive endpoints, storage abstraction, drive options, and drive entity mappings.
 - `Modules/Processing` owns processing jobs, document chunks, the background worker, and chunk retrieval over `pgvector`.
 - `Modules/SearchChat` owns search/chat endpoints, conversations, chat messages, and semantic search orchestration.
+- `Modules/Agent` owns persisted agent runs, iteration limits, and approval/resume orchestration.
+- `Modules/AgentTools` owns the approval metadata, runtime tool registry, Drive tools, and read-only GitHub tools.
 - `Modules/Admin` owns authenticated operational views, including persisted logs and the activity-feed projection.
 - `Shared/DomainEvents` owns the lightweight in-process dispatcher contracts and failure isolation.
 - `Shared/Infrastructure` owns cross-cutting infrastructure: DbContext, migrations, external AI HTTP client, CORS, security headers, file-logging configuration, OpenTelemetry tracing, and host-level wiring.
