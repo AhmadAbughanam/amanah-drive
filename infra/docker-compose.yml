@@ -51,6 +51,7 @@ services:
       AiService__ServiceToken: ${AI_SERVICE_TOKEN:?AI_SERVICE_TOKEN is required}
       AiService__ChatModel: ${HF_MODEL:-openai/gpt-oss-20b}
       AiService__WorkerEnabled: "true"
+      GitHub__ReadToken: ${GITHUB_READ_TOKEN:-}
       AiPricing__Models__0__Enabled: ${AI_PRICING_ENABLED:-false}
       AiPricing__Models__0__Provider: ${AI_PRICING_PROVIDER:-huggingface}
       AiPricing__Models__0__Model: ${AI_PRICING_MODEL:-openai/gpt-oss-20b}

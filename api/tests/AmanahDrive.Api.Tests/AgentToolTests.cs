@@ -165,6 +165,8 @@ public sealed class AgentToolTests : IAsyncLifetime
         Assert.False(scope.ServiceProvider.GetRequiredService<IAgentTool<ListFolderRequest, ListFolderResponse>>().RequiresApproval);
         Assert.False(scope.ServiceProvider.GetRequiredService<IAgentTool<SearchFilesRequest, SearchFilesResponse>>().RequiresApproval);
         Assert.False(scope.ServiceProvider.GetRequiredService<IAgentTool<ReadFileTextRequest, ReadFileTextResponse>>().RequiresApproval);
+        Assert.False(scope.ServiceProvider.GetRequiredService<IAgentTool<ListGitHubDirectoryRequest, GitHubDirectoryResponse>>().RequiresApproval);
+        Assert.False(scope.ServiceProvider.GetRequiredService<IAgentTool<ReadGitHubFileRequest, GitHubFileTextResponse>>().RequiresApproval);
         Assert.False(scope.ServiceProvider.GetRequiredService<IAgentTool<CreateFolderToolRequest, CreateFolderToolResponse>>().RequiresApproval);
         Assert.False(scope.ServiceProvider.GetRequiredService<IAgentTool<CopyFileToolRequest, CopyFileToolResponse>>().RequiresApproval);
         Assert.True(scope.ServiceProvider.GetRequiredService<IAgentTool<RenameFolderToolRequest, RenameFolderToolResponse>>().RequiresApproval);

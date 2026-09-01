@@ -5,6 +5,7 @@ using AmanahDrive.Api.Shared.DomainEvents;
 using AmanahDrive.Api.Shared.Infrastructure.Ai;
 using AmanahDrive.Api.Shared.Infrastructure.Cors;
 using AmanahDrive.Api.Shared.Infrastructure.Data;
+using AmanahDrive.Api.Shared.Infrastructure.GitHub;
 using AmanahDrive.Api.Shared.Infrastructure.Health;
 using AmanahDrive.Api.Shared.Infrastructure.Security;
 using AmanahDrive.Api.Shared.Infrastructure.Telemetry;
@@ -46,6 +47,15 @@ public static class InfrastructureModule
             .ValidateDataAnnotations()
             .Validate(options => options.AllowedOrigins.Length > 0, "Cors:AllowedOrigins must contain at least one origin.")
             .Validate(options => !options.AllowedOrigins.Contains("*", StringComparer.Ordinal), "Cors:AllowedOrigins must not contain '*'.")
+            .ValidateOnStart();
+
+        services.AddOptions<GitHubOptions>()
+            .Bind(configuration.GetSection(GitHubOptions.SectionName))
+            // Empty is valid and means "GitHub tools disabled" - only a non-empty value that's
+            // too short to be a real token is treated as a genuine misconfiguration worth
+            // failing fast on.
+            .Validate(options => options.ReadToken.Length == 0 || options.ReadToken.Length >= 20,
+                "GitHub:ReadToken, if set, must be a valid read-scoped personal access token.")
             .ValidateOnStart();
 
         var connectionString = configuration.GetConnectionString("Default")
@@ -131,6 +141,11 @@ public static class InfrastructureModule
             client.BaseAddress = new Uri(aiServiceOptions.BaseUrl);
             client.Timeout = Timeout.InfiniteTimeSpan;
         }).AddAiServiceResilience(aiServiceOptions);
+
+        services.AddHttpClient<IGitHubClient, GitHubClient>(client =>
+        {
+            client.BaseAddress = new Uri("https://api.github.com/");
+        });
 
         services.AddApplicationTracing(configuration);
 

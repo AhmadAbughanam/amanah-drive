@@ -30,6 +30,8 @@ public static class AgentToolMetadataCatalog
         "rename_folder" => Create(name, "Rename a folder.", "{\"type\":\"object\",\"properties\":{\"folderId\":{\"type\":\"string\",\"format\":\"uuid\"},\"name\":{\"type\":\"string\"}},\"required\":[\"folderId\",\"name\"]}"),
         "rename_file" => Create(name, "Rename a file.", "{\"type\":\"object\",\"properties\":{\"fileId\":{\"type\":\"string\",\"format\":\"uuid\"},\"name\":{\"type\":\"string\"}},\"required\":[\"fileId\",\"name\"]}"),
         "move_file" => Create(name, "Move a file to a folder or the root.", "{\"type\":\"object\",\"properties\":{\"fileId\":{\"type\":\"string\",\"format\":\"uuid\"},\"destinationFolderId\":{\"type\":[\"string\",\"null\"],\"format\":\"uuid\"}},\"required\":[\"fileId\"]}"),
+        "list_github_directory" => Create(name, "List files and directories in a GitHub repository path.", "{\"type\":\"object\",\"properties\":{\"owner\":{\"type\":\"string\"},\"repo\":{\"type\":\"string\"},\"path\":{\"type\":\"string\"},\"ref\":{\"type\":\"string\"}},\"required\":[\"owner\",\"repo\"]}"),
+        "read_github_file" => Create(name, "Read UTF-8 text from a file in a GitHub repository.", "{\"type\":\"object\",\"properties\":{\"owner\":{\"type\":\"string\"},\"repo\":{\"type\":\"string\"},\"path\":{\"type\":\"string\"},\"ref\":{\"type\":\"string\"}},\"required\":[\"owner\",\"repo\",\"path\"]}"),
         _ => throw new InvalidOperationException($"No metadata is registered for agent tool '{name}'.")
     };
 

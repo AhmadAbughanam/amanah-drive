@@ -257,6 +257,7 @@ internal sealed class AmanahDriveApiFactory(
         builder.UseSetting("AiService:BaseUrl", "http://ai-service.test");
         builder.UseSetting("AiService:ServiceToken", "tests-only-ai-service-token");
         builder.UseSetting("AiService:WorkerEnabled", "false");
+        builder.UseSetting("GitHub:ReadToken", "tests-only-github-read-token");
         builder.UseSetting("Cors:AllowedOrigins:0", "http://localhost:3000");
 
         if (storageRoot is not null)
