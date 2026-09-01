@@ -1,13 +1,17 @@
 import os
+from io import BytesIO
 
 import httpx
 import pytest
+from docx import Document
+from PIL import Image
 from fastapi.testclient import TestClient
 from tenacity import wait_none
 
 from app.config import EMBEDDING_DIMENSION, HF_DEFAULT_MODEL
 from app.main import app
 from app.schemas import RagAnswerResponse, RagCitation
+from app.services import extraction
 from app.services.rag import HuggingFaceUpstreamError, build_grounded_prompt, call_hugging_face, create_citations
 
 TOKEN = "tests-only-service-token"
@@ -74,6 +78,83 @@ def test_extract_pdf():
 
     assert response.status_code == 200
     assert "Hello PDF" in response.json()["text"]
+
+
+def test_text_pdf_does_not_trigger_scanned_pdf_ocr(monkeypatch):
+    def unexpected_ocr(_data):
+        raise AssertionError("OCR fallback must not run for normal text PDFs")
+
+    monkeypatch.setattr(extraction, "extract_scanned_pdf_text", unexpected_ocr)
+
+    assert "Hello PDF" in extraction.extract_pdf_text(pdf_bytes())
+
+
+def test_scanned_pdf_heuristic_only_matches_an_absent_text_layer():
+    assert extraction.needs_scanned_pdf_ocr([""]) is True
+    assert extraction.needs_scanned_pdf_ocr(["Invoice 123"]) is False
+    assert extraction.needs_scanned_pdf_ocr(["123"]) is False
+
+
+def test_scanned_pdf_uses_ocr_fallback_when_embedded_text_is_absent(monkeypatch):
+    class EmptyTextPage:
+        def extract_text(self):
+            return ""
+
+    class ScannedReader:
+        pages = [EmptyTextPage()]
+
+    monkeypatch.setattr(extraction, "PdfReader", lambda _stream: ScannedReader())
+    monkeypatch.setattr(extraction, "extract_scanned_pdf_text", lambda _data: "OCR recovered text")
+
+    assert extraction.extract_pdf_text(b"scanned-pdf") == "OCR recovered text"
+
+
+def test_extract_image_uses_ocr(monkeypatch):
+    monkeypatch.setattr(extraction.pytesseract, "image_to_string", lambda _image: "OCR image text")
+    image = Image.new("RGB", (8, 8), "white")
+    image_bytes = BytesIO()
+    image.save(image_bytes, format="PNG")
+
+    response = client().post(
+        "/extract",
+        headers=headers(),
+        files={"file": ("scan.png", image_bytes.getvalue(), "image/png")},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["contentType"] == "image/png"
+    assert response.json()["text"] == "OCR image text"
+
+
+def test_extract_docx_includes_paragraphs_and_tables():
+    document = Document()
+    document.add_paragraph("Document heading")
+    table = document.add_table(rows=1, cols=2)
+    table.cell(0, 0).text = "Name"
+    table.cell(0, 1).text = "Value"
+    document_bytes = BytesIO()
+    document.save(document_bytes)
+
+    response = client().post(
+        "/extract",
+        headers=headers(),
+        files={"file": ("notes.docx", document_bytes.getvalue(), "application/vnd.openxmlformats-officedocument.wordprocessingml.document")},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["text"] == "Document heading\nName\tValue"
+
+
+def test_extract_csv_uses_existing_utf8_path():
+    response = client().post(
+        "/extract",
+        headers=headers(),
+        files={"file": ("items.csv", b"name,amount\nPens,3\n", "text/csv")},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["contentType"] == "text/csv"
+    assert response.json()["text"] == "name,amount\nPens,3\n"
 
 
 def test_extract_rejects_missing_service_token():

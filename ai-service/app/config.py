@@ -8,6 +8,10 @@ HF_DEFAULT_MODEL = "openai/gpt-oss-20b"
 HF_REQUEST_TIMEOUT_SECONDS = 30.0
 SUPPORTED_CONTENT_TYPES: Set[str] = {
     "application/pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "image/jpeg",
+    "image/png",
+    "text/csv",
     "text/markdown",
     "text/plain",
 }

@@ -6,6 +6,10 @@ opentelemetry-exporter-otlp-proto-http==1.41.1
 opentelemetry-instrumentation-fastapi==0.62b1
 opentelemetry-instrumentation-httpx==0.62b1
 pypdf==6.16.1
+Pillow==11.3.0
+pytesseract==0.3.13
+PyMuPDF==1.26.4
+python-docx==1.2.0
 sentence-transformers==5.1.0
 torch==2.8.0
 transformers==4.57.6

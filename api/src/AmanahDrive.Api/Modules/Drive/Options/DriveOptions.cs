@@ -14,6 +14,10 @@ public sealed class DriveOptions
     public string[] AllowedContentTypes { get; init; } =
     [
         "application/pdf",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "image/jpeg",
+        "image/png",
+        "text/csv",
         "text/markdown",
         "text/plain"
     ];

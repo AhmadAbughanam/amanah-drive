@@ -858,7 +858,7 @@ function FilesView({
               <input
                 className="sr-only"
                 type="file"
-                accept=".pdf,.md,.txt,application/pdf,text/markdown,text/plain"
+                accept=".pdf,.docx,.csv,.md,.txt,.png,.jpg,.jpeg,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/csv,text/markdown,text/plain,image/png,image/jpeg"
                 onChange={onUploadFile}
                 disabled={isWorking}
               />
@@ -868,7 +868,7 @@ function FilesView({
               <input
                 className="sr-only"
                 type="file"
-                accept=".pdf,.md,.txt,application/pdf,text/markdown,text/plain"
+                accept=".pdf,.docx,.csv,.md,.txt,.png,.jpg,.jpeg,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/csv,text/markdown,text/plain,image/png,image/jpeg"
                 onChange={onUploadFile}
                 disabled={isWorking}
               />
@@ -879,7 +879,7 @@ function FilesView({
             <InfoGlyph />
             <p className="text-sm leading-5 text-white/55">
               <span className="block font-semibold text-white/82">Supported formats</span>
-              PDF, Markdown, and plain text.
+              PDF, DOCX, CSV, Markdown, plain text, PNG, and JPEG.
             </p>
           </div>
         </aside>

@@ -51,6 +51,10 @@ Accepts multipart form data with a single file part named `file`.
 Supported content types:
 
 * `application/pdf`
+* `application/vnd.openxmlformats-officedocument.wordprocessingml.document`
+* `image/jpeg`
+* `image/png`
+* `text/csv`
 * `text/markdown`
 * `text/plain`
 
