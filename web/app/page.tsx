@@ -32,9 +32,9 @@ const skills = [
 ];
 
 const skillStyles = [
-  "border-[#c084fc]/55 text-[#e9d5ff] hover:bg-[#c084fc]/10",
-  "border-[#f472b6]/55 text-[#fbcfe8] hover:bg-[#f472b6]/10",
-  "border-[#60a5fa]/55 text-[#bfdbfe] hover:bg-[#60a5fa]/10",
+  "border-white/30 text-white hover:border-white/55 hover:bg-white/[0.07]",
+  "border-white/14 text-white/62 hover:border-white/30 hover:bg-white/[0.05]",
+  "border-white/22 text-white/82 hover:border-white/42 hover:bg-white/[0.06]",
 ];
 
 const experienceDetails = [
@@ -63,8 +63,8 @@ const achievements = [
 function PortfolioNav() {
   return (
     <header className="mx-auto flex w-full max-w-[1280px] items-center justify-between px-6 py-7 sm:px-10 lg:px-14">
-      <a href="#top" className="group flex items-center gap-3 outline-none focus-visible:ring-2 focus-visible:ring-[#c084fc]">
-        <span className="grid h-10 w-10 place-items-center rounded-full border border-[#c084fc]/55 text-sm font-semibold text-white transition group-hover:bg-[#c084fc]/10">
+      <a href="#top" className="group flex items-center gap-3 outline-none focus-visible:ring-2 focus-visible:ring-white/70">
+        <span className="grid h-10 w-10 place-items-center rounded-full border border-white/35 text-sm font-semibold text-white transition group-hover:bg-white/10">
           AA
         </span>
         <span className="text-xs font-semibold uppercase tracking-[0.22em] text-white/76">Ahmad Abughanam</span>
@@ -79,7 +79,7 @@ function PortfolioNav() {
       </nav>
 
       <details className="group relative lg:hidden">
-        <summary className="flex h-10 w-10 cursor-pointer list-none flex-col items-end justify-center gap-2 rounded-full border border-white/20 px-2.5 outline-none focus-visible:ring-2 focus-visible:ring-[#c084fc] [&::-webkit-details-marker]:hidden" aria-label="Open portfolio navigation">
+        <summary className="flex h-10 w-10 cursor-pointer list-none flex-col items-end justify-center gap-2 rounded-full border border-white/20 px-2.5 outline-none focus-visible:ring-2 focus-visible:ring-white/70 [&::-webkit-details-marker]:hidden" aria-label="Open portfolio navigation">
           <span className="h-px w-5 bg-white" />
           <span className="h-px w-3.5 bg-white transition group-open:w-5" />
         </summary>
@@ -105,7 +105,7 @@ function HeroSection() {
           <span aria-hidden="true">
             Engineering
             <br />
-            <span className="bg-gradient-to-r from-[#c084fc] via-[#f472b6] to-[#60a5fa] bg-clip-text text-transparent">intelligent systems.</span>
+            <span className="bg-gradient-to-r from-white via-white/55 to-white/90 bg-clip-text text-transparent">intelligent systems.</span>
           </span>
         </h1>
         <p className="mt-7 max-w-[610px] text-base leading-8 text-white/64 sm:text-lg">
@@ -113,7 +113,7 @@ function HeroSection() {
         </p>
 
         <div className="mt-9 flex flex-wrap items-center gap-4">
-          <a href="#projects" className="rounded-full bg-white px-6 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-black transition hover:bg-[#e9d5ff]">
+          <a href="#projects" className="rounded-full bg-white px-6 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-black transition hover:bg-white/85">
             Explore work
           </a>
         </div>
@@ -121,14 +121,14 @@ function HeroSection() {
         <div className="mt-12 flex items-center gap-6 text-xs font-semibold uppercase tracking-[0.16em] text-white/52">
           <a href="https://github.com/AhmadAbughanam" className="transition hover:text-white">GitHub</a>
           <a href="https://www.linkedin.com/in/ahmad-maher-2a67212b5" className="transition hover:text-white">LinkedIn</a>
-          <span className="h-px w-14 bg-gradient-to-r from-[#c084fc] to-[#60a5fa]" aria-hidden="true" />
+          <span className="h-px w-14 bg-white/35" aria-hidden="true" />
         </div>
       </div>
 
       <div className="relative mx-auto w-full max-w-[520px] lg:mr-0">
-        <div className="absolute -left-5 top-12 h-24 w-px rotate-12 bg-[#f472b6]/65 sm:-left-10" aria-hidden="true" />
-        <div className="absolute -right-3 bottom-16 h-px w-24 -rotate-12 bg-[#60a5fa]/70 sm:-right-8" aria-hidden="true" />
-        <Scribble className="absolute -right-2 -top-9 z-10 w-32 text-[#c084fc] sm:w-44" />
+        <div className="absolute -left-5 top-12 h-24 w-px rotate-12 bg-white/30 sm:-left-10" aria-hidden="true" />
+        <div className="absolute -right-3 bottom-16 h-px w-24 -rotate-12 bg-white/22 sm:-right-8" aria-hidden="true" />
+        <Scribble className="absolute -right-2 -top-9 z-10 w-32 text-white/35 sm:w-44" />
         <div className="relative aspect-[4/5] overflow-hidden rounded-[8px] border border-white/12 bg-[#111118] shadow-[0_28px_90px_rgba(0,0,0,0.48)]">
           <Image
             src="/profile.png"
@@ -155,7 +155,7 @@ function SkillsSection() {
       <div className="mx-auto max-w-[1120px] text-center">
         <SectionLabel>Skills</SectionLabel>
         <h2 className="mt-4 text-3xl font-semibold text-white sm:text-5xl">Technical Skills</h2>
-        <Scribble className="mx-auto mt-5 w-40 text-[#c084fc]" />
+        <Scribble className="mx-auto mt-5 w-40 text-white/30" />
         <div className="mx-auto mt-10 flex max-w-[940px] flex-wrap justify-center gap-3">
           {skills.map((skill, index) => (
             <span key={skill} className={`rounded-full border px-4 py-2.5 text-sm transition ${skillStyles[index % skillStyles.length]}`}>
@@ -169,9 +169,15 @@ function SkillsSection() {
 }
 
 function ExperienceSection() {
+  const markerStyles = [
+    "border-white/70 text-white",
+    "border-white/45 text-white/80",
+    "border-white/28 text-white/62",
+  ];
+
   return (
     <section id="experience" className="relative overflow-hidden bg-[#020203] px-6 py-20 sm:px-10 lg:py-28">
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#f472b6]/70 to-transparent" aria-hidden="true" />
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/22 to-transparent" aria-hidden="true" />
       <div className="mx-auto max-w-[1180px]">
         <div className="grid gap-8 lg:grid-cols-[0.72fr_1.28fr] lg:gap-20">
           <div>
@@ -182,29 +188,22 @@ function ExperienceSection() {
           <article className="relative border-t border-white/16 pt-8">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#60a5fa]">IT / Automation Intern</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/60">IT / Automation Intern</p>
                 <h3 className="mt-3 text-3xl font-semibold text-white">Jordan Kuwait Bank</h3>
                 <p className="mt-2 text-sm text-white/48">Amman, Jordan</p>
               </div>
-              <span className="w-fit rounded-full border border-[#f472b6]/45 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-[#fbcfe8]">3 months</span>
+              <span className="w-fit rounded-full border border-white/25 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-white/80">3 months</span>
             </div>
 
             <div className="relative mt-12 pl-12 sm:pl-16">
               <svg className="absolute bottom-0 left-0 top-0 h-full w-10 overflow-visible sm:w-12" viewBox="0 0 48 360" preserveAspectRatio="none" fill="none" aria-hidden="true">
-                <defs>
-                  <linearGradient id="timeline-line" x1="6" y1="0" x2="42" y2="360" gradientUnits="userSpaceOnUse">
-                    <stop stopColor="#c084fc" />
-                    <stop offset="0.5" stopColor="#f472b6" />
-                    <stop offset="1" stopColor="#60a5fa" />
-                  </linearGradient>
-                </defs>
-                <path d="M24 0C4 44 44 78 22 120C3 158 44 196 22 236C4 275 41 309 24 360" stroke="url(#timeline-line)" strokeWidth="2" strokeLinecap="round" />
+                <path d="M24 0C4 44 44 78 22 120C3 158 44 196 22 236C4 275 41 309 24 360" stroke="rgba(255,255,255,0.28)" strokeWidth="2" strokeLinecap="round" />
               </svg>
 
               <ol className="space-y-7">
                 {experienceDetails.map((detail, index) => (
                   <li key={detail} className="relative rounded-[8px] border border-white/[0.09] bg-white/[0.035] p-5 text-sm leading-7 text-white/66 sm:p-6 sm:text-base">
-                    <span className={`absolute -left-[43px] top-7 grid h-7 w-7 place-items-center rounded-full border bg-[#020203] text-[10px] font-semibold sm:-left-[59px] ${index === 0 ? "border-[#c084fc] text-[#e9d5ff]" : index === 1 ? "border-[#f472b6] text-[#fbcfe8]" : "border-[#60a5fa] text-[#bfdbfe]"}`}>
+                    <span className={`absolute -left-[43px] top-7 grid h-7 w-7 place-items-center rounded-full border bg-[#020203] text-[10px] font-semibold sm:-left-[59px] ${markerStyles[index % markerStyles.length]}`}>
                       0{index + 1}
                     </span>
                     {detail}
@@ -224,24 +223,24 @@ function AboutSection() {
     <section id="about" className="bg-[#0d0c13] px-6 py-20 sm:px-10 lg:py-28">
       <div className="mx-auto grid max-w-[1180px] items-center gap-12 lg:grid-cols-[0.88fr_1.12fr] lg:gap-20">
         <div className="relative mx-auto w-full max-w-[470px]">
-          <div className="absolute -bottom-4 -left-4 h-full w-full rounded-[8px] border border-[#c084fc]/35" aria-hidden="true" />
+          <div className="absolute -bottom-4 -left-4 h-full w-full rounded-[8px] border border-white/20" aria-hidden="true" />
           <div className="relative flex aspect-[5/6] flex-col justify-between overflow-hidden rounded-[8px] border border-white/12 bg-[#07070b] p-7 sm:p-9">
-            <div className="absolute inset-x-0 top-1/3 h-px bg-gradient-to-r from-transparent via-[#c084fc]/45 to-transparent" aria-hidden="true" />
-            <div className="absolute bottom-1/3 inset-x-0 h-px bg-gradient-to-r from-transparent via-[#60a5fa]/45 to-transparent" aria-hidden="true" />
+            <div className="absolute inset-x-0 top-1/3 h-px bg-gradient-to-r from-transparent via-white/22 to-transparent" aria-hidden="true" />
+            <div className="absolute bottom-1/3 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/14 to-transparent" aria-hidden="true" />
             <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.18em] text-white/42">
               <span>Ahmad Maher Abughanam</span>
               <span>Amman, Jordan</span>
             </div>
             <div className="relative">
-              <span className="block bg-gradient-to-br from-[#c084fc] via-[#f472b6] to-[#60a5fa] bg-clip-text text-[132px] font-semibold leading-none text-transparent sm:text-[168px]" aria-hidden="true">AA</span>
-              <Scribble className="absolute -bottom-8 right-0 w-32 text-[#f472b6] sm:w-40" />
+              <span className="block bg-gradient-to-br from-white via-white/70 to-white/35 bg-clip-text text-[132px] font-semibold leading-none text-transparent sm:text-[168px]" aria-hidden="true">AA</span>
+              <Scribble className="absolute -bottom-8 right-0 w-32 text-white/25 sm:w-40" />
             </div>
             <div className="border-t border-white/14 pt-5">
               <p className="text-lg font-semibold text-white">AI Engineer</p>
               <p className="mt-2 text-sm leading-6 text-white/52">Backend Software Engineer</p>
             </div>
           </div>
-          <Scribble className="absolute -bottom-12 right-0 w-36 text-[#60a5fa]" />
+          <Scribble className="absolute -bottom-12 right-0 w-36 text-white/18" />
         </div>
 
         <div>
@@ -254,11 +253,11 @@ function AboutSection() {
 
           <dl className="mt-10 grid gap-8 border-t border-white/12 pt-8 sm:grid-cols-2">
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-[0.18em] text-[#f472b6]">Location</dt>
+              <dt className="text-xs font-semibold uppercase tracking-[0.18em] text-white/50">Location</dt>
               <dd className="mt-3 text-base text-white/78">Amman, Jordan</dd>
             </div>
             <div>
-              <dt className="text-xs font-semibold uppercase tracking-[0.18em] text-[#60a5fa]">Education</dt>
+              <dt className="text-xs font-semibold uppercase tracking-[0.18em] text-white/50">Education</dt>
               <dd className="mt-3 text-base leading-7 text-white/78">B.Sc. Computer Science / Artificial Intelligence</dd>
               <dd className="mt-1 text-sm leading-6 text-white/48">Middle East University, July 2026, GPA 3.50 / 4.00</dd>
             </div>
@@ -266,6 +265,20 @@ function AboutSection() {
         </div>
       </div>
     </section>
+  );
+}
+
+function ProjectFigure({ src, alt, aspect }: { src: string; alt: string; aspect: string }) {
+  return (
+    <figure className={`group relative ${aspect} overflow-hidden rounded-[8px] border border-white/12 bg-[#101016] shadow-[0_20px_60px_rgba(0,0,0,0.4)] transition duration-300 hover:border-white/28`}>
+      <Image
+        src={src}
+        alt={alt}
+        fill
+        sizes="(max-width: 640px) 46vw, (max-width: 1024px) 40vw, 24vw"
+        className="object-cover object-top transition duration-500 ease-out group-hover:scale-[1.04]"
+      />
+    </figure>
   );
 }
 
@@ -281,19 +294,15 @@ function ProjectsSection() {
         </div>
 
         <article className="mt-14 grid items-center gap-14 border-t border-white/12 pt-12 lg:grid-cols-[1.08fr_0.92fr] lg:gap-20">
-          <div className="grid gap-4 sm:relative sm:min-h-[520px]">
-            <figure className="overflow-hidden rounded-[8px] border border-white/12 bg-[#101016] shadow-[0_24px_70px_rgba(0,0,0,0.42)] sm:absolute sm:left-0 sm:top-0 sm:w-[86%]">
-              <Image src="/drive-files-dark.png" alt="Amanah Drive file management dashboard" width={1440} height={900} className="h-auto w-full" />
-            </figure>
-            <figure className="overflow-hidden rounded-[8px] border border-[#c084fc]/35 bg-[#101016] shadow-[0_24px_70px_rgba(0,0,0,0.5)] sm:absolute sm:bottom-0 sm:right-0 sm:w-[76%]">
-              <Image src="/drive-search-chat-dark.png" alt="Amanah Drive semantic search and AI chat dashboard" width={1440} height={900} className="h-auto w-full" />
-            </figure>
+          <div className="grid grid-cols-2 gap-4">
+            <ProjectFigure src="/drive-files-dark.png" alt="Amanah Drive file management dashboard" aspect="aspect-[8/5]" />
+            <ProjectFigure src="/drive-search-chat-dark.png" alt="Amanah Drive semantic search and AI chat dashboard" aspect="aspect-[8/5]" />
           </div>
 
           <div>
             <div className="flex items-center gap-4">
-              <span className="text-sm font-semibold text-[#f472b6]">01</span>
-              <span className="h-px w-16 bg-[#f472b6]/55" aria-hidden="true" />
+              <span className="text-sm font-semibold text-white">01</span>
+              <span className="h-px w-16 bg-white/35" aria-hidden="true" />
             </div>
             <h3 className="mt-6 text-4xl font-semibold text-white sm:text-6xl">Amanah Drive</h3>
             <p className="mt-7 max-w-[500px] text-base leading-8 text-white/62 sm:text-lg">
@@ -308,7 +317,7 @@ function ProjectsSection() {
               href="https://github.com/AhmadAbughanam/amanah-drive"
               target="_blank"
               rel="noreferrer"
-              className="mt-9 inline-flex items-center gap-3 border-b border-white/30 pb-2 text-xs font-semibold uppercase tracking-[0.16em] text-white transition hover:border-[#60a5fa] hover:text-[#bfdbfe]"
+              className="mt-9 inline-flex items-center gap-3 border-b border-white/30 pb-2 text-xs font-semibold uppercase tracking-[0.16em] text-white transition hover:border-white hover:text-white"
             >
               View GitHub repository <span aria-hidden="true">-&gt;</span>
             </a>
@@ -316,19 +325,15 @@ function ProjectsSection() {
         </article>
 
         <article className="mt-20 grid items-center gap-14 border-t border-white/12 pt-12 lg:grid-cols-[0.92fr_1.08fr] lg:gap-20">
-          <div className="lg:order-2 grid gap-4 sm:relative sm:min-h-[520px]">
-            <figure className="relative aspect-[3/4] w-[78%] overflow-hidden rounded-[8px] border border-white/12 bg-[#101016] shadow-[0_24px_70px_rgba(0,0,0,0.42)] sm:absolute sm:left-0 sm:top-0">
-              <Image src="/aqarya-landing.png" alt="Aqarya landing page pitching a digital trust layer for property in Jordan" fill sizes="(max-width: 1024px) 78vw, 42vw" className="object-cover object-top" />
-            </figure>
-            <figure className="relative ml-[24%] aspect-[3/4] w-[62%] overflow-hidden rounded-[8px] border border-[#60a5fa]/35 bg-[#101016] shadow-[0_24px_70px_rgba(0,0,0,0.5)] sm:absolute sm:bottom-0 sm:right-0 sm:ml-0">
-              <Image src="/aqarya-map.png" alt="Aqarya citizen map with clustered, verified property pins" fill sizes="(max-width: 1024px) 62vw, 34vw" className="object-cover object-top" />
-            </figure>
+          <div className="lg:order-2 grid grid-cols-2 gap-4">
+            <ProjectFigure src="/aqarya-landing.png" alt="Aqarya landing page pitching a digital trust layer for property in Jordan" aspect="aspect-[3/4]" />
+            <ProjectFigure src="/aqarya-map.png" alt="Aqarya citizen map with clustered, verified property pins" aspect="aspect-[3/4]" />
           </div>
 
           <div className="lg:order-1">
             <div className="flex items-center gap-4">
-              <span className="text-sm font-semibold text-[#60a5fa]">02</span>
-              <span className="h-px w-16 bg-[#60a5fa]/55" aria-hidden="true" />
+              <span className="text-sm font-semibold text-white">02</span>
+              <span className="h-px w-16 bg-white/35" aria-hidden="true" />
             </div>
             <h3 className="mt-6 text-4xl font-semibold text-white sm:text-6xl">Aqarya</h3>
             <p className="mt-7 max-w-[500px] text-base leading-8 text-white/62 sm:text-lg">
@@ -345,7 +350,7 @@ function ProjectsSection() {
                 href="https://aqarya.online"
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-3 border-b border-white/30 pb-2 text-xs font-semibold uppercase tracking-[0.16em] text-white transition hover:border-[#c084fc] hover:text-[#e9d5ff]"
+                className="inline-flex items-center gap-3 border-b border-white/30 pb-2 text-xs font-semibold uppercase tracking-[0.16em] text-white transition hover:border-white hover:text-white"
               >
                 View live demo <span aria-hidden="true">-&gt;</span>
               </a>
@@ -353,7 +358,7 @@ function ProjectsSection() {
                 href="https://github.com/AhmadAbughanam/AqaryaApp"
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-3 border-b border-white/30 pb-2 text-xs font-semibold uppercase tracking-[0.16em] text-white transition hover:border-[#60a5fa] hover:text-[#bfdbfe]"
+                className="inline-flex items-center gap-3 border-b border-white/30 pb-2 text-xs font-semibold uppercase tracking-[0.16em] text-white transition hover:border-white hover:text-white"
               >
                 View GitHub repository <span aria-hidden="true">-&gt;</span>
               </a>
@@ -366,6 +371,7 @@ function ProjectsSection() {
 }
 
 function CredentialsSection() {
+  const numberStyles = ["text-white", "text-white/70", "text-white/50"];
   return (
     <section className="border-y border-white/[0.08] bg-[#0b0b10] px-6 py-20 sm:px-10 lg:py-28">
       <div className="mx-auto grid max-w-[1180px] gap-16 lg:grid-cols-[1fr_1fr] lg:gap-20">
@@ -375,7 +381,7 @@ function CredentialsSection() {
           <ol className="mt-10 space-y-5">
             {achievements.map((achievement, index) => (
               <li key={achievement} className="grid grid-cols-[42px_1fr] gap-4 border-t border-white/12 pt-5 text-sm leading-7 text-white/62 sm:text-base">
-                <span className={index === 0 ? "text-[#c084fc]" : index === 1 ? "text-[#f472b6]" : "text-[#60a5fa]"}>0{index + 1}</span>
+                <span className={numberStyles[index % numberStyles.length]}>0{index + 1}</span>
                 <span>{achievement}</span>
               </li>
             ))}
@@ -400,27 +406,27 @@ function PortfolioFooter() {
   return (
     <footer id="contact" className="relative overflow-hidden border-t border-white/[0.08] bg-[#030305] px-6 pb-8 pt-16 sm:px-10 sm:pt-24 lg:pt-28">
       <div className="pointer-events-none absolute inset-x-0 top-8 mx-auto max-w-[1180px] px-6 sm:top-12 sm:px-10">
-        <div className="h-px bg-gradient-to-r from-transparent via-[#c084fc]/70 to-transparent" />
-        <Scribble className="absolute right-8 top-[-30px] w-36 text-[#f472b6]/70 sm:right-14 sm:top-[-44px] sm:w-56" />
+        <div className="h-px bg-gradient-to-r from-transparent via-white/25 to-transparent" />
+        <Scribble className="absolute right-8 top-[-30px] w-36 text-white/22 sm:right-14 sm:top-[-44px] sm:w-56" />
       </div>
 
       <div className="relative mx-auto max-w-[1180px]">
         <SectionLabel>Contact</SectionLabel>
         <h2 className="mt-6 max-w-[1050px] font-serif text-[54px] font-medium leading-[0.92] text-white sm:text-[80px] lg:text-[116px]">
-          Let&apos;s build <span className="bg-gradient-to-r from-[#c084fc] via-[#f472b6] to-[#60a5fa] bg-clip-text text-transparent">something.</span>
+          Let&apos;s build <span className="bg-gradient-to-r from-white via-white/55 to-white/90 bg-clip-text text-transparent">something.</span>
         </h2>
 
         <div className="mt-12 grid gap-9 border-y border-white/12 py-9 sm:mt-16 sm:grid-cols-[minmax(0,1.35fr)_minmax(220px,0.65fr)] sm:items-end sm:gap-12 sm:py-11">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/42">Write to me</p>
-            <a href="mailto:abughannam98@gmail.com" className="group mt-4 inline-flex max-w-full flex-col text-[22px] font-semibold leading-tight text-white transition duration-300 hover:text-[#fbcfe8] sm:text-[30px] lg:text-[38px]">
+            <a href="mailto:abughannam98@gmail.com" className="group mt-4 inline-flex max-w-full flex-col text-[22px] font-semibold leading-tight text-white transition duration-300 hover:text-white/80 sm:text-[30px] lg:text-[38px]">
               <span className="break-words">abughannam98@gmail.com</span>
-              <span className="mt-3 h-px w-full origin-left scale-x-[0.2] bg-gradient-to-r from-[#c084fc] via-[#f472b6] to-[#60a5fa] transition-transform duration-300 group-hover:scale-x-100 group-focus-visible:scale-x-100" />
+              <span className="mt-3 h-px w-full origin-left scale-x-[0.2] bg-white/45 transition-transform duration-300 group-hover:scale-x-100 group-focus-visible:scale-x-100" />
             </a>
           </div>
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/42">Call</p>
-            <a href="tel:+962786099743" className="mt-4 inline-block text-[22px] font-semibold text-white transition duration-300 hover:-translate-y-0.5 hover:text-[#bfdbfe] sm:text-[30px]">
+            <a href="tel:+962786099743" className="mt-4 inline-block text-[22px] font-semibold text-white transition duration-300 hover:-translate-y-0.5 hover:text-white/80 sm:text-[30px]">
               0786099743
             </a>
           </div>
@@ -432,12 +438,12 @@ function PortfolioFooter() {
           <div className="border-t border-white/14 pt-9 lg:border-l lg:border-t-0 lg:pl-14 lg:pt-0">
             <SectionLabel>Elsewhere</SectionLabel>
             <div className="mt-6 space-y-3">
-              <a href="https://github.com/AhmadAbughanam" className="group flex items-center justify-between border-b border-white/12 py-4 text-sm font-semibold uppercase tracking-[0.16em] text-white/72 transition duration-300 hover:border-[#c084fc] hover:text-white">
-                <span className="flex items-center gap-4"><span className="flex h-10 w-10 items-center justify-center rounded-full border border-white/18 text-[10px] transition duration-300 group-hover:-translate-y-0.5 group-hover:border-[#c084fc] group-hover:bg-[#c084fc] group-hover:text-black">GH</span>GitHub</span>
+              <a href="https://github.com/AhmadAbughanam" className="group flex items-center justify-between border-b border-white/12 py-4 text-sm font-semibold uppercase tracking-[0.16em] text-white/72 transition duration-300 hover:border-white/60 hover:text-white">
+                <span className="flex items-center gap-4"><span className="flex h-10 w-10 items-center justify-center rounded-full border border-white/18 text-[10px] transition duration-300 group-hover:-translate-y-0.5 group-hover:border-white group-hover:bg-white group-hover:text-black">GH</span>GitHub</span>
                 <span aria-hidden="true" className="text-lg transition-transform duration-300 group-hover:translate-x-1">&#8599;</span>
               </a>
-              <a href="https://www.linkedin.com/in/ahmad-maher-2a67212b5" className="group flex items-center justify-between border-b border-white/12 py-4 text-sm font-semibold uppercase tracking-[0.16em] text-white/72 transition duration-300 hover:border-[#60a5fa] hover:text-white">
-                <span className="flex items-center gap-4"><span className="flex h-10 w-10 items-center justify-center rounded-full border border-white/18 text-xs font-bold normal-case transition duration-300 group-hover:-translate-y-0.5 group-hover:border-[#60a5fa] group-hover:bg-[#60a5fa] group-hover:text-black">in</span>LinkedIn</span>
+              <a href="https://www.linkedin.com/in/ahmad-maher-2a67212b5" className="group flex items-center justify-between border-b border-white/12 py-4 text-sm font-semibold uppercase tracking-[0.16em] text-white/72 transition duration-300 hover:border-white/60 hover:text-white">
+                <span className="flex items-center gap-4"><span className="flex h-10 w-10 items-center justify-center rounded-full border border-white/18 text-xs font-bold normal-case transition duration-300 group-hover:-translate-y-0.5 group-hover:border-white group-hover:bg-white group-hover:text-black">in</span>LinkedIn</span>
                 <span aria-hidden="true" className="text-lg transition-transform duration-300 group-hover:translate-x-1">&#8599;</span>
               </a>
             </div>
@@ -445,9 +451,9 @@ function PortfolioFooter() {
             <div className="mt-12">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-white/42">Quick links</p>
               <nav aria-label="Footer navigation" className="mt-5 grid grid-cols-2 gap-x-8 gap-y-4 text-sm text-white/58">
-                <a href="#about" className="transition hover:text-[#c084fc]">About</a>
-                <a href="#projects" className="transition hover:text-[#f472b6]">Work</a>
-                <a href="#experience" className="transition hover:text-[#60a5fa]">Experience</a>
+                <a href="#about" className="transition hover:text-white">About</a>
+                <a href="#projects" className="transition hover:text-white">Work</a>
+                <a href="#experience" className="transition hover:text-white">Experience</a>
                 <a href="#contact" className="transition hover:text-white">Contact</a>
               </nav>
             </div>

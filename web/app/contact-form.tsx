@@ -52,21 +52,21 @@ export function ContactForm() {
       <p className="font-serif text-3xl text-white sm:text-4xl">Send a message</p>
       <label className="block">
         <span className="text-xs font-semibold uppercase tracking-[0.16em] text-white/48">Name</span>
-        <input name="name" required maxLength={100} className="mt-3 w-full border-0 border-b border-white/22 bg-transparent px-0 py-3 text-base text-white outline-none transition placeholder:text-white/24 focus:border-[#c084fc]" />
+        <input name="name" required maxLength={100} className="mt-3 w-full border-0 border-b border-white/22 bg-transparent px-0 py-3 text-base text-white outline-none transition placeholder:text-white/24 focus:border-white" />
       </label>
       <label className="block">
         <span className="text-xs font-semibold uppercase tracking-[0.16em] text-white/48">Email</span>
-        <input name="email" type="email" required maxLength={254} className="mt-3 w-full border-0 border-b border-white/22 bg-transparent px-0 py-3 text-base text-white outline-none transition placeholder:text-white/24 focus:border-[#f472b6]" />
+        <input name="email" type="email" required maxLength={254} className="mt-3 w-full border-0 border-b border-white/22 bg-transparent px-0 py-3 text-base text-white outline-none transition placeholder:text-white/24 focus:border-white" />
       </label>
       <label className="block">
         <span className="text-xs font-semibold uppercase tracking-[0.16em] text-white/48">Message</span>
-        <textarea name="message" required maxLength={5000} rows={5} className="mt-3 w-full resize-y rounded-[8px] border border-white/18 bg-white/[0.025] p-4 text-base leading-7 text-white outline-none transition placeholder:text-white/24 focus:border-[#60a5fa]" />
+        <textarea name="message" required maxLength={5000} rows={5} className="mt-3 w-full resize-y rounded-[8px] border border-white/18 bg-white/[0.025] p-4 text-base leading-7 text-white outline-none transition placeholder:text-white/24 focus:border-white" />
       </label>
       <label className="absolute -left-[10000px] top-auto h-px w-px overflow-hidden" aria-hidden="true">
         Website
         <input name="website" type="text" tabIndex={-1} autoComplete="off" />
       </label>
-      <button type="submit" disabled={isSubmitting} className="rounded-full bg-white px-6 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-black transition hover:bg-[#e9d5ff] disabled:cursor-wait disabled:opacity-60">
+      <button type="submit" disabled={isSubmitting} className="rounded-full bg-white px-6 py-3.5 text-xs font-semibold uppercase tracking-[0.16em] text-black transition hover:bg-white/85 disabled:cursor-wait disabled:opacity-60">
         {isSubmitting ? "Sending..." : "Send message"}
       </button>
       {submission.status === "success" && (
