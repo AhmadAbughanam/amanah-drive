@@ -314,6 +314,52 @@ function ProjectsSection() {
             </a>
           </div>
         </article>
+
+        <article className="mt-20 grid items-center gap-14 border-t border-white/12 pt-12 lg:grid-cols-[0.92fr_1.08fr] lg:gap-20">
+          <div className="lg:order-2 grid gap-4 sm:relative sm:min-h-[520px]">
+            <figure className="relative aspect-[3/4] w-[78%] overflow-hidden rounded-[8px] border border-white/12 bg-[#101016] shadow-[0_24px_70px_rgba(0,0,0,0.42)] sm:absolute sm:left-0 sm:top-0">
+              <Image src="/aqarya-landing.png" alt="Aqarya landing page pitching a digital trust layer for property in Jordan" fill sizes="(max-width: 1024px) 78vw, 42vw" className="object-cover object-top" />
+            </figure>
+            <figure className="relative ml-[24%] aspect-[3/4] w-[62%] overflow-hidden rounded-[8px] border border-[#60a5fa]/35 bg-[#101016] shadow-[0_24px_70px_rgba(0,0,0,0.5)] sm:absolute sm:bottom-0 sm:right-0 sm:ml-0">
+              <Image src="/aqarya-map.png" alt="Aqarya citizen map with clustered, verified property pins" fill sizes="(max-width: 1024px) 62vw, 34vw" className="object-cover object-top" />
+            </figure>
+          </div>
+
+          <div className="lg:order-1">
+            <div className="flex items-center gap-4">
+              <span className="text-sm font-semibold text-[#60a5fa]">02</span>
+              <span className="h-px w-16 bg-[#60a5fa]/55" aria-hidden="true" />
+            </div>
+            <h3 className="mt-6 text-4xl font-semibold text-white sm:text-6xl">Aqarya</h3>
+            <p className="mt-7 max-w-[500px] text-base leading-8 text-white/62 sm:text-lg">
+              A digital trust and operations layer for property in Jordan — source-authenticated
+              listings, a SANAD-gated citizen journey, and a clustered map of verified property records.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-2">
+              {["React", "TypeScript", "React Router", "Leaflet", "Vite"].map((item, index) => (
+                <span key={item} className={`rounded-full border px-3 py-2 text-xs ${skillStyles[index % skillStyles.length]}`}>{item}</span>
+              ))}
+            </div>
+            <div className="mt-9 flex flex-wrap items-center gap-x-8 gap-y-3">
+              <a
+                href="https://aqarya.online"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-3 border-b border-white/30 pb-2 text-xs font-semibold uppercase tracking-[0.16em] text-white transition hover:border-[#c084fc] hover:text-[#e9d5ff]"
+              >
+                View live demo <span aria-hidden="true">-&gt;</span>
+              </a>
+              <a
+                href="https://github.com/AhmadAbughanam/AqaryaApp"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-3 border-b border-white/30 pb-2 text-xs font-semibold uppercase tracking-[0.16em] text-white transition hover:border-[#60a5fa] hover:text-[#bfdbfe]"
+              >
+                View GitHub repository <span aria-hidden="true">-&gt;</span>
+              </a>
+            </div>
+          </div>
+        </article>
       </div>
     </section>
   );
