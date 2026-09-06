@@ -13,4 +13,6 @@ public interface IAgentRunService
     Task<AgentRun?> ApproveAsync(Guid userId, Guid runId, CancellationToken cancellationToken);
 
     Task<AgentRun?> RejectAsync(Guid userId, Guid runId, CancellationToken cancellationToken);
+
+    Task<bool> ProcessNextPendingRunAsync(CancellationToken cancellationToken);
 }

@@ -34,7 +34,7 @@ public sealed class AgentRunService(
                 throw new AgentConversationNotFoundException();
             }
 
-            if (latestRun.Status == AgentRunStatus.AwaitingApproval)
+            if (!IsTerminal(latestRun.Status))
             {
                 throw new AgentConversationNotReadyException();
             }
@@ -47,7 +47,7 @@ public sealed class AgentRunService(
             UserId = userId,
             ConversationId = conversationId ?? Guid.NewGuid(),
             Question = question.Trim(),
-            Status = AgentRunStatus.AwaitingApproval,
+            Status = AgentRunStatus.Pending,
             CreatedAt = now,
             UpdatedAt = now,
             Steps =
@@ -58,7 +58,7 @@ public sealed class AgentRunService(
         };
         await dbContext.AgentRuns.AddAsync(run, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
-        return await ContinueAsync(run, cancellationToken);
+        return run;
     }
 
     public Task<AgentRun?> GetAsync(Guid userId, Guid runId, CancellationToken cancellationToken) =>
@@ -80,8 +80,24 @@ public sealed class AgentRunService(
     public Task<AgentRun?> RejectAsync(Guid userId, Guid runId, CancellationToken cancellationToken) =>
         ResolvePendingToolAsync(userId, runId, approve: false, cancellationToken);
 
+    public async Task<bool> ProcessNextPendingRunAsync(CancellationToken cancellationToken)
+    {
+        var runId = await ClaimNextPendingRunAsync(cancellationToken);
+        if (runId is null)
+        {
+            return false;
+        }
+
+        var run = await dbContext.AgentRuns
+            .Include(candidate => candidate.Steps)
+            .SingleAsync(candidate => candidate.Id == runId.Value, cancellationToken);
+        await ContinueAsync(run, cancellationToken);
+        return true;
+    }
+
     private async Task<AgentRun?> ResolvePendingToolAsync(Guid userId, Guid runId, bool approve, CancellationToken cancellationToken)
     {
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(cancellationToken);
         var run = await GetAsync(userId, runId, cancellationToken);
         if (run is null || run.Status != AgentRunStatus.AwaitingApproval)
         {
@@ -123,6 +139,7 @@ public sealed class AgentRunService(
             // otherwise keep serving the stale in-memory value) and return as-is without
             // acting again.
             await dbContext.Entry(pending).ReloadAsync(cancellationToken);
+            await dbContext.Entry(run).ReloadAsync(cancellationToken);
             return run;
         }
 
@@ -135,22 +152,24 @@ public sealed class AgentRunService(
             pending.Content = rejectedContent;
         }
 
-        if (approve)
-        {
-            await ExecuteToolAsync(run, pending, cancellationToken);
-        }
-        else
-        {
-            run.UpdatedAt = DateTimeOffset.UtcNow;
-        }
-
-        return await ContinueAsync(run, cancellationToken);
+        run.Status = AgentRunStatus.Pending;
+        run.UpdatedAt = DateTimeOffset.UtcNow;
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+        return run;
     }
 
     private async Task<AgentRun> ContinueAsync(AgentRun run, CancellationToken cancellationToken)
     {
         try
         {
+            var approvedTool = run.Steps.SingleOrDefault(step =>
+                step.RequiresApproval && step.ToolCallStatus == AgentToolCallStatus.Executing);
+            if (approvedTool is not null)
+            {
+                await ExecuteToolAsync(run, approvedTool, cancellationToken);
+            }
+
             while (true)
             {
                 var modelCalls = run.Steps.Count(step => step.Role == "assistant");
@@ -218,6 +237,8 @@ public sealed class AgentRunService(
                     return run;
                 }
 
+                toolStep.ToolCallStatus = AgentToolCallStatus.Executing;
+                await dbContext.SaveChangesAsync(cancellationToken);
                 await ExecuteToolAsync(run, toolStep, cancellationToken);
             }
         }
@@ -242,6 +263,59 @@ public sealed class AgentRunService(
             throw Enrich(exception);
         }
     }
+
+    private async Task<Guid?> ClaimNextPendingRunAsync(CancellationToken cancellationToken)
+    {
+        var connection = dbContext.Database.GetDbConnection();
+        var shouldCloseConnection = connection.State != System.Data.ConnectionState.Open;
+        if (shouldCloseConnection)
+        {
+            await connection.OpenAsync(cancellationToken);
+        }
+
+        try
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText = """
+                UPDATE agent_runs
+                SET "Status" = @runningStatus,
+                    "UpdatedAt" = @now
+                WHERE "Id" = (
+                    SELECT "Id"
+                    FROM agent_runs
+                    WHERE "Status" = @pendingStatus
+                    ORDER BY "CreatedAt", "Id"
+                    LIMIT 1
+                    FOR UPDATE SKIP LOCKED
+                )
+                RETURNING "Id";
+                """;
+            AddParameter(command, "runningStatus", AgentRunStatus.Running.ToString());
+            AddParameter(command, "pendingStatus", AgentRunStatus.Pending.ToString());
+            AddParameter(command, "now", DateTimeOffset.UtcNow);
+
+            var result = await command.ExecuteScalarAsync(cancellationToken);
+            return result is Guid claimedRunId ? claimedRunId : null;
+        }
+        finally
+        {
+            if (shouldCloseConnection)
+            {
+                await connection.CloseAsync();
+            }
+        }
+    }
+
+    private static void AddParameter(System.Data.Common.DbCommand command, string name, object value)
+    {
+        var parameter = command.CreateParameter();
+        parameter.ParameterName = name;
+        parameter.Value = value;
+        command.Parameters.Add(parameter);
+    }
+
+    private static bool IsTerminal(AgentRunStatus status) => status is
+        AgentRunStatus.Completed or AgentRunStatus.Failed or AgentRunStatus.IterationLimitReached;
 
     // Temporary diagnostic aid: DbUpdateConcurrencyException's own message never says which
     // entities were actually involved, only that "0 rows" were affected somewhere in the batch.

@@ -277,6 +277,48 @@ test("agent rejection resumes the run and shows the returned answer", async ({ p
   await expect(page.getByText("I left the file where it was.")).toBeVisible();
 });
 
+test("agent polling surfaces an executing tool before the run finishes", async ({ page }) => {
+  const requests: string[] = [];
+  const queuedRun = agentRun({
+    status: "Pending",
+    steps: [agentStep(1, "user", { content: "Create a reports folder" })],
+  });
+  const runningRun = agentRun({
+    status: "Running",
+    steps: [
+      ...queuedRun.steps,
+      agentStep(2, "assistant"),
+      agentStep(3, "tool", { toolName: "create_folder", argumentsSummary: "Create folder “Reports”", resultSummary: "Working…", status: "Executing" }),
+    ],
+  });
+  const completedRun = agentRun({
+    status: "Completed",
+    finalAnswer: "The Reports folder is ready.",
+    steps: [
+      ...queuedRun.steps,
+      agentStep(2, "assistant"),
+      agentStep(3, "tool", { toolName: "create_folder", argumentsSummary: "Create folder “Reports”", resultSummary: "Completed.", status: "Executed" }),
+      agentStep(4, "assistant", { content: "The Reports folder is ready." }),
+    ],
+  });
+  await mockApi(page, {
+    loginSucceeds: true,
+    agentStartResponse: queuedRun,
+    agentPollResponses: [runningRun, runningRun, completedRun],
+    agentPollRequests: requests,
+  });
+
+  await signIn(page);
+  await page.getByRole("button", { name: "Agent" }).click();
+  await page.getByLabel("Instruction").fill("Create a reports folder");
+  await page.getByRole("button", { name: "Run agent" }).click();
+
+  await expect(page.getByText("Working…")).toBeVisible();
+  await expect(page.locator('[aria-live="polite"]')).toHaveText("Agent is working…");
+  await expect(page.getByText("The Reports folder is ready.", { exact: true })).toBeVisible();
+  expect(requests.length).toBeGreaterThanOrEqual(3);
+});
+
 test("agent follow-ups reuse conversation history and new conversation resets it", async ({ page }) => {
   const conversationId = "77777777-7777-7777-7777-777777777777";
   const firstRunId = "66666666-6666-6666-6666-666666666666";
@@ -415,6 +457,8 @@ async function mockApi(
     agentStartRequests?: Array<Record<string, unknown>>;
     agentApproveResponse?: Record<string, unknown>;
     agentRejectResponse?: Record<string, unknown>;
+    agentPollResponses?: Array<Record<string, unknown>>;
+    agentPollRequests?: string[];
   },
 ) {
   await page.route(`${apiBaseUrl}/auth/login`, async (route) => {
@@ -568,6 +612,7 @@ async function mockApi(
   });
 
   let agentStartIndex = 0;
+  let agentPollIndex = 0;
   await page.route(`${apiBaseUrl}/agent/runs`, async (route) => {
     options.agentStartRequests?.push(route.request().postDataJSON() as Record<string, unknown>);
     const response = options.agentStartResponses?.[agentStartIndex++] ?? options.agentStartResponse ?? agentRun({ status: "Completed", finalAnswer: "Default agent answer." });
@@ -575,6 +620,15 @@ async function mockApi(
   });
 
   await page.route(`${apiBaseUrl}/agent/runs/**`, async (route) => {
+    if (route.request().method() === "GET") {
+      options.agentPollRequests?.push(route.request().url());
+      const responses = options.agentPollResponses;
+      const response = responses?.[Math.min(agentPollIndex++, responses.length - 1)]
+        ?? agentRun({ status: "Completed", finalAnswer: "Default agent answer." });
+      await route.fulfill({ status: 200, json: response });
+      return;
+    }
+
     const action = route.request().url().endsWith("/approve") ? options.agentApproveResponse : options.agentRejectResponse;
     await route.fulfill({ status: 200, json: action ?? agentRun({ status: "Completed", finalAnswer: "Default agent answer." }) });
   });

@@ -590,7 +590,7 @@ function AgentView({
   const [isSubmitting, setSubmitting] = useState(false);
   const [approvalAction, setApprovalAction] = useState<"approve" | "reject" | null>(null);
 
-  function applyRun(nextRun: AgentRunResponse) {
+  const applyRun = useCallback((nextRun: AgentRunResponse) => {
     onRunChange(nextRun);
     // The agent's file-mutating tools (create/rename/move/copy) only take effect once a run
     // reaches Completed - refresh the Files view in the background so newly changed files show
@@ -598,7 +598,35 @@ function AgentView({
     if (nextRun.status === "Completed") {
       void onFilesChanged();
     }
-  }
+  }, [onFilesChanged, onRunChange]);
+
+  useEffect(() => {
+    if (!run || (run.status !== "Pending" && run.status !== "Running")) return;
+
+    let cancelled = false;
+    let timeoutId: number | undefined;
+    const poll = async () => {
+      try {
+        const nextRun = await apiJson<AgentRunResponse>(`/agent/runs/${run.id}`);
+        if (cancelled) return;
+        setSubmitError(null);
+        applyRun(nextRun);
+        if (nextRun.status === "Pending" || nextRun.status === "Running") {
+          timeoutId = window.setTimeout(poll, 750);
+        }
+      } catch (err) {
+        if (cancelled) return;
+        setSubmitError(err instanceof Error ? err.message : "Live agent progress is temporarily unavailable.");
+        timeoutId = window.setTimeout(poll, 1500);
+      }
+    };
+
+    timeoutId = window.setTimeout(poll, 250);
+    return () => {
+      cancelled = true;
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+    };
+  }, [applyRun, run?.id, run?.status]);
 
   async function startRun(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -646,6 +674,7 @@ function AgentView({
   }
 
   const isAwaitingApproval = run?.status === "AwaitingApproval";
+  const isRunActive = run?.status === "Pending" || run?.status === "Running";
   const isBusy = isSubmitting || approvalAction !== null;
   const pendingAction = run?.pendingActionSummary ?? run?.steps.find((step) => step.status === "PendingApproval")?.argumentsSummary;
 
@@ -654,7 +683,7 @@ function AgentView({
       <div className={`${panelClass} h-fit p-5`}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <SectionLabel className="text-[#a7f3d0]">File agent</SectionLabel>
-          {run ? <button className={secondaryButtonClass} disabled={isBusy || isAwaitingApproval} onClick={startNewConversation} type="button">New conversation</button> : null}
+          {run ? <button className={secondaryButtonClass} disabled={isBusy || isRunActive || isAwaitingApproval} onClick={startNewConversation} type="button">New conversation</button> : null}
         </div>
         <h1 className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-white">Ask the agent to work with your files.</h1>
         <p className="mt-2 text-sm leading-6 text-white/55">It can inspect your drive immediately and will ask before making a rename or move.</p>
@@ -662,15 +691,15 @@ function AgentView({
           <label className="block text-xs font-semibold uppercase tracking-[0.12em] text-white/58" htmlFor="agent-instruction">Instruction</label>
           <textarea
             className={`${fieldClass} min-h-32 resize-y py-3`}
-            disabled={isBusy || isAwaitingApproval}
+            disabled={isBusy || isRunActive || isAwaitingApproval}
             id="agent-instruction"
             maxLength={4000}
             onChange={(event) => setInstruction(event.target.value)}
             placeholder="For example: find the latest invoice and move a copy into Finance."
             value={instruction}
           />
-          <button className={`${primaryButtonClass} w-full`} disabled={isBusy || isAwaitingApproval || !instruction.trim()} type="submit">
-            {isSubmitting ? "Agent is working…" : "Run agent"}
+          <button className={`${primaryButtonClass} w-full`} disabled={isBusy || isRunActive || isAwaitingApproval || !instruction.trim()} type="submit">
+            {isSubmitting || isRunActive ? "Agent is working…" : "Run agent"}
           </button>
         </form>
         {isAwaitingApproval ? <p className="mt-3 text-xs leading-5 text-white/45">Resolve the pending action before starting another run.</p> : null}
@@ -709,6 +738,11 @@ function AgentView({
         ) : (
           <div className="mt-4 space-y-3">
             {run.steps.map((step) => <AgentTranscriptStep key={`${step.runId}:${step.sequence}`} step={step} />)}
+            {run.status === "Pending" || run.status === "Running" ? (
+              <div aria-live="polite" className="rounded-[7px] border border-[#60a5fa]/20 bg-[#60a5fa]/[0.07] px-4 py-3 text-sm text-[#bfdbfe]">
+                {run.status === "Pending" ? "Agent run queued…" : "Agent is working…"}
+              </div>
+            ) : null}
             {run.status === "Completed" ? (
               <div className="rounded-[7px] border border-emerald-200/20 bg-emerald-300/[0.07] px-4 py-3">
                 <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#a7f3d0]">Completed</p>

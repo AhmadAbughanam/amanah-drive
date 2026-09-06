@@ -90,7 +90,7 @@ export type AgentRunStepResponse = {
 export type AgentRunResponse = {
   id: string;
   conversationId: string;
-  status: "AwaitingApproval" | "Completed" | "IterationLimitReached" | "Failed";
+  status: "Pending" | "Running" | "AwaitingApproval" | "Completed" | "IterationLimitReached" | "Failed";
   finalAnswer: string | null;
   failureReason: string | null;
   pendingToolName: string | null;

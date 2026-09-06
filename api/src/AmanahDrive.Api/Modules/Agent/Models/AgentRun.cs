@@ -27,6 +27,8 @@ public sealed class AgentRun
 
 public enum AgentRunStatus
 {
+    Pending,
+    Running,
     AwaitingApproval,
     Completed,
     IterationLimitReached,

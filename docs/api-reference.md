@@ -30,13 +30,15 @@ The browsable OpenAPI/Scalar UI is available at `/docs` in Development, or when 
 | GET | `/search` | Bearer JWT | Semantic search over processed chunks with `query` and optional `topK`. |
 | POST | `/chat` | Bearer JWT | Retrieve relevant chunks, ask the AI service for a grounded answer, and persist the exchange. |
 | GET | `/chat/{conversationId}` | Bearer JWT | Return conversation message history with `page` and `pageSize`. |
-| POST | `/agent/runs` | Bearer JWT | Start a persisted, approval-aware agent run, optionally continuing an agent conversation. |
+| POST | `/agent/runs` | Bearer JWT | Persist a `Pending` approval-aware agent run and return immediately, optionally continuing an agent conversation. |
 | GET | `/agent/runs/{runId}` | Bearer JWT | Return a run's current state and its conversation's readable ordered step history. |
-| POST | `/agent/runs/{runId}/approve` | Bearer JWT | Approve the pending tool call and resume the run. |
-| POST | `/agent/runs/{runId}/reject` | Bearer JWT | Reject the pending tool call and resume the run with that result. |
+| POST | `/agent/runs/{runId}/approve` | Bearer JWT | Atomically approve the pending tool call, requeue the run as `Pending`, and return immediately. |
+| POST | `/agent/runs/{runId}/reject` | Bearer JWT | Atomically reject the pending tool call, requeue the run as `Pending`, and return immediately. |
 
 ## Agent conversation continuity
 
-`POST /agent/runs` accepts `{ "question": string, "conversationId"?: UUID | null }`. Omitting `conversationId` starts a new conversation; supplying an owned conversation ID starts a separate follow-up run. An unknown or unowned conversation returns `404`. A follow-up returns `409` while that conversation's latest run is `AwaitingApproval`; `Completed`, `Failed`, and `IterationLimitReached` runs can be followed up.
+`POST /agent/runs` accepts `{ "question": string, "conversationId"?: UUID | null }`. Omitting `conversationId` starts a new conversation; supplying an owned conversation ID starts a separate follow-up run. An unknown or unowned conversation returns `404`. A follow-up returns `409` while that conversation's latest run is `Pending`, `Running`, or `AwaitingApproval`; `Completed`, `Failed`, and `IterationLimitReached` runs can be followed up.
 
 Every agent-run response includes `conversationId`. Its `steps` collection is the full conversation transcript ordered across runs, and each step includes its `runId`. Runs remain separate bounded executions: the configured iteration cap is counted only against assistant steps in the current run, even though model input includes eligible steps from prior runs.
+
+The agent worker atomically claims `Pending` runs as `Running`. Clients observe progress by polling `GET /agent/runs/{runId}` while either status is present, and stop polling when the run reaches `AwaitingApproval` or a terminal state.

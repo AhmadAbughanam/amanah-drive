@@ -15,7 +15,8 @@ flowchart TB
     UI["Agent dashboard (web/app/drive/page.tsx)"]
 
     subgraph API["ASP.NET Core API"]
-        AgentModule["Agent module<br/>AgentRunService — the loop"]
+        AgentModule["Agent module<br/>endpoints + AgentRunService"]
+        Worker["AgentRunWorker<br/>background loop"]
         Registry["AgentTools module<br/>AgentToolRegistry — dispatch"]
         DriveTools["8 Drive tools"]
         GitHubTools["2 GitHub tools"]
@@ -26,7 +27,10 @@ flowchart TB
     GH["GitHub REST API"]
     PG[("PostgreSQL<br/>agent_runs / agent_run_steps")]
 
-    UI -- "POST /agent/runs<br/>conversationId + approve /reject" --> AgentModule
+    UI -- "POST start / approve / reject<br/>GET polling" --> AgentModule
+    AgentModule -- "persist Pending + return" --> PG
+    Worker -- "atomic Pending → Running claim" --> PG
+    Worker --> AgentModule
     AgentModule -- "persists every step" --> PG
     AgentModule -- "tool schemas + conversation" --> AI
     AI -- "tool_calls or final answer" --> AgentModule
@@ -61,28 +65,34 @@ The line is drawn at **reversibility**, not at read-vs-write: creating and copyi
 ```mermaid
 sequenceDiagram
     participant U as User
-    participant A as AgentRunService
+    participant A as Agent endpoints
+    participant W as AgentRunWorker
+    participant S as AgentRunService
     participant DB as PostgreSQL
     participant AI as AI service
     participant T as AgentToolRegistry
 
     U->>A: POST /agent/runs { question, conversationId? }
     A->>DB: persist system + user steps
+    A-->>U: 201 Pending
+    W->>DB: atomically claim Pending as Running
+    W->>S: ContinueAsync(claimed run)
     loop Until final answer, pause, or iteration cap
-        A->>AI: messages + tool schemas
-        AI-->>A: tool_call OR final answer
+        S->>AI: messages + tool schemas
+        AI-->>S: tool_call OR final answer
         alt Final answer
-            A->>DB: mark Completed
-            A-->>U: final answer
+            S->>DB: mark Completed
         else Tool call, auto-approved
-            A->>T: invoke(toolName, arguments)
-            T-->>A: result
-            A->>DB: persist tool-role result, loop again
+            S->>DB: persist Executing tool step
+            S->>T: invoke(toolName, arguments)
+            T-->>S: result
+            S->>DB: persist tool-role result, loop again
         else Tool call, requires approval
-            A->>DB: mark AwaitingApproval, stop
-            A-->>U: pending action (human-readable)
+            S->>DB: mark AwaitingApproval, stop
         end
     end
+    U->>A: GET /agent/runs/{id} while Pending or Running
+    A-->>U: accumulated steps + current status
 ```
 
 The **8-iteration cap** (`AgentOptions.MaxIterations`, configurable 1–10) is checked before every model call, not after — a model that keeps calling tools without ever producing a final answer stops itself rather than looping indefinitely and running up your Hugging Face bill. Every model call is recorded through `IAiUsageRecorder` with `Operation: "agent"`, so a single run's real cost shows up as multiple distinct entries in the observability dashboard, not one opaque number.
@@ -91,14 +101,15 @@ The **8-iteration cap** (`AgentOptions.MaxIterations`, configurable 1–10) is c
 
 Each instruction still creates a distinct `AgentRun`. Runs in the same conversation share `ConversationId`, and the message list sent to the model replays eligible steps from every run in deterministic run-and-step order. Duplicate stored system steps are omitted and the current system prompt is emitted once at the front of the assembled history.
 
-This separation is intentional: prior steps provide linguistic and tool context, but `ContinueAsync` counts assistant steps only from the current run when enforcing `MaxIterations`. A follow-up therefore receives a fresh eight-call budget even if earlier runs exhausted theirs. Follow-ups are accepted only after the conversation's latest run reaches `Completed`, `Failed`, or `IterationLimitReached`; an `AwaitingApproval` run must be approved or rejected first. Conversation lookup always includes the calling user's ID, so an unknown conversation and another user's conversation are both exposed as `404`.
+This separation is intentional: prior steps provide linguistic and tool context, but `ContinueAsync` counts assistant steps only from the current run when enforcing `MaxIterations`. A follow-up therefore receives a fresh eight-call budget even if earlier runs exhausted theirs. Follow-ups are accepted only after the conversation's latest run reaches `Completed`, `Failed`, or `IterationLimitReached`; a `Pending`, `Running`, or `AwaitingApproval` run must finish or be resolved first. Conversation lookup always includes the calling user's ID, so an unknown conversation and another user's conversation are both exposed as `404`.
 
 ## Approval gating
 
 ```mermaid
 sequenceDiagram
     participant U as User
-    participant A as AgentRunService
+    participant A as Agent endpoint/service
+    participant W as AgentRunWorker
     participant DB as agent_run_steps
 
     Note over A,DB: Run is AwaitingApproval, one step PendingApproval
@@ -108,13 +119,15 @@ sequenceDiagram
         Note over A: Someone/something already resolved it — back off, no double-execution
         A-->>U: current run state, unchanged
     else 1 row affected — this request owns it
+        A->>DB: set run Pending in the same transaction
+        A-->>U: updated queued run
+        W->>DB: atomically claim run as Running
         alt Approve
-            A->>A: execute the tool for real
+            W->>W: execute the tool for real
         else Reject
-            A->>DB: store "The user declined this action."
+            Note over W: use the stored rejected tool result
         end
-        A->>DB: resume the loop
-        A-->>U: updated run state
+        W->>W: resume the loop
     end
 ```
 
@@ -126,17 +139,20 @@ Rejecting doesn't end the run — the decline is fed back to the model as a norm
 
 ```mermaid
 stateDiagram-v2
-    [*] --> AwaitingApproval: StartAsync (initial state before the first model call)
-    AwaitingApproval --> Completed: model returns a final answer
-    AwaitingApproval --> AwaitingApproval: auto-approved tool call, loop continues
-    AwaitingApproval --> Failed: unhandled exception
-    AwaitingApproval --> IterationLimitReached: 8 model calls reached with no final answer
+    [*] --> Pending: start or approval decision persisted
+    Pending --> Running: worker atomically claims
+    Running --> Running: auto-approved tool call, loop continues
+    Running --> AwaitingApproval: gated tool call
+    AwaitingApproval --> Pending: approve or reject
+    Running --> Completed: model returns a final answer
+    Running --> Failed: unhandled exception
+    Running --> IterationLimitReached: 8 model calls reached with no final answer
     Completed --> [*]
     Failed --> [*]
     IterationLimitReached --> [*]
 ```
 
-`AwaitingApproval` is overloaded slightly — it's both "genuinely paused, waiting on you" and the transient state a fresh run starts in before its first model call resolves it one way or another. It's the same underlying status either way; the UI distinguishes them by whether a step is actually `PendingApproval`.
+`AwaitingApproval` now means only "genuinely paused, waiting on you." `Pending` is queued work and `Running` is owned by a worker. The UI polls while work is in either active state and stops at approval or a terminal state.
 
 ## Safety design
 
@@ -154,11 +170,12 @@ An earlier phase added YouTube caption ingestion as a document source for the ag
 | Concern | Location |
 |---|---|
 | The loop itself | [`AgentRunService.cs`](../api/src/AmanahDrive.Api/Modules/Agent/Services/AgentRunService.cs) |
+| Background execution | [`AgentRunWorker.cs`](../api/src/AmanahDrive.Api/Modules/Agent/Services/AgentRunWorker.cs) |
 | Persistence | [`AgentRun.cs`](../api/src/AmanahDrive.Api/Modules/Agent/Models/AgentRun.cs), [`AgentRunStep.cs`](../api/src/AmanahDrive.Api/Modules/Agent/Models/AgentRunStep.cs) |
 | Endpoints | [`AgentEndpoints.cs`](../api/src/AmanahDrive.Api/Modules/Agent/Endpoints/AgentEndpoints.cs) — see also [API Reference](api-reference.md) |
 | Tool contract + dispatch | [`IAgentTool.cs`](../api/src/AmanahDrive.Api/Modules/AgentTools/IAgentTool.cs), [`AgentToolRegistry.cs`](../api/src/AmanahDrive.Api/Modules/AgentTools/AgentToolRegistry.cs) |
 | Drive tools | [`DriveAgentTools.cs`](../api/src/AmanahDrive.Api/Modules/AgentTools/Tools/DriveAgentTools.cs) |
 | GitHub tools + client | [`GitHubAgentTools.cs`](../api/src/AmanahDrive.Api/Modules/AgentTools/Tools/GitHubAgentTools.cs), [`GitHubClient.cs`](../api/src/AmanahDrive.Api/Shared/Infrastructure/GitHub/GitHubClient.cs) |
 | Tool-calling HTTP contract with HF | [`ai-service/app/services/agent.py`](../ai-service/app/services/agent.py) |
-| Configuration (iteration cap) | [`AgentOptions.cs`](../api/src/AmanahDrive.Api/Modules/Agent/Options/AgentOptions.cs) |
+| Configuration (iteration cap and worker polling) | [`AgentOptions.cs`](../api/src/AmanahDrive.Api/Modules/Agent/Options/AgentOptions.cs) |
 | UI | [`web/app/drive/page.tsx`](../web/app/drive/page.tsx) — `AgentView` |

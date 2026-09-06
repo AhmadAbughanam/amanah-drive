@@ -13,6 +13,10 @@ public static class AgentModule
             .ValidateDataAnnotations()
             .ValidateOnStart();
         services.AddScoped<IAgentRunService, AgentRunService>();
+        if (configuration.GetSection(AgentOptions.SectionName).Get<AgentOptions>()?.WorkerEnabled ?? true)
+        {
+            services.AddHostedService<AgentRunWorker>();
+        }
         return services;
     }
 

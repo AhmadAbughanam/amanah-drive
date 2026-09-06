@@ -1,8 +1,10 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Collections.Concurrent;
 using AmanahDrive.Api.Modules.Agent.Models;
 using AmanahDrive.Api.Modules.Agent.Services;
+using AmanahDrive.Api.Modules.AgentTools;
 using AmanahDrive.Api.Shared.Infrastructure.Ai;
 using AmanahDrive.Api.Shared.Infrastructure.Data;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -18,6 +20,7 @@ public sealed class AgentRunServiceTests : IAsyncLifetime
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder("pgvector/pgvector:pg17")
         .WithDatabase("amanah_drive_agent_run_tests").WithUsername("postgres").WithPassword("postgres").Build();
     private readonly FakeAiProcessingClient _aiClient = new();
+    private readonly FakeAgentToolRegistry _toolRegistry = new();
     private AmanahDriveApiFactory _factory = null!;
     private Guid _userId;
     private string _accessToken = null!;
@@ -29,6 +32,8 @@ public sealed class AgentRunServiceTests : IAsyncLifetime
         {
             services.RemoveAll<IAiProcessingClient>();
             services.AddSingleton<IAiProcessingClient>(_aiClient);
+            services.RemoveAll<IAgentToolRegistry>();
+            services.AddSingleton<IAgentToolRegistry>(_toolRegistry);
         });
         await _factory.ResetDatabaseAsync();
         var client = _factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
@@ -52,7 +57,7 @@ public sealed class AgentRunServiceTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task AutoApprovedTool_ExecutesAndContinuesWithToolRoleMessage()
+    public async Task StartedRun_IsQueuedUntilWorkerDrivesItToCompletion()
     {
         using var scope = _factory.Services.CreateScope();
         var service = scope.ServiceProvider.GetRequiredService<IAgentRunService>();
@@ -61,10 +66,54 @@ public sealed class AgentRunServiceTests : IAsyncLifetime
 
         var run = await service.StartAsync(_userId, "Create a notes folder", null, CancellationToken.None);
 
-        Assert.Equal(AgentRunStatus.Completed, run.Status);
-        Assert.Equal("Created the folder.", run.FinalAnswer);
+        Assert.Equal(AgentRunStatus.Pending, run.Status);
+        Assert.Empty(_aiClient.AgentRequests);
+
+        Assert.True(await service.ProcessNextPendingRunAsync(CancellationToken.None));
+        var completed = await service.GetAsync(_userId, run.Id, CancellationToken.None);
+        Assert.NotNull(completed);
+        Assert.Equal(AgentRunStatus.Completed, completed.Status);
+        Assert.Equal("Created the folder.", completed.FinalAnswer);
         Assert.Equal(2, _aiClient.AgentRequests.Count);
         Assert.Contains(_aiClient.AgentRequests[1].Messages, message => message.Role == "tool");
+    }
+
+    [Fact]
+    public async Task PostRun_ReturnsPendingAndHostedWorkerCompletesItInBackground()
+    {
+        _aiClient.Enqueue(Final("Completed in the background."));
+        await using var workerFactory = new AmanahDriveApiFactory(
+            _postgres.GetConnectionString(),
+            settings: new Dictionary<string, string?>
+            {
+                ["Agent:WorkerEnabled"] = "true",
+                ["Agent:WorkerPollSeconds"] = "1"
+            },
+            configureServices: services =>
+            {
+                services.RemoveAll<IAiProcessingClient>();
+                services.AddSingleton<IAiProcessingClient>(_aiClient);
+                services.RemoveAll<IAgentToolRegistry>();
+                services.AddSingleton<IAgentToolRegistry>(_toolRegistry);
+            });
+        var client = workerFactory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _accessToken);
+
+        using var startResponse = await client.PostAsJsonAsync("/agent/runs", new { Question = "Complete this in the background" });
+        var run = (await startResponse.Content.ReadFromJsonAsync<AgentRunResponseDto>())!;
+
+        Assert.Equal(HttpStatusCode.Created, startResponse.StatusCode);
+        Assert.Equal("Pending", run.Status);
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(5);
+        while (run.Status is "Pending" or "Running" && DateTimeOffset.UtcNow < deadline)
+        {
+            await Task.Delay(50);
+            run = (await client.GetFromJsonAsync<AgentRunResponseDto>($"/agent/runs/{run.Id}"))!;
+        }
+
+        Assert.Equal("Completed", run.Status);
+        Assert.Equal("Completed in the background.", run.Steps.Last().Content);
+        Assert.Single(_aiClient.AgentRequests);
     }
 
     [Fact]
@@ -75,10 +124,17 @@ public sealed class AgentRunServiceTests : IAsyncLifetime
         _aiClient.Enqueue(ToolCall("rename_folder", "{\"folderId\":\"00000000-0000-0000-0000-000000000001\",\"name\":\"Archive\"}"));
         _aiClient.Enqueue(Final("The rename was attempted."));
 
-        var pending = await service.StartAsync(_userId, "Rename a folder", null, CancellationToken.None);
+        var started = await service.StartAsync(_userId, "Rename a folder", null, CancellationToken.None);
+        Assert.True(await service.ProcessNextPendingRunAsync(CancellationToken.None));
+        var pending = await service.GetAsync(_userId, started.Id, CancellationToken.None);
+        Assert.NotNull(pending);
         Assert.Equal(AgentRunStatus.AwaitingApproval, pending.Status);
 
         var completed = await service.ApproveAsync(_userId, pending.Id, CancellationToken.None);
+        Assert.NotNull(completed);
+        Assert.Equal(AgentRunStatus.Pending, completed.Status);
+        Assert.True(await service.ProcessNextPendingRunAsync(CancellationToken.None));
+        completed = await service.GetAsync(_userId, pending.Id, CancellationToken.None);
         Assert.NotNull(completed);
         Assert.Equal(AgentRunStatus.Completed, completed.Status);
         Assert.Contains(_aiClient.AgentRequests[1].Messages, message => message.Role == "tool");
@@ -93,8 +149,13 @@ public sealed class AgentRunServiceTests : IAsyncLifetime
         _aiClient.Enqueue(Final("I will not move the file."));
 
         var pending = await service.StartAsync(_userId, "Move a file", null, CancellationToken.None);
+        Assert.True(await service.ProcessNextPendingRunAsync(CancellationToken.None));
         var completed = await service.RejectAsync(_userId, pending.Id, CancellationToken.None);
 
+        Assert.NotNull(completed);
+        Assert.Equal(AgentRunStatus.Pending, completed.Status);
+        Assert.True(await service.ProcessNextPendingRunAsync(CancellationToken.None));
+        completed = await service.GetAsync(_userId, pending.Id, CancellationToken.None);
         Assert.NotNull(completed);
         Assert.Equal(AgentRunStatus.Completed, completed.Status);
         var toolMessage = Assert.Single(_aiClient.AgentRequests[1].Messages, message => message.Role == "tool");
@@ -111,6 +172,8 @@ public sealed class AgentRunServiceTests : IAsyncLifetime
             _aiClient.Enqueue(ToolCall("create_folder", $"{{\"name\":\"Folder {index}\",\"parentFolderId\":null}}"));
         }
         var run = await service.StartAsync(_userId, "Keep creating folders", null, CancellationToken.None);
+        Assert.True(await service.ProcessNextPendingRunAsync(CancellationToken.None));
+        run = (await service.GetAsync(_userId, run.Id, CancellationToken.None))!;
 
         Assert.Equal(AgentRunStatus.IterationLimitReached, run.Status);
         Assert.Equal(8, _aiClient.AgentRequests.Count);
@@ -125,7 +188,9 @@ public sealed class AgentRunServiceTests : IAsyncLifetime
         _aiClient.Enqueue(Final("I will call it Q3 instead."));
 
         var first = await service.StartAsync(_userId, "Find the quarterly report", null, CancellationToken.None);
+        Assert.True(await service.ProcessNextPendingRunAsync(CancellationToken.None));
         var followUp = await service.StartAsync(_userId, "Actually call it Q3 instead", first.ConversationId, CancellationToken.None);
+        Assert.True(await service.ProcessNextPendingRunAsync(CancellationToken.None));
 
         Assert.Equal(first.ConversationId, followUp.ConversationId);
         var messages = _aiClient.AgentRequests[1].Messages.ToList();
@@ -147,7 +212,11 @@ public sealed class AgentRunServiceTests : IAsyncLifetime
         _aiClient.Enqueue(Final("The follow-up completed."));
 
         var exhausted = await service.StartAsync(_userId, "Use the whole budget", null, CancellationToken.None);
+        Assert.True(await service.ProcessNextPendingRunAsync(CancellationToken.None));
+        exhausted = (await service.GetAsync(_userId, exhausted.Id, CancellationToken.None))!;
         var followUp = await service.StartAsync(_userId, "Now answer this", exhausted.ConversationId, CancellationToken.None);
+        Assert.True(await service.ProcessNextPendingRunAsync(CancellationToken.None));
+        followUp = (await service.GetAsync(_userId, followUp.Id, CancellationToken.None))!;
 
         Assert.Equal(AgentRunStatus.IterationLimitReached, exhausted.Status);
         Assert.Equal(AgentRunStatus.Completed, followUp.Status);
@@ -164,11 +233,27 @@ public sealed class AgentRunServiceTests : IAsyncLifetime
         _aiClient.Enqueue(ToolCall("rename_folder", "{\"folderId\":\"00000000-0000-0000-0000-000000000001\",\"name\":\"Archive\"}"));
 
         var pending = await service.StartAsync(_userId, "Rename a folder", null, CancellationToken.None);
+        Assert.True(await service.ProcessNextPendingRunAsync(CancellationToken.None));
+        pending = (await service.GetAsync(_userId, pending.Id, CancellationToken.None))!;
 
         await Assert.ThrowsAsync<AgentConversationNotReadyException>(() =>
             service.StartAsync(_userId, "Use a different name", pending.ConversationId, CancellationToken.None));
         Assert.Equal(AgentRunStatus.AwaitingApproval, pending.Status);
         Assert.Single(_aiClient.AgentRequests);
+    }
+
+    [Fact]
+    public async Task FollowUp_IsRejectedWhileLatestRunIsQueued()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var service = scope.ServiceProvider.GetRequiredService<IAgentRunService>();
+        var queued = await service.StartAsync(_userId, "First instruction", null, CancellationToken.None);
+
+        await Assert.ThrowsAsync<AgentConversationNotReadyException>(() =>
+            service.StartAsync(_userId, "Too soon", queued.ConversationId, CancellationToken.None));
+
+        Assert.Equal(AgentRunStatus.Pending, queued.Status);
+        Assert.Empty(_aiClient.AgentRequests);
     }
 
     [Fact]
@@ -181,7 +266,7 @@ public sealed class AgentRunServiceTests : IAsyncLifetime
 
         await Assert.ThrowsAsync<AgentConversationNotFoundException>(() =>
             service.StartAsync(Guid.NewGuid(), "Try to continue it", owned.ConversationId, CancellationToken.None));
-        Assert.Single(_aiClient.AgentRequests);
+        Assert.Empty(_aiClient.AgentRequests);
     }
 
     [Fact]
@@ -193,14 +278,21 @@ public sealed class AgentRunServiceTests : IAsyncLifetime
 
         using var firstResponse = await client.PostAsJsonAsync("/agent/runs", new { Question = "First instruction" });
         var first = (await firstResponse.Content.ReadFromJsonAsync<AgentRunResponseDto>())!;
+        Assert.Equal("Pending", first.Status);
+        Assert.Empty(_aiClient.AgentRequests);
+        Assert.True(await ProcessNextRunAsync());
         using var followUpResponse = await client.PostAsJsonAsync("/agent/runs", new { Question = "Follow-up instruction", first.ConversationId });
         var followUp = (await followUpResponse.Content.ReadFromJsonAsync<AgentRunResponseDto>())!;
+        Assert.Equal("Pending", followUp.Status);
+        Assert.True(await ProcessNextRunAsync());
+        using var completedResponse = await client.GetAsync($"/agent/runs/{followUp.Id}");
+        var completed = (await completedResponse.Content.ReadFromJsonAsync<AgentRunResponseDto>())!;
 
         Assert.Equal(HttpStatusCode.Created, firstResponse.StatusCode);
         Assert.Equal(HttpStatusCode.Created, followUpResponse.StatusCode);
-        Assert.Equal(first.ConversationId, followUp.ConversationId);
-        Assert.Equal(["First instruction", "First answer.", "Follow-up instruction", "Follow-up answer."], followUp.Steps.Select(step => step.Content));
-        Assert.Equal(2, followUp.Steps.Select(step => step.RunId).Distinct().Count());
+        Assert.Equal(first.ConversationId, completed.ConversationId);
+        Assert.Equal(["First instruction", "First answer.", "Follow-up instruction", "Follow-up answer."], completed.Steps.Select(step => step.Content));
+        Assert.Equal(2, completed.Steps.Select(step => step.RunId).Distinct().Count());
     }
 
     [Fact]
@@ -211,6 +303,7 @@ public sealed class AgentRunServiceTests : IAsyncLifetime
 
         using var firstResponse = await client.PostAsJsonAsync("/agent/runs", new { Question = "Rename a folder" });
         var pending = (await firstResponse.Content.ReadFromJsonAsync<AgentRunResponseDto>())!;
+        Assert.True(await ProcessNextRunAsync());
         using var followUpResponse = await client.PostAsJsonAsync("/agent/runs", new { Question = "Use another name", pending.ConversationId });
 
         Assert.Equal(HttpStatusCode.Conflict, followUpResponse.StatusCode);
@@ -227,11 +320,68 @@ public sealed class AgentRunServiceTests : IAsyncLifetime
         Assert.Empty(_aiClient.AgentRequests);
     }
 
+    [Fact]
+    public async Task ConcurrentWorkerTicks_ClaimPendingRunOnlyOnce()
+    {
+        _aiClient.Enqueue(Final("Completed once."));
+        var client = CreateAuthorizedClient();
+        using var startResponse = await client.PostAsJsonAsync("/agent/runs", new { Question = "Do this once" });
+        var started = (await startResponse.Content.ReadFromJsonAsync<AgentRunResponseDto>())!;
+
+        using var firstScope = _factory.Services.CreateScope();
+        using var secondScope = _factory.Services.CreateScope();
+        var results = await Task.WhenAll(
+            firstScope.ServiceProvider.GetRequiredService<IAgentRunService>().ProcessNextPendingRunAsync(CancellationToken.None),
+            secondScope.ServiceProvider.GetRequiredService<IAgentRunService>().ProcessNextPendingRunAsync(CancellationToken.None));
+
+        Assert.Single(results, result => result);
+        Assert.Single(_aiClient.AgentRequests);
+        using var getResponse = await client.GetAsync($"/agent/runs/{started.Id}");
+        var completed = (await getResponse.Content.ReadFromJsonAsync<AgentRunResponseDto>())!;
+        Assert.Equal("Completed", completed.Status);
+    }
+
+    [Fact]
+    public async Task ConcurrentApprovals_AndWorkerTicks_ExecuteApprovedToolOnlyOnce()
+    {
+        _aiClient.Enqueue(ToolCall("rename_folder", "{\"folderId\":\"00000000-0000-0000-0000-000000000001\",\"name\":\"Archive\"}"));
+        _aiClient.Enqueue(Final("Finished once."));
+        using (var startScope = _factory.Services.CreateScope())
+        {
+            var startService = startScope.ServiceProvider.GetRequiredService<IAgentRunService>();
+            var started = await startService.StartAsync(_userId, "Rename a folder", null, CancellationToken.None);
+            Assert.True(await startService.ProcessNextPendingRunAsync(CancellationToken.None));
+
+            using var firstApprovalScope = _factory.Services.CreateScope();
+            using var secondApprovalScope = _factory.Services.CreateScope();
+            await Task.WhenAll(
+                firstApprovalScope.ServiceProvider.GetRequiredService<IAgentRunService>().ApproveAsync(_userId, started.Id, CancellationToken.None),
+                secondApprovalScope.ServiceProvider.GetRequiredService<IAgentRunService>().ApproveAsync(_userId, started.Id, CancellationToken.None));
+
+            using var firstWorkerScope = _factory.Services.CreateScope();
+            using var secondWorkerScope = _factory.Services.CreateScope();
+            var processed = await Task.WhenAll(
+                firstWorkerScope.ServiceProvider.GetRequiredService<IAgentRunService>().ProcessNextPendingRunAsync(CancellationToken.None),
+                secondWorkerScope.ServiceProvider.GetRequiredService<IAgentRunService>().ProcessNextPendingRunAsync(CancellationToken.None));
+
+            Assert.Single(processed, result => result);
+            Assert.Equal(1, _toolRegistry.InvocationCount("rename_folder"));
+            Assert.Equal(2, _aiClient.AgentRequests.Count);
+        }
+    }
+
     private HttpClient CreateAuthorizedClient()
     {
         var client = _factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _accessToken);
         return client;
+    }
+
+    private async Task<bool> ProcessNextRunAsync()
+    {
+        using var scope = _factory.Services.CreateScope();
+        return await scope.ServiceProvider.GetRequiredService<IAgentRunService>()
+            .ProcessNextPendingRunAsync(CancellationToken.None);
     }
 
     private static AgentCompletionResponse Final(string content) =>
@@ -248,8 +398,9 @@ public sealed class AgentRunServiceTests : IAsyncLifetime
 
     private sealed class FakeAiProcessingClient : IAiProcessingClient
     {
-        private readonly Queue<AgentCompletionResponse> _responses = [];
-        public List<AgentCompletionRequest> AgentRequests { get; } = [];
+        private readonly ConcurrentQueue<AgentCompletionResponse> _responses = [];
+        private readonly ConcurrentQueue<AgentCompletionRequest> _agentRequests = [];
+        public IReadOnlyList<AgentCompletionRequest> AgentRequests => _agentRequests.ToArray();
         public void Enqueue(AgentCompletionResponse response) => _responses.Enqueue(response);
         public Task<ExtractResponse> ExtractAsync(string fileName, string contentType, Stream fileStream, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<ChunkResponse> ChunkAsync(string text, int chunkSize, int overlap, CancellationToken cancellationToken) => throw new NotSupportedException();
@@ -257,8 +408,48 @@ public sealed class AgentRunServiceTests : IAsyncLifetime
         public Task<RagAnswerResponse> AnswerAsync(RagAnswerRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
         public Task<AgentCompletionResponse> CompleteAgentAsync(AgentCompletionRequest request, CancellationToken cancellationToken)
         {
-            AgentRequests.Add(request);
-            return Task.FromResult(_responses.Dequeue());
+            _agentRequests.Enqueue(request);
+            return Task.FromResult(_responses.TryDequeue(out var response)
+                ? response
+                : throw new InvalidOperationException("No fake agent response was queued."));
+        }
+    }
+
+    private sealed class FakeAgentToolRegistry : IAgentToolRegistry
+    {
+        private readonly IReadOnlyDictionary<string, FakeAgentToolInvoker> _tools = new[]
+        {
+            new FakeAgentToolInvoker("create_folder", requiresApproval: false),
+            new FakeAgentToolInvoker("rename_folder", requiresApproval: true),
+            new FakeAgentToolInvoker("move_file", requiresApproval: true)
+        }.ToDictionary(tool => tool.Metadata.Name, StringComparer.Ordinal);
+
+        public IReadOnlyCollection<AgentToolMetadata> Tools => _tools.Values.Select(tool => tool.Metadata).ToList();
+
+        public bool TryGet(string name, out IAgentToolInvoker tool)
+        {
+            var found = _tools.TryGetValue(name, out var fakeTool);
+            tool = fakeTool!;
+            return found;
+        }
+
+        public int InvocationCount(string name) => _tools[name].InvocationCount;
+    }
+
+    private sealed class FakeAgentToolInvoker(string name, bool requiresApproval) : IAgentToolInvoker
+    {
+        private int _invocationCount;
+
+        public AgentToolMetadata Metadata { get; } = AgentToolMetadataCatalog.For(name);
+
+        public bool RequiresApproval { get; } = requiresApproval;
+
+        public int InvocationCount => Volatile.Read(ref _invocationCount);
+
+        public Task<AgentToolInvocationResult> InvokeAsync(AgentToolContext context, string argumentsJson, CancellationToken cancellationToken)
+        {
+            Interlocked.Increment(ref _invocationCount);
+            return Task.FromResult(new AgentToolInvocationResult(AgentToolStatus.Success, "{\"status\":\"Success\"}"));
         }
     }
 }
