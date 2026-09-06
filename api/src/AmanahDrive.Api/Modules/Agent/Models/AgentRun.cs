@@ -6,6 +6,8 @@ public sealed class AgentRun
 
     public Guid UserId { get; set; }
 
+    public Guid ConversationId { get; set; }
+
     public required string Question { get; set; }
 
     public AgentRunStatus Status { get; set; }

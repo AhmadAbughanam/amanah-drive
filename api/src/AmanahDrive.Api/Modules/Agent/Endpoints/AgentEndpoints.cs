@@ -31,8 +31,16 @@ public static class AgentEndpoints
 
             try
             {
-                var run = await service.StartAsync(userId.Value, request.Question, cancellationToken);
-                return Results.Created($"/agent/runs/{run.Id}", ToResponse(run));
+                var run = await service.StartAsync(userId.Value, request.Question, request.ConversationId, cancellationToken);
+                return Results.Created($"/agent/runs/{run.Id}", await ToResponseAsync(userId.Value, run, service, cancellationToken));
+            }
+            catch (AgentConversationNotFoundException)
+            {
+                return Results.NotFound(new ErrorResponse("Agent conversation was not found."));
+            }
+            catch (AgentConversationNotReadyException)
+            {
+                return Results.Conflict(new ErrorResponse("Resolve the latest agent run before starting a follow-up."));
             }
             catch (AiServiceException exception)
             {
@@ -48,7 +56,7 @@ public static class AgentEndpoints
             try
             {
                 var run = await service.ApproveAsync(userId.Value, runId, cancellationToken);
-                return run is null ? Results.NotFound() : Results.Ok(ToResponse(run));
+                return run is null ? Results.NotFound() : Results.Ok(await ToResponseAsync(userId.Value, run, service, cancellationToken));
             }
             catch (AiServiceException exception)
             {
@@ -64,7 +72,7 @@ public static class AgentEndpoints
             try
             {
                 var run = await service.RejectAsync(userId.Value, runId, cancellationToken);
-                return run is null ? Results.NotFound() : Results.Ok(ToResponse(run));
+                return run is null ? Results.NotFound() : Results.Ok(await ToResponseAsync(userId.Value, run, service, cancellationToken));
             }
             catch (AiServiceException exception)
             {
@@ -78,22 +86,23 @@ public static class AgentEndpoints
             var userId = GetUserId(user);
             if (userId is null) return Results.Unauthorized();
             var run = await service.GetAsync(userId.Value, runId, cancellationToken);
-            return run is null ? Results.NotFound() : Results.Ok(ToResponse(run));
+            return run is null ? Results.NotFound() : Results.Ok(await ToResponseAsync(userId.Value, run, service, cancellationToken));
         }).Produces<AgentRunResponse>(StatusCodes.Status200OK);
 
         return app;
     }
 
-    private static AgentRunResponse ToResponse(AgentRun run)
+    private static async Task<AgentRunResponse> ToResponseAsync(Guid userId, AgentRun run, IAgentRunService service, CancellationToken cancellationToken)
     {
         var pending = run.Steps.SingleOrDefault(step => step.ToolCallStatus == AgentToolCallStatus.PendingApproval);
-        var steps = run.Steps
+        var conversationSteps = await service.GetConversationStepsAsync(userId, run.ConversationId, cancellationToken);
+        var steps = conversationSteps
             .Where(step => step.Role != "system")
-            .OrderBy(step => step.Sequence)
             .Select(ToStepResponse)
             .ToList();
         return new AgentRunResponse(
             run.Id,
+            run.ConversationId,
             run.Status.ToString(),
             run.FinalAnswer,
             run.FailureReason,
@@ -105,6 +114,7 @@ public static class AgentEndpoints
     }
 
     private static AgentRunStepResponse ToStepResponse(AgentRunStep step) => new(
+        step.AgentRunId,
         step.Sequence,
         step.Role,
         step.Role is "user" or "assistant" ? step.Content : null,
@@ -182,10 +192,11 @@ public static class AgentEndpoints
     }
 }
 
-public sealed record StartAgentRunRequest([Required, MaxLength(4000)] string Question);
+public sealed record StartAgentRunRequest([Required, MaxLength(4000)] string Question, Guid? ConversationId);
 
 public sealed record AgentRunResponse(
     Guid Id,
+    Guid ConversationId,
     string Status,
     string? FinalAnswer,
     string? FailureReason,
@@ -196,6 +207,7 @@ public sealed record AgentRunResponse(
     DateTimeOffset UpdatedAt);
 
 public sealed record AgentRunStepResponse(
+    Guid RunId,
     int Sequence,
     string Role,
     string? Content,

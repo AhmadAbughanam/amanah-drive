@@ -4,9 +4,11 @@ namespace AmanahDrive.Api.Modules.Agent.Services;
 
 public interface IAgentRunService
 {
-    Task<AgentRun> StartAsync(Guid userId, string question, CancellationToken cancellationToken);
+    Task<AgentRun> StartAsync(Guid userId, string question, Guid? conversationId, CancellationToken cancellationToken);
 
     Task<AgentRun?> GetAsync(Guid userId, Guid runId, CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<AgentRunStep>> GetConversationStepsAsync(Guid userId, Guid conversationId, CancellationToken cancellationToken);
 
     Task<AgentRun?> ApproveAsync(Guid userId, Guid runId, CancellationToken cancellationToken);
 

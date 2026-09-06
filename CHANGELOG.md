@@ -173,3 +173,4 @@
 
 - Added persisted, iteration-bounded agent runs with tool-role message isolation, explicit approval/rejection, and usage recording.
 - Added Drive and read-only GitHub tools, plus an Agent dashboard for instructions, tool transcripts, and pending-approval decisions.
+- Added conversation continuity across separate bounded runs, including ownership checks, terminal-run follow-up gating, accumulated transcripts, and a fresh-conversation UI action.

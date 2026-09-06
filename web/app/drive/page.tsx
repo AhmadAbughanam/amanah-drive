@@ -582,7 +582,7 @@ function AgentView({
   onFilesChanged,
 }: {
   run: AgentRunResponse | null;
-  onRunChange: (run: AgentRunResponse) => void;
+  onRunChange: (run: AgentRunResponse | null) => void;
   onFilesChanged: () => void | Promise<void>;
 }) {
   const [instruction, setInstruction] = useState("");
@@ -613,7 +613,7 @@ function AgentView({
     try {
       applyRun(await apiJson<AgentRunResponse>("/agent/runs", {
         method: "POST",
-        body: JSON.stringify({ question }),
+        body: JSON.stringify(run ? { question, conversationId: run.conversationId } : { question }),
       }));
       setInstruction("");
     } catch (err) {
@@ -639,6 +639,12 @@ function AgentView({
     }
   }
 
+  function startNewConversation() {
+    setInstruction("");
+    setSubmitError(null);
+    onRunChange(null);
+  }
+
   const isAwaitingApproval = run?.status === "AwaitingApproval";
   const isBusy = isSubmitting || approvalAction !== null;
   const pendingAction = run?.pendingActionSummary ?? run?.steps.find((step) => step.status === "PendingApproval")?.argumentsSummary;
@@ -646,7 +652,10 @@ function AgentView({
   return (
     <section className="grid gap-5 px-5 py-6 sm:px-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:px-9">
       <div className={`${panelClass} h-fit p-5`}>
-        <SectionLabel className="text-[#a7f3d0]">File agent</SectionLabel>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <SectionLabel className="text-[#a7f3d0]">File agent</SectionLabel>
+          {run ? <button className={secondaryButtonClass} disabled={isBusy || isAwaitingApproval} onClick={startNewConversation} type="button">New conversation</button> : null}
+        </div>
         <h1 className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-white">Ask the agent to work with your files.</h1>
         <p className="mt-2 text-sm leading-6 text-white/55">It can inspect your drive immediately and will ask before making a rename or move.</p>
         <form className="mt-5 space-y-3" onSubmit={startRun}>
@@ -694,12 +703,12 @@ function AgentView({
       </div>
 
       <div className={`${panelClass} min-h-[430px] p-5`}>
-        <SectionLabel className="text-[#a7f3d0]">Run transcript</SectionLabel>
+        <SectionLabel className="text-[#a7f3d0]">Conversation transcript</SectionLabel>
         {!run ? (
-          <div className="flex min-h-80 items-center justify-center text-center text-sm leading-6 text-white/45">Your active agent run will appear here.</div>
+          <div className="flex min-h-80 items-center justify-center text-center text-sm leading-6 text-white/45">Your active agent conversation will appear here.</div>
         ) : (
           <div className="mt-4 space-y-3">
-            {run.steps.map((step) => <AgentTranscriptStep key={step.sequence} step={step} />)}
+            {run.steps.map((step) => <AgentTranscriptStep key={`${step.runId}:${step.sequence}`} step={step} />)}
             {run.status === "Completed" ? (
               <div className="rounded-[7px] border border-emerald-200/20 bg-emerald-300/[0.07] px-4 py-3">
                 <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#a7f3d0]">Completed</p>

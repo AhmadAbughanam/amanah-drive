@@ -26,7 +26,7 @@ flowchart TB
     GH["GitHub REST API"]
     PG[("PostgreSQL<br/>agent_runs / agent_run_steps")]
 
-    UI -- "POST /agent/runs<br/>/approve /reject" --> AgentModule
+    UI -- "POST /agent/runs<br/>conversationId + approve /reject" --> AgentModule
     AgentModule -- "persists every step" --> PG
     AgentModule -- "tool schemas + conversation" --> AI
     AI -- "tool_calls or final answer" --> AgentModule
@@ -66,7 +66,7 @@ sequenceDiagram
     participant AI as AI service
     participant T as AgentToolRegistry
 
-    U->>A: POST /agent/runs { question }
+    U->>A: POST /agent/runs { question, conversationId? }
     A->>DB: persist system + user steps
     loop Until final answer, pause, or iteration cap
         A->>AI: messages + tool schemas
@@ -86,6 +86,12 @@ sequenceDiagram
 ```
 
 The **8-iteration cap** (`AgentOptions.MaxIterations`, configurable 1–10) is checked before every model call, not after — a model that keeps calling tools without ever producing a final answer stops itself rather than looping indefinitely and running up your Hugging Face bill. Every model call is recorded through `IAiUsageRecorder` with `Operation: "agent"`, so a single run's real cost shows up as multiple distinct entries in the observability dashboard, not one opaque number.
+
+## Conversation continuity
+
+Each instruction still creates a distinct `AgentRun`. Runs in the same conversation share `ConversationId`, and the message list sent to the model replays eligible steps from every run in deterministic run-and-step order. Duplicate stored system steps are omitted and the current system prompt is emitted once at the front of the assembled history.
+
+This separation is intentional: prior steps provide linguistic and tool context, but `ContinueAsync` counts assistant steps only from the current run when enforcing `MaxIterations`. A follow-up therefore receives a fresh eight-call budget even if earlier runs exhausted theirs. Follow-ups are accepted only after the conversation's latest run reaches `Completed`, `Failed`, or `IterationLimitReached`; an `AwaitingApproval` run must be approved or rejected first. Conversation lookup always includes the calling user's ID, so an unknown conversation and another user's conversation are both exposed as `404`.
 
 ## Approval gating
 

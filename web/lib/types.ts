@@ -75,6 +75,7 @@ export type ChatHistoryResponse = {
 };
 
 export type AgentRunStepResponse = {
+  runId: string;
   sequence: number;
   role: string;
   content: string | null;
@@ -88,6 +89,7 @@ export type AgentRunStepResponse = {
 
 export type AgentRunResponse = {
   id: string;
+  conversationId: string;
   status: "AwaitingApproval" | "Completed" | "IterationLimitReached" | "Failed";
   finalAnswer: string | null;
   failureReason: string | null;

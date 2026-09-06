@@ -16,6 +16,7 @@ public sealed class AgentRunConfiguration : IEntityTypeConfiguration<AgentRun>
         entity.Property(run => run.FailureReason).HasMaxLength(512);
         entity.HasIndex(run => run.UserId);
         entity.HasIndex(run => new { run.UserId, run.UpdatedAt });
+        entity.HasIndex(run => new { run.UserId, run.ConversationId, run.CreatedAt });
         entity.HasOne<AdminUser>()
             .WithMany()
             .HasForeignKey(run => run.UserId)

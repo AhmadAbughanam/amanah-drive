@@ -277,6 +277,60 @@ test("agent rejection resumes the run and shows the returned answer", async ({ p
   await expect(page.getByText("I left the file where it was.")).toBeVisible();
 });
 
+test("agent follow-ups reuse conversation history and new conversation resets it", async ({ page }) => {
+  const conversationId = "77777777-7777-7777-7777-777777777777";
+  const firstRunId = "66666666-6666-6666-6666-666666666666";
+  const followUpRunId = "88888888-8888-8888-8888-888888888888";
+  const requests: Array<Record<string, unknown>> = [];
+  const firstRun = agentRun({
+    id: firstRunId,
+    conversationId,
+    status: "Completed",
+    finalAnswer: "I found the report.",
+    steps: [
+      agentStep(1, "user", { runId: firstRunId, content: "Find the quarterly report" }),
+      agentStep(2, "assistant", { runId: firstRunId, content: "I found the report." }),
+    ],
+  });
+  const followUpRun = agentRun({
+    id: followUpRunId,
+    conversationId,
+    status: "Completed",
+    finalAnswer: "I will call it Q3.",
+    steps: [
+      ...firstRun.steps,
+      agentStep(1, "user", { runId: followUpRunId, content: "Actually call it Q3" }),
+      agentStep(2, "assistant", { runId: followUpRunId, content: "I will call it Q3." }),
+    ],
+  });
+  const freshRun = agentRun({
+    id: "99999999-9999-9999-9999-999999999999",
+    conversationId: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+    status: "Completed",
+    finalAnswer: "Fresh start.",
+    steps: [agentStep(1, "user", { runId: "99999999-9999-9999-9999-999999999999", content: "Start over" })],
+  });
+  await mockApi(page, { loginSucceeds: true, agentStartResponses: [firstRun, followUpRun, freshRun], agentStartRequests: requests });
+
+  await signIn(page);
+  await page.getByRole("button", { name: "Agent" }).click();
+  await page.getByLabel("Instruction").fill("Find the quarterly report");
+  await page.getByRole("button", { name: "Run agent" }).click();
+  await page.getByLabel("Instruction").fill("Actually call it Q3");
+  await page.getByRole("button", { name: "Run agent" }).click();
+
+  await expect(page.getByText("Find the quarterly report")).toBeVisible();
+  await expect(page.getByText("Actually call it Q3")).toBeVisible();
+  expect(requests[0]).toEqual({ question: "Find the quarterly report" });
+  expect(requests[1]).toEqual({ question: "Actually call it Q3", conversationId });
+
+  await page.getByRole("button", { name: "New conversation" }).click();
+  await expect(page.getByText("Your active agent conversation will appear here.")).toBeVisible();
+  await page.getByLabel("Instruction").fill("Start over");
+  await page.getByRole("button", { name: "Run agent" }).click();
+  expect(requests[2]).toEqual({ question: "Start over" });
+});
+
 test("invalid login shows an error and stays on login", async ({ page }) => {
   await mockApi(page, { loginSucceeds: false });
 
@@ -357,6 +411,8 @@ async function mockApi(
     };
     observability?: Record<string, unknown>;
     agentStartResponse?: Record<string, unknown>;
+    agentStartResponses?: Array<Record<string, unknown>>;
+    agentStartRequests?: Array<Record<string, unknown>>;
     agentApproveResponse?: Record<string, unknown>;
     agentRejectResponse?: Record<string, unknown>;
   },
@@ -511,8 +567,11 @@ async function mockApi(
     });
   });
 
+  let agentStartIndex = 0;
   await page.route(`${apiBaseUrl}/agent/runs`, async (route) => {
-    await route.fulfill({ status: 201, json: options.agentStartResponse ?? agentRun({ status: "Completed", finalAnswer: "Default agent answer." }) });
+    options.agentStartRequests?.push(route.request().postDataJSON() as Record<string, unknown>);
+    const response = options.agentStartResponses?.[agentStartIndex++] ?? options.agentStartResponse ?? agentRun({ status: "Completed", finalAnswer: "Default agent answer." });
+    await route.fulfill({ status: 201, json: response });
   });
 
   await page.route(`${apiBaseUrl}/agent/runs/**`, async (route) => {
@@ -524,6 +583,7 @@ async function mockApi(
 function agentRun(overrides: Record<string, unknown>) {
   return {
     id: "66666666-6666-6666-6666-666666666666",
+    conversationId: "77777777-7777-7777-7777-777777777777",
     status: "Completed",
     finalAnswer: null,
     failureReason: null,
@@ -538,6 +598,7 @@ function agentRun(overrides: Record<string, unknown>) {
 
 function agentStep(sequence: number, role: string, overrides: Record<string, unknown> = {}) {
   return {
+    runId: "66666666-6666-6666-6666-666666666666",
     sequence,
     role,
     content: null,

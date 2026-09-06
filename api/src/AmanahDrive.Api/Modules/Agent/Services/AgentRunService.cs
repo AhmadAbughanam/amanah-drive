@@ -19,13 +19,33 @@ public sealed class AgentRunService(
         "When a tool result has status \"rejected\", the user deliberately declined that specific action - it is not an error, failure, or something that went wrong on your end. Never say you \"couldn't\", \"failed to\", or \"were unable to\" complete it, and don't apologize as if something broke. Acknowledge their choice plainly (e.g. \"I won't rename the file, since you didn't approve that.\") and, only if it's genuinely useful, ask whether they'd like something different - don't pad the response with unnecessary questions.";
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
-    public async Task<AgentRun> StartAsync(Guid userId, string question, CancellationToken cancellationToken)
+    public async Task<AgentRun> StartAsync(Guid userId, string question, Guid? conversationId, CancellationToken cancellationToken)
     {
+        if (conversationId is not null)
+        {
+            var latestRun = await dbContext.AgentRuns
+                .AsNoTracking()
+                .Where(run => run.UserId == userId && run.ConversationId == conversationId)
+                .OrderByDescending(run => run.CreatedAt)
+                .ThenByDescending(run => run.Id)
+                .FirstOrDefaultAsync(cancellationToken);
+            if (latestRun is null)
+            {
+                throw new AgentConversationNotFoundException();
+            }
+
+            if (latestRun.Status == AgentRunStatus.AwaitingApproval)
+            {
+                throw new AgentConversationNotReadyException();
+            }
+        }
+
         var now = DateTimeOffset.UtcNow;
         var run = new AgentRun
         {
             Id = Guid.NewGuid(),
             UserId = userId,
+            ConversationId = conversationId ?? Guid.NewGuid(),
             Question = question.Trim(),
             Status = AgentRunStatus.AwaitingApproval,
             CreatedAt = now,
@@ -44,6 +64,15 @@ public sealed class AgentRunService(
     public Task<AgentRun?> GetAsync(Guid userId, Guid runId, CancellationToken cancellationToken) =>
         dbContext.AgentRuns.Include(run => run.Steps)
             .SingleOrDefaultAsync(run => run.Id == runId && run.UserId == userId, cancellationToken);
+
+    public async Task<IReadOnlyList<AgentRunStep>> GetConversationStepsAsync(Guid userId, Guid conversationId, CancellationToken cancellationToken) =>
+        await dbContext.AgentRunSteps
+            .AsNoTracking()
+            .Where(step => step.AgentRun.UserId == userId && step.AgentRun.ConversationId == conversationId)
+            .OrderBy(step => step.AgentRun.CreatedAt)
+            .ThenBy(step => step.AgentRun.Id)
+            .ThenBy(step => step.Sequence)
+            .ToListAsync(cancellationToken);
 
     public Task<AgentRun?> ApproveAsync(Guid userId, Guid runId, CancellationToken cancellationToken) =>
         ResolvePendingToolAsync(userId, runId, approve: true, cancellationToken);
@@ -135,7 +164,7 @@ public sealed class AgentRunService(
                 }
 
                 var response = await aiClient.CompleteAgentAsync(
-                    new AgentCompletionRequest(BuildMessages(run), toolRegistry.Tools.Select(metadata => new AgentToolDefinition("function", new AgentToolFunction(metadata.Name, metadata.Description, metadata.Parameters))).ToList()),
+                    new AgentCompletionRequest(await BuildMessagesAsync(run, cancellationToken), toolRegistry.Tools.Select(metadata => new AgentToolDefinition("function", new AgentToolFunction(metadata.Name, metadata.Description, metadata.Parameters))).ToList()),
                     cancellationToken);
                 var now = DateTimeOffset.UtcNow;
                 var toolCalls = response.Message.ToolCalls ?? [];
@@ -262,17 +291,22 @@ public sealed class AgentRunService(
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    private static IReadOnlyCollection<AgentChatMessage> BuildMessages(AgentRun run) => run.Steps
-        .OrderBy(step => step.Sequence)
-        .Where(step => step.Role != "tool" || step.ToolCallStatus is AgentToolCallStatus.Executed or AgentToolCallStatus.Rejected or AgentToolCallStatus.Invalid)
-        .Select(step => new AgentChatMessage(
-            step.Role,
-            step.Content,
-            step.ToolCallId,
-            step.Role == "assistant" && !string.IsNullOrWhiteSpace(step.ToolArgumentsJson)
-                ? JsonSerializer.Deserialize<IReadOnlyCollection<AgentToolCall>>(step.ToolArgumentsJson, JsonOptions)
-                : null))
-        .ToList();
+    private async Task<IReadOnlyCollection<AgentChatMessage>> BuildMessagesAsync(AgentRun run, CancellationToken cancellationToken)
+    {
+        var steps = await GetConversationStepsAsync(run.UserId, run.ConversationId, cancellationToken);
+        return steps
+            .Where(step => step.Role != "system")
+            .Where(step => step.Role != "tool" || step.ToolCallStatus is AgentToolCallStatus.Executed or AgentToolCallStatus.Rejected or AgentToolCallStatus.Invalid)
+            .Select(step => new AgentChatMessage(
+                step.Role,
+                step.Content,
+                step.ToolCallId,
+                step.Role == "assistant" && !string.IsNullOrWhiteSpace(step.ToolArgumentsJson)
+                    ? JsonSerializer.Deserialize<IReadOnlyCollection<AgentToolCall>>(step.ToolArgumentsJson, JsonOptions)
+                    : null))
+            .Prepend(new AgentChatMessage("system", SystemPrompt))
+            .ToList();
+    }
 
     private static AgentRunStep NewStep(int sequence, string role, string? content, DateTimeOffset now) => new()
     {
