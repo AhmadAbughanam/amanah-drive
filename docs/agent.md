@@ -18,7 +18,7 @@ flowchart TB
         AgentModule["Agent module<br/>endpoints + AgentRunService"]
         Worker["AgentRunWorker<br/>background loop"]
         Registry["AgentTools module<br/>AgentToolRegistry — dispatch"]
-        DriveTools["10 Drive tools"]
+        DriveTools["11 Drive tools"]
         GitHubTools["2 GitHub tools"]
     end
 
@@ -55,6 +55,7 @@ flowchart TB
 | `rename_folder` | **Required** | Renames a folder |
 | `rename_file` | **Required** | Renames a file |
 | `move_file` | **Required** | Moves a file to another folder |
+| `move_folder` | **Required** | Moves a folder to another folder or the root; rejects self/descendant destinations |
 | `delete_file` | **Always required — permanent** | Permanently deletes a file and its stored bytes |
 | `delete_folder` | **Always required — permanent** | Permanently deletes a folder, all descendants, and every contained file |
 | `list_github_directory` | Auto | Lists a GitHub repo path (read-only) |

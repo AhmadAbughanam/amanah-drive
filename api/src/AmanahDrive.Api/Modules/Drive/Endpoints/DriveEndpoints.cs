@@ -93,6 +93,29 @@ public static class DriveEndpoints
             .Produces<ErrorResponse>(StatusCodes.Status409Conflict)
             .ProducesValidationProblem();
 
+        group.MapPatch("/folders/{folderId:guid}/move", async (
+            Guid folderId,
+            MoveFolderRequest request,
+            ClaimsPrincipal user,
+            IDriveService driveService,
+            CancellationToken cancellationToken) =>
+        {
+            var userId = GetUserId(user);
+            if (userId is null)
+            {
+                return Results.Unauthorized();
+            }
+
+            var result = await driveService.MoveFolderAsync(userId.Value, folderId, request.FolderId, cancellationToken);
+            return ToResult(result, Results.Ok);
+        })
+            .WithSummary("Move a folder to another folder or the root.")
+            .Produces<FolderResponse>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces<ErrorResponse>(StatusCodes.Status400BadRequest)
+            .Produces<ErrorResponse>(StatusCodes.Status409Conflict);
+
         group.MapDelete("/folders/{folderId:guid}", async (
             Guid folderId,
             ClaimsPrincipal user,
@@ -294,6 +317,8 @@ public sealed record RenameRequest(
     [Required, MaxLength(255)] string Name);
 
 public sealed record MoveFileRequest(Guid? FolderId);
+
+public sealed record MoveFolderRequest(Guid? FolderId);
 
 public sealed record FolderResponse(Guid Id, string Name, Guid? ParentFolderId, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
 

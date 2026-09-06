@@ -112,6 +112,39 @@ public sealed class DriveService(
         return DriveOperationResult<FolderResponse>.Success(ToFolderResponse(folder));
     }
 
+    public async Task<DriveOperationResult<FolderResponse>> MoveFolderAsync(Guid userId, Guid folderId, Guid? destinationFolderId, CancellationToken cancellationToken)
+    {
+        var folder = await dbContext.Folders.SingleOrDefaultAsync(folder => folder.Id == folderId && folder.UserId == userId, cancellationToken);
+        if (folder is null)
+        {
+            return DriveOperationResult<FolderResponse>.NotFound();
+        }
+
+        if (destinationFolderId is not null && !await FolderBelongsToUserAsync(destinationFolderId.Value, userId, cancellationToken))
+        {
+            return DriveOperationResult<FolderResponse>.NotFound();
+        }
+
+        if (destinationFolderId is not null)
+        {
+            var descendantFolderIds = await GetDescendantFolderIdsAsync(userId, folderId, cancellationToken);
+            if (descendantFolderIds.Contains(destinationFolderId.Value))
+            {
+                return DriveOperationResult<FolderResponse>.Invalid("A folder cannot be moved into itself or one of its descendants.");
+            }
+        }
+
+        if (await FolderNameExistsAsync(userId, destinationFolderId, folder.Name, cancellationToken, folder.Id))
+        {
+            return DriveOperationResult<FolderResponse>.Conflict("A folder with that name already exists in the destination folder.");
+        }
+
+        folder.ParentFolderId = destinationFolderId;
+        folder.UpdatedAt = DateTimeOffset.UtcNow;
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return DriveOperationResult<FolderResponse>.Success(ToFolderResponse(folder));
+    }
+
     public async Task<DriveOperationResult> DeleteFolderAsync(Guid userId, Guid folderId, CancellationToken cancellationToken)
     {
         var folder = await dbContext.Folders.SingleOrDefaultAsync(folder => folder.Id == folderId && folder.UserId == userId, cancellationToken);

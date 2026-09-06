@@ -3,7 +3,12 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using AmanahDrive.Api.Modules.Auth.Models;
+using AmanahDrive.Api.Modules.Drive.Models;
+using AmanahDrive.Api.Shared.Infrastructure.Data;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Testcontainers.PostgreSql;
 
 namespace AmanahDrive.Api.Tests;
@@ -71,6 +76,68 @@ public sealed class DriveEndpointTests : IAsyncLifetime
 
         var deletedContents = await GetFolderContentsAsync(client);
         Assert.DoesNotContain(deletedContents.Folders, folder => folder.Id == created.Id);
+    }
+
+    [Fact]
+    public async Task MoveFolder_MovesFolderToOwnedDestination()
+    {
+        var client = await CreateAuthorizedClientAsync();
+        var folder = await CreateFolderAsync(client, "Reports");
+        var destination = await CreateFolderAsync(client, "Archive");
+
+        var response = await client.PatchAsJsonAsync($"/drive/folders/{folder.Id}/move", new { FolderId = destination.Id });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var moved = await ReadJsonAsync<FolderDto>(response);
+        Assert.Equal(destination.Id, moved.ParentFolderId);
+        Assert.DoesNotContain((await GetFolderContentsAsync(client)).Folders, candidate => candidate.Id == folder.Id);
+        Assert.Contains((await GetFolderContentsAsync(client, destination.Id)).Folders, candidate => candidate.Id == folder.Id);
+    }
+
+    [Fact]
+    public async Task MoveFolder_RejectsDestinationOwnedByAnotherUser()
+    {
+        var client = await CreateAuthorizedClientAsync();
+        var folder = await CreateFolderAsync(client, "Reports");
+        var foreignDestinationId = await SeedForeignFolderAsync();
+
+        var response = await client.PatchAsJsonAsync($"/drive/folders/{folder.Id}/move", new { FolderId = foreignDestinationId });
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Contains((await GetFolderContentsAsync(client)).Folders, candidate => candidate.Id == folder.Id);
+    }
+
+    [Fact]
+    public async Task MoveFolder_RejectsNameCollisionAtDestination()
+    {
+        var client = await CreateAuthorizedClientAsync();
+        var folder = await CreateFolderAsync(client, "Reports");
+        var destination = await CreateFolderAsync(client, "Archive");
+        var existing = await CreateFolderAsync(client, "Reports", destination.Id);
+
+        var response = await client.PatchAsJsonAsync($"/drive/folders/{folder.Id}/move", new { FolderId = destination.Id });
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Contains((await GetFolderContentsAsync(client)).Folders, candidate => candidate.Id == folder.Id);
+        Assert.Contains((await GetFolderContentsAsync(client, destination.Id)).Folders, candidate => candidate.Id == existing.Id);
+    }
+
+    [Fact]
+    public async Task MoveFolder_RejectsMovingIntoItselfOrDescendantWithoutChangingTree()
+    {
+        var client = await CreateAuthorizedClientAsync();
+        var parent = await CreateFolderAsync(client, "Parent");
+        var child = await CreateFolderAsync(client, "Child", parent.Id);
+
+        var selfResponse = await client.PatchAsJsonAsync($"/drive/folders/{parent.Id}/move", new { FolderId = parent.Id });
+        var descendantResponse = await client.PatchAsJsonAsync($"/drive/folders/{parent.Id}/move", new { FolderId = child.Id });
+
+        Assert.Equal(HttpStatusCode.BadRequest, selfResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, descendantResponse.StatusCode);
+        Assert.Contains("cannot be moved into itself or one of its descendants", await selfResponse.Content.ReadAsStringAsync(), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("cannot be moved into itself or one of its descendants", await descendantResponse.Content.ReadAsStringAsync(), StringComparison.OrdinalIgnoreCase);
+        Assert.Contains((await GetFolderContentsAsync(client)).Folders, candidate => candidate.Id == parent.Id);
+        Assert.Contains((await GetFolderContentsAsync(client, parent.Id)).Folders, candidate => candidate.Id == child.Id);
     }
 
     [Fact]
@@ -179,6 +246,35 @@ public sealed class DriveEndpointTests : IAsyncLifetime
         var token = await BootstrapAndGetAccessTokenAsync(client);
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         return client;
+    }
+
+    private async Task<Guid> SeedForeignFolderAsync()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var now = DateTimeOffset.UtcNow;
+        var email = $"other-{Guid.NewGuid():N}@example.com";
+        var user = new AdminUser
+        {
+            Id = Guid.NewGuid(),
+            Email = email,
+            NormalizedEmail = email.ToUpperInvariant(),
+            PasswordHash = "not-used",
+            CreatedAt = now,
+            UpdatedAt = now
+        };
+        var folder = new Folder
+        {
+            Id = Guid.NewGuid(),
+            UserId = user.Id,
+            Name = "Foreign destination",
+            CreatedAt = now,
+            UpdatedAt = now
+        };
+        var dbContext = scope.ServiceProvider.GetRequiredService<AmanahDriveDbContext>();
+        await dbContext.AdminUsers.AddAsync(user);
+        await dbContext.Folders.AddAsync(folder);
+        await dbContext.SaveChangesAsync();
+        return folder.Id;
     }
 
     private static async Task<string> BootstrapAndGetAccessTokenAsync(HttpClient client)

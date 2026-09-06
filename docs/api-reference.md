@@ -21,6 +21,7 @@ The browsable OpenAPI/Scalar UI is available at `/docs` in Development, or when 
 | GET | `/drive/folders` | Bearer JWT | List folders and files for a parent folder with `page` and `pageSize`. |
 | POST | `/drive/folders` | Bearer JWT | Create a folder. |
 | PATCH | `/drive/folders/{folderId}/rename` | Bearer JWT | Rename a folder. |
+| PATCH | `/drive/folders/{folderId}/move` | Bearer JWT | Move a folder to another folder or the root; self/descendant destinations return `400`. |
 | DELETE | `/drive/folders/{folderId}` | Bearer JWT | Delete a folder, descendants, metadata, and stored files. |
 | POST | `/drive/files/upload` | Bearer JWT | Upload a PDF, DOCX, CSV, Markdown, plain-text, PNG, or JPEG file and create a processing job. |
 | GET | `/drive/files/{fileId}/download` | Bearer JWT | Download a stored file. |
@@ -34,6 +35,8 @@ The browsable OpenAPI/Scalar UI is available at `/docs` in Development, or when 
 | GET | `/agent/runs/{runId}` | Bearer JWT | Return a run's current state and its conversation's readable ordered step history. |
 | POST | `/agent/runs/{runId}/approve` | Bearer JWT | Atomically approve the pending tool call, requeue the run as `Pending`, and return immediately. |
 | POST | `/agent/runs/{runId}/reject` | Bearer JWT | Atomically reject the pending tool call, requeue the run as `Pending`, and return immediately. |
+
+`PATCH /drive/folders/{folderId}/move` accepts `{ "folderId": UUID | null }`, matching the file-move endpoint: a UUID selects the destination folder and `null` moves to the root. Missing or unowned source/destination folders return `404`, destination name collisions return `409`, and self/descendant destinations return `400` without changing the tree.
 
 ## Agent conversation continuity
 

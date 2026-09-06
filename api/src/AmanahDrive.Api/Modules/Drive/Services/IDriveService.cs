@@ -22,6 +22,12 @@ public interface IDriveService
         string name,
         CancellationToken cancellationToken);
 
+    Task<DriveOperationResult<FolderResponse>> MoveFolderAsync(
+        Guid userId,
+        Guid folderId,
+        Guid? destinationFolderId,
+        CancellationToken cancellationToken);
+
     Task<DriveOperationResult> DeleteFolderAsync(Guid userId, Guid folderId, CancellationToken cancellationToken);
 
     Task<DriveOperationResult<FileItemResponse>> UploadFileAsync(

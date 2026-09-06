@@ -221,6 +221,23 @@ public sealed class MoveFileTool(IDriveService driveService) : IAgentTool<MoveFi
     }
 }
 
+public sealed record MoveFolderToolRequest(Guid FolderId, Guid? DestinationFolderId);
+
+public sealed record MoveFolderToolResponse(FolderResponse Folder);
+
+public sealed class MoveFolderTool(IDriveService driveService) : IAgentTool<MoveFolderToolRequest, MoveFolderToolResponse>
+{
+    public string Name => "move_folder";
+
+    public bool RequiresApproval => true;
+
+    public async Task<AgentToolResult<MoveFolderToolResponse>> ExecuteAsync(AgentToolContext context, MoveFolderToolRequest request, CancellationToken cancellationToken)
+    {
+        var result = await driveService.MoveFolderAsync(context.UserId, request.FolderId, request.DestinationFolderId, cancellationToken);
+        return DriveToolResultMapper.ToAgentResult(result, folder => new MoveFolderToolResponse(folder));
+    }
+}
+
 public sealed record DeleteFileToolRequest(Guid FileId);
 
 public sealed record DeleteFileToolResponse(Guid FileId, bool PermanentlyDeleted);

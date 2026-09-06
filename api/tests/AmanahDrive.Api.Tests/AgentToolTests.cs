@@ -158,6 +158,28 @@ public sealed class AgentToolTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task MoveFolder_MovesFolderThroughDriveService()
+    {
+        var folder = await SeedFolderAsync("Reports");
+        var destination = await SeedFolderAsync("Archive");
+        using var scope = _factory.Services.CreateScope();
+        var tool = scope.ServiceProvider.GetRequiredService<IAgentTool<MoveFolderToolRequest, MoveFolderToolResponse>>();
+
+        var result = await tool.ExecuteAsync(
+            new AgentToolContext(_userId),
+            new MoveFolderToolRequest(folder.Id, destination.Id),
+            CancellationToken.None);
+
+        Assert.Equal(AgentToolStatus.Success, result.Status);
+        Assert.NotNull(result.Value);
+        Assert.Equal(destination.Id, result.Value.Folder.ParentFolderId);
+        Assert.Equal(destination.Id, await scope.ServiceProvider.GetRequiredService<AmanahDriveDbContext>().Folders
+            .Where(candidate => candidate.Id == folder.Id)
+            .Select(candidate => candidate.ParentFolderId)
+            .SingleAsync());
+    }
+
+    [Fact]
     public async Task DeleteFile_DeletesExistingFileAndMapsMissingFileToNotFound()
     {
         var file = await SeedFileAsync("delete-me.txt", "temporary"u8.ToArray());
@@ -216,9 +238,11 @@ public sealed class AgentToolTests : IAsyncLifetime
         Assert.True(scope.ServiceProvider.GetRequiredService<IAgentTool<RenameFolderToolRequest, RenameFolderToolResponse>>().RequiresApproval);
         Assert.True(scope.ServiceProvider.GetRequiredService<IAgentTool<RenameFileToolRequest, RenameFileToolResponse>>().RequiresApproval);
         Assert.True(scope.ServiceProvider.GetRequiredService<IAgentTool<MoveFileToolRequest, MoveFileToolResponse>>().RequiresApproval);
+        Assert.True(scope.ServiceProvider.GetRequiredService<IAgentTool<MoveFolderToolRequest, MoveFolderToolResponse>>().RequiresApproval);
         Assert.True(scope.ServiceProvider.GetRequiredService<IAgentTool<DeleteFileToolRequest, DeleteFileToolResponse>>().RequiresApproval);
         Assert.True(scope.ServiceProvider.GetRequiredService<IAgentTool<DeleteFolderToolRequest, DeleteFolderToolResponse>>().RequiresApproval);
         var registeredNames = scope.ServiceProvider.GetRequiredService<IAgentToolRegistry>().Tools.Select(tool => tool.Name);
+        Assert.Contains("move_folder", registeredNames);
         Assert.Contains("delete_file", registeredNames);
         Assert.Contains("delete_folder", registeredNames);
     }
