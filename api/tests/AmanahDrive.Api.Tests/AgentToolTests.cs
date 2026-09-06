@@ -158,6 +158,50 @@ public sealed class AgentToolTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task DeleteFile_DeletesExistingFileAndMapsMissingFileToNotFound()
+    {
+        var file = await SeedFileAsync("delete-me.txt", "temporary"u8.ToArray());
+        using var scope = _factory.Services.CreateScope();
+        var tool = scope.ServiceProvider.GetRequiredService<IAgentTool<DeleteFileToolRequest, DeleteFileToolResponse>>();
+
+        var deleted = await tool.ExecuteAsync(new AgentToolContext(_userId), new DeleteFileToolRequest(file.Id), CancellationToken.None);
+        var missing = await tool.ExecuteAsync(new AgentToolContext(_userId), new DeleteFileToolRequest(file.Id), CancellationToken.None);
+
+        Assert.Equal(AgentToolStatus.Success, deleted.Status);
+        Assert.NotNull(deleted.Value);
+        Assert.Equal(file.Id, deleted.Value.FileId);
+        Assert.True(deleted.Value.PermanentlyDeleted);
+        Assert.Equal(AgentToolStatus.NotFound, missing.Status);
+        Assert.False(await scope.ServiceProvider.GetRequiredService<AmanahDriveDbContext>().FileItems.AnyAsync(item => item.Id == file.Id));
+        Assert.Empty(Directory.EnumerateFiles(_storageRoot, "*", SearchOption.AllDirectories));
+    }
+
+    [Fact]
+    public async Task DeleteFolder_RecursivelyDeletesNonEmptyTreeAndMapsMissingFolderToNotFound()
+    {
+        var parent = await SeedFolderAsync("Parent");
+        var child = await SeedFolderAsync("Child", parent.Id);
+        await SeedFileAsync("parent.txt", "parent"u8.ToArray(), parent.Id);
+        await SeedFileAsync("child.txt", "child"u8.ToArray(), child.Id);
+        using var scope = _factory.Services.CreateScope();
+        var tool = scope.ServiceProvider.GetRequiredService<IAgentTool<DeleteFolderToolRequest, DeleteFolderToolResponse>>();
+
+        var deleted = await tool.ExecuteAsync(new AgentToolContext(_userId), new DeleteFolderToolRequest(parent.Id), CancellationToken.None);
+        var missing = await tool.ExecuteAsync(new AgentToolContext(_userId), new DeleteFolderToolRequest(parent.Id), CancellationToken.None);
+
+        Assert.Equal(AgentToolStatus.Success, deleted.Status);
+        Assert.NotNull(deleted.Value);
+        Assert.Equal(parent.Id, deleted.Value.FolderId);
+        Assert.True(deleted.Value.PermanentlyDeleted);
+        Assert.True(deleted.Value.ContentsDeletedRecursively);
+        Assert.Equal(AgentToolStatus.NotFound, missing.Status);
+        var dbContext = scope.ServiceProvider.GetRequiredService<AmanahDriveDbContext>();
+        Assert.False(await dbContext.Folders.AnyAsync(folder => folder.Id == parent.Id || folder.Id == child.Id));
+        Assert.False(await dbContext.FileItems.AnyAsync(file => file.FolderId == parent.Id || file.FolderId == child.Id));
+        Assert.Empty(Directory.EnumerateFiles(_storageRoot, "*", SearchOption.AllDirectories));
+    }
+
+    [Fact]
     public void ToolApprovalFlags_AreDeclaredOnTheToolImplementations()
     {
         using var scope = _factory.Services.CreateScope();
@@ -172,9 +216,14 @@ public sealed class AgentToolTests : IAsyncLifetime
         Assert.True(scope.ServiceProvider.GetRequiredService<IAgentTool<RenameFolderToolRequest, RenameFolderToolResponse>>().RequiresApproval);
         Assert.True(scope.ServiceProvider.GetRequiredService<IAgentTool<RenameFileToolRequest, RenameFileToolResponse>>().RequiresApproval);
         Assert.True(scope.ServiceProvider.GetRequiredService<IAgentTool<MoveFileToolRequest, MoveFileToolResponse>>().RequiresApproval);
+        Assert.True(scope.ServiceProvider.GetRequiredService<IAgentTool<DeleteFileToolRequest, DeleteFileToolResponse>>().RequiresApproval);
+        Assert.True(scope.ServiceProvider.GetRequiredService<IAgentTool<DeleteFolderToolRequest, DeleteFolderToolResponse>>().RequiresApproval);
+        var registeredNames = scope.ServiceProvider.GetRequiredService<IAgentToolRegistry>().Tools.Select(tool => tool.Name);
+        Assert.Contains("delete_file", registeredNames);
+        Assert.Contains("delete_folder", registeredNames);
     }
 
-    private async Task<FileItem> SeedFileAsync(string fileName, byte[] content)
+    private async Task<FileItem> SeedFileAsync(string fileName, byte[] content, Guid? folderId = null)
     {
         using var scope = _factory.Services.CreateScope();
         var storage = scope.ServiceProvider.GetRequiredService<IFileStorage>();
@@ -184,6 +233,7 @@ public sealed class AgentToolTests : IAsyncLifetime
         {
             Id = Guid.NewGuid(),
             UserId = _userId,
+            FolderId = folderId,
             OriginalFileName = fileName,
             StorageKey = stored.StorageKey,
             ContentType = "text/plain",
@@ -197,6 +247,24 @@ public sealed class AgentToolTests : IAsyncLifetime
         await dbContext.FileItems.AddAsync(file);
         await dbContext.SaveChangesAsync();
         return file;
+    }
+
+    private async Task<Folder> SeedFolderAsync(string name, Guid? parentFolderId = null)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var folder = new Folder
+        {
+            Id = Guid.NewGuid(),
+            UserId = _userId,
+            Name = name,
+            ParentFolderId = parentFolderId,
+            CreatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTimeOffset.UtcNow
+        };
+        var dbContext = scope.ServiceProvider.GetRequiredService<AmanahDriveDbContext>();
+        await dbContext.Folders.AddAsync(folder);
+        await dbContext.SaveChangesAsync();
+        return folder;
     }
 
     private async Task SeedChunkAsync(Guid fileId, int chunkIndex, string text)

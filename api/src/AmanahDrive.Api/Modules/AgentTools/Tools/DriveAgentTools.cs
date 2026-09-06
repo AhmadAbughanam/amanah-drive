@@ -221,6 +221,42 @@ public sealed class MoveFileTool(IDriveService driveService) : IAgentTool<MoveFi
     }
 }
 
+public sealed record DeleteFileToolRequest(Guid FileId);
+
+public sealed record DeleteFileToolResponse(Guid FileId, bool PermanentlyDeleted);
+
+public sealed class DeleteFileTool(IDriveService driveService) : IAgentTool<DeleteFileToolRequest, DeleteFileToolResponse>
+{
+    public string Name => "delete_file";
+
+    public bool RequiresApproval => true;
+
+    public async Task<AgentToolResult<DeleteFileToolResponse>> ExecuteAsync(AgentToolContext context, DeleteFileToolRequest request, CancellationToken cancellationToken)
+    {
+        var result = await driveService.DeleteFileAsync(context.UserId, request.FileId, cancellationToken);
+        return DriveToolResultMapper.ToAgentResult(result, () => new DeleteFileToolResponse(request.FileId, PermanentlyDeleted: true));
+    }
+}
+
+public sealed record DeleteFolderToolRequest(Guid FolderId);
+
+public sealed record DeleteFolderToolResponse(Guid FolderId, bool PermanentlyDeleted, bool ContentsDeletedRecursively);
+
+public sealed class DeleteFolderTool(IDriveService driveService) : IAgentTool<DeleteFolderToolRequest, DeleteFolderToolResponse>
+{
+    public string Name => "delete_folder";
+
+    public bool RequiresApproval => true;
+
+    public async Task<AgentToolResult<DeleteFolderToolResponse>> ExecuteAsync(AgentToolContext context, DeleteFolderToolRequest request, CancellationToken cancellationToken)
+    {
+        var result = await driveService.DeleteFolderAsync(context.UserId, request.FolderId, cancellationToken);
+        return DriveToolResultMapper.ToAgentResult(
+            result,
+            () => new DeleteFolderToolResponse(request.FolderId, PermanentlyDeleted: true, ContentsDeletedRecursively: true));
+    }
+}
+
 internal static class DriveToolResultMapper
 {
     public static AgentToolResult<TResult> ToAgentResult<TSource, TResult>(DriveOperationResult<TSource> result, Func<TSource, TResult> success)
@@ -231,6 +267,16 @@ internal static class DriveToolResultMapper
             DriveOperationStatus.NotFound => AgentToolResult<TResult>.NotFound(),
             DriveOperationStatus.Conflict => AgentToolResult<TResult>.Conflict(result.ErrorMessage!),
             DriveOperationStatus.Invalid => AgentToolResult<TResult>.Invalid(result.ErrorMessage!),
+            _ => throw new InvalidOperationException("Drive service returned an unsupported tool result.")
+        };
+    }
+
+    public static AgentToolResult<TResult> ToAgentResult<TResult>(DriveOperationResult result, Func<TResult> success)
+    {
+        return result.Status switch
+        {
+            DriveOperationStatus.Success => AgentToolResult<TResult>.Success(success()),
+            DriveOperationStatus.NotFound => AgentToolResult<TResult>.NotFound(),
             _ => throw new InvalidOperationException("Drive service returned an unsupported tool result.")
         };
     }

@@ -144,6 +144,8 @@ public static class AgentEndpoints
             "rename_folder" => string.IsNullOrWhiteSpace(name) ? "Rename a folder" : $"Rename a folder to “{name}”",
             "rename_file" => string.IsNullOrWhiteSpace(name) ? "Rename a file" : $"Rename a file to “{name}”",
             "move_file" => destinationFolderId is null ? "Move a file to the root folder" : "Move a file to a folder",
+            "delete_file" => "Permanently delete a file",
+            "delete_folder" => "Permanently delete a folder and all of its contents",
             _ => "Run an agent tool"
         };
     }

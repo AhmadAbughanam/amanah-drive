@@ -27,7 +27,7 @@ The interface screenshots use deterministic sample data so the repository images
 - Asynchronous document processing: native PDF text, scanned-PDF and image OCR, DOCX/table text, CSV, Markdown, and plain-text extraction; chunking, embedding, and pgvector storage.
 - Semantic search over stored document chunks.
 - RAG chat with citations and persisted conversation history.
-- Approval-aware agent runs with persisted cross-run conversation history, eight Drive tools, and two read-only GitHub tools.
+- Approval-aware agent runs with persisted cross-run conversation history, ten Drive tools, and two read-only GitHub tools.
 - Authenticated Next.js dashboard for file management, search, chat, agent runs, activity, logs, and operational metrics.
 - Portfolio landing page and login flow.
 - Docker Compose environment for PostgreSQL, API, AI service, and web app.
