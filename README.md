@@ -387,6 +387,7 @@ CSRF posture in V1: application mutations require a bearer access token, while r
 ## References
 
 - [Architecture Reference](docs/architecture.md)
+- [Agent Reference](docs/agent.md)
 - [API Reference](docs/api-reference.md)
 - [AI Service Contract](docs/ai-service-contract.md)
 - [Architecture Decision Records](docs/decisions/README.md)

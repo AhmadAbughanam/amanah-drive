@@ -135,6 +135,7 @@ The API is a modular monolith: one deployable ASP.NET Core service, one physical
 - `Modules/SearchChat` owns search/chat endpoints, conversations, chat messages, and semantic search orchestration.
 - `Modules/Agent` owns persisted agent runs, iteration limits, and approval/resume orchestration.
 - `Modules/AgentTools` owns the approval metadata, runtime tool registry, Drive tools, and read-only GitHub tools.
+  See [Agent Reference](agent.md) for the full design — the turn loop, approval gating, run states, and safety reasoning.
 - `Modules/Admin` owns authenticated operational views, including persisted logs and the activity-feed projection.
 - `Shared/DomainEvents` owns the lightweight in-process dispatcher contracts and failure isolation.
 - `Shared/Infrastructure` owns cross-cutting infrastructure: DbContext, migrations, external AI HTTP client, CORS, security headers, file-logging configuration, OpenTelemetry tracing, and host-level wiring.

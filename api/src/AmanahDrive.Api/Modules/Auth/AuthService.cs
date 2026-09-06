@@ -161,7 +161,7 @@ public sealed class AuthService(
         existingToken.RevokedAt = DateTimeOffset.UtcNow;
         existingToken.RevokedByIp = ipAddress;
         existingToken.ReplacedByTokenHash = replacement.Entity.TokenHash;
-
+        
         await dbContext.RefreshTokens.AddAsync(replacement.Entity, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
 
