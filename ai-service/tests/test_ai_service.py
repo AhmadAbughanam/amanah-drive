@@ -8,10 +8,21 @@ from PIL import Image
 from fastapi.testclient import TestClient
 from tenacity import wait_none
 
-from app.config import EMBEDDING_DIMENSION, HF_DEFAULT_MODEL
+from app.config import (
+    EMBEDDING_DIMENSION,
+    GEMINI_CHAT_COMPLETIONS_URL,
+    GEMINI_DEFAULT_MODEL,
+    GROQ_CHAT_COMPLETIONS_URL,
+    GROQ_PRIMARY_MODEL,
+    GROQ_SECONDARY_MODEL,
+    HF_CHAT_COMPLETIONS_URL,
+    HF_DEFAULT_MODEL,
+    OPENROUTER_CHAT_COMPLETIONS_URL,
+    OPENROUTER_DEFAULT_MODEL,
+)
 from app.main import app
 from app.schemas import RagAnswerResponse, RagCitation
-from app.services import extraction
+from app.services import agent as agent_service, extraction
 from app.services.rag import HuggingFaceUpstreamError, build_grounded_prompt, call_hugging_face, create_citations
 
 TOKEN = "tests-only-service-token"
@@ -389,38 +400,240 @@ def test_hugging_face_call_does_not_retry_non_transient_client_error(monkeypatch
     assert attempts == 1
 
 
-def test_agent_completion_forwards_tools_and_parses_tool_calls(monkeypatch):
-    monkeypatch.setenv("HF_API_TOKEN", "tests-only-hf-token")
-    captured = {}
+@pytest.mark.parametrize(
+    ("environment", "failed_models", "expected_provider", "expected_model", "expected_url", "expected_calls"),
+    [
+        ({"GEMINI_API_KEY": "gemini-token"}, set(), "gemini", GEMINI_DEFAULT_MODEL, GEMINI_CHAT_COMPLETIONS_URL, 1),
+        ({"GROQ_API_KEY": "groq-token"}, set(), "groq", GROQ_PRIMARY_MODEL, GROQ_CHAT_COMPLETIONS_URL, 1),
+        (
+            {"GROQ_API_KEY": "groq-token"},
+            {GROQ_PRIMARY_MODEL},
+            "groq",
+            GROQ_SECONDARY_MODEL,
+            GROQ_CHAT_COMPLETIONS_URL,
+            2,
+        ),
+        (
+            {"OPENROUTER_API_KEY": "openrouter-token"},
+            set(),
+            "openrouter",
+            OPENROUTER_DEFAULT_MODEL,
+            OPENROUTER_CHAT_COMPLETIONS_URL,
+            1,
+        ),
+        ({"HF_API_TOKEN": "hf-token"}, set(), "huggingface", HF_DEFAULT_MODEL, HF_CHAT_COMPLETIONS_URL, 1),
+    ],
+)
+def test_agent_completion_succeeds_for_each_provider_tier(
+    monkeypatch,
+    environment,
+    failed_models,
+    expected_provider,
+    expected_model,
+    expected_url,
+    expected_calls,
+):
+    configure_agent_provider_environment(monkeypatch, environment)
+    requests = []
 
-    def fake_post(*_args, **kwargs):
-        captured.update(kwargs["json"])
-        return httpx.Response(
-            200,
-            json={
-                "choices": [{"message": {"content": None, "tool_calls": [{
-                    "id": "call-1",
-                    "type": "function",
-                    "function": {"name": "list_folder", "arguments": "{\"parentFolderId\":null}"},
-                }]}}],
-                "usage": {"prompt_tokens": 12, "completion_tokens": 4},
-            },
-        )
+    def fake_post(url, **kwargs):
+        requests.append((url, kwargs))
+        model = kwargs["json"]["model"]
+        if model in failed_models:
+            return httpx.Response(400, text="model rejected request")
+        return provider_tool_call_response(expected_provider, model)
 
     monkeypatch.setattr("app.services.agent.httpx.post", fake_post)
-    response = client().post(
-        "/agent/complete",
-        headers=headers(),
-        json={
-            "messages": [{"role": "system", "content": "Use tools safely."}, {"role": "user", "content": "List root."}],
-            "tools": [{"type": "function", "function": {"name": "list_folder", "description": "List files.", "parameters": {"type": "object"}}}],
-        },
-    )
+    response = client().post("/agent/complete", headers=headers(), json=agent_request_json())
 
     assert response.status_code == 200
-    assert captured["tool_choice"] == "auto"
-    assert captured["tools"][0]["function"]["name"] == "list_folder"
-    assert response.json()["message"]["toolCalls"][0]["function"]["name"] == "list_folder"
+    assert len(requests) == expected_calls
+    assert requests[-1][0] == expected_url
+    expected_token = next(
+        value for name, value in environment.items() if name.endswith("API_KEY") or name == "HF_API_TOKEN"
+    )
+    assert requests[-1][1]["headers"]["Authorization"] == f"Bearer {expected_token}"
+    request_body = requests[-1][1]["json"]
+    assert request_body["model"] == expected_model
+    assert request_body["tool_choice"] == "auto"
+    assert request_body["tools"][0]["function"]["name"] == "list_folder"
+    body = response.json()
+    assert body["model"] == expected_model
+    assert body["usage"] == {"provider": expected_provider, "inputTokens": 12, "outputTokens": 4}
+    assert body["message"]["toolCalls"][0]["function"] == {
+        "name": "list_folder",
+        "arguments": "{\"parentFolderId\":null}",
+    }
+
+
+def test_agent_completion_skips_unconfigured_tier_without_request(monkeypatch):
+    configure_agent_provider_environment(monkeypatch, {"GROQ_API_KEY": "groq-token"})
+    requests = []
+
+    def fake_post(url, **kwargs):
+        requests.append((url, kwargs["json"]["model"]))
+        return provider_tool_call_response("groq", kwargs["json"]["model"])
+
+    monkeypatch.setattr("app.services.agent.httpx.post", fake_post)
+    response = client().post("/agent/complete", headers=headers(), json=agent_request_json())
+
+    assert response.status_code == 200
+    assert requests == [(GROQ_CHAT_COMPLETIONS_URL, GROQ_PRIMARY_MODEL)]
+
+
+def test_agent_completion_uses_openrouter_model_override(monkeypatch):
+    override_model = "vendor/rotating-tool-model:free"
+    configure_agent_provider_environment(
+        monkeypatch,
+        {"OPENROUTER_API_KEY": "openrouter-token", "OPENROUTER_MODEL": override_model},
+    )
+    requested_models = []
+
+    def fake_post(_url, **kwargs):
+        requested_models.append(kwargs["json"]["model"])
+        return provider_tool_call_response("openrouter", override_model)
+
+    monkeypatch.setattr("app.services.agent.httpx.post", fake_post)
+    response = client().post("/agent/complete", headers=headers(), json=agent_request_json())
+
+    assert response.status_code == 200
+    assert requested_models == [override_model]
+    assert response.json()["model"] == override_model
+
+
+def test_agent_completion_exhausts_transient_retries_then_falls_through(monkeypatch):
+    configure_agent_provider_environment(
+        monkeypatch,
+        {"GEMINI_API_KEY": "gemini-token", "GROQ_API_KEY": "groq-token"},
+    )
+    attempts = []
+
+    def fake_post(url, **kwargs):
+        model = kwargs["json"]["model"]
+        attempts.append(model)
+        if model == GEMINI_DEFAULT_MODEL:
+            request = httpx.Request("POST", url)
+            raise httpx.ConnectError("temporary connection failure", request=request)
+        return provider_tool_call_response("groq", model)
+
+    no_wait_call = agent_service.call_openai_compatible_with_tools.retry_with(wait=wait_none())
+    monkeypatch.setattr(agent_service, "call_openai_compatible_with_tools", no_wait_call)
+    monkeypatch.setattr("app.services.agent.httpx.post", fake_post)
+    response = client().post("/agent/complete", headers=headers(), json=agent_request_json())
+
+    assert response.status_code == 200
+    assert attempts == [GEMINI_DEFAULT_MODEL, GEMINI_DEFAULT_MODEL, GROQ_PRIMARY_MODEL]
+    assert response.json()["usage"]["provider"] == "groq"
+
+
+def test_agent_completion_reports_total_chain_exhaustion(monkeypatch):
+    configure_agent_provider_environment(
+        monkeypatch,
+        {
+            "GEMINI_API_KEY": "gemini-token",
+            "GROQ_API_KEY": "groq-token",
+            "OPENROUTER_API_KEY": "openrouter-token",
+            "HF_API_TOKEN": "hf-token",
+        },
+    )
+    attempted_models = []
+
+    def fake_post(_url, **kwargs):
+        attempted_models.append(kwargs["json"]["model"])
+        return httpx.Response(400, text="invalid request")
+
+    monkeypatch.setattr("app.services.agent.httpx.post", fake_post)
+    response = client().post("/agent/complete", headers=headers(), json=agent_request_json())
+
+    assert response.status_code == 502
+    assert attempted_models == [
+        GEMINI_DEFAULT_MODEL,
+        GROQ_PRIMARY_MODEL,
+        GROQ_SECONDARY_MODEL,
+        OPENROUTER_DEFAULT_MODEL,
+        HF_DEFAULT_MODEL,
+    ]
+    detail = response.json()["detail"]
+    assert detail.startswith("All configured agent completion providers failed:")
+    for provider_name, model in (
+        ("gemini", GEMINI_DEFAULT_MODEL),
+        ("groq", GROQ_PRIMARY_MODEL),
+        ("groq", GROQ_SECONDARY_MODEL),
+        ("openrouter", OPENROUTER_DEFAULT_MODEL),
+        ("huggingface", HF_DEFAULT_MODEL),
+    ):
+        assert f"{provider_name}/{model}" in detail
+
+
+def test_agent_completion_reports_when_no_provider_is_configured(monkeypatch):
+    configure_agent_provider_environment(monkeypatch, {})
+    monkeypatch.setattr(
+        "app.services.agent.httpx.post",
+        lambda *_args, **_kwargs: pytest.fail("No HTTP request should be attempted"),
+    )
+
+    response = client().post("/agent/complete", headers=headers(), json=agent_request_json())
+
+    assert response.status_code == 503
+    assert response.json()["detail"] == "No agent completion provider API keys are configured"
+
+
+def configure_agent_provider_environment(monkeypatch, values):
+    for name in ("GEMINI_API_KEY", "GROQ_API_KEY", "OPENROUTER_API_KEY", "OPENROUTER_MODEL", "HF_API_TOKEN", "HF_MODEL"):
+        monkeypatch.delenv(name, raising=False)
+    for name, value in values.items():
+        monkeypatch.setenv(name, value)
+
+
+def agent_request_json() -> dict:
+    return {
+        "messages": [
+            {"role": "system", "content": "Use tools safely."},
+            {"role": "user", "content": "List root."},
+        ],
+        "tools": [
+            {
+                "type": "function",
+                "function": {
+                    "name": "list_folder",
+                    "description": "List files.",
+                    "parameters": {"type": "object"},
+                },
+            }
+        ],
+    }
+
+
+def provider_tool_call_response(provider: str, model: str) -> httpx.Response:
+    body = {
+        "id": f"chatcmpl-{provider}",
+        "object": "chat.completion",
+        "model": model,
+        "choices": [
+            {
+                "index": 0,
+                "message": {
+                    "role": "assistant",
+                    "content": None,
+                    "tool_calls": [
+                        {
+                            "id": f"call-{provider}",
+                            "type": "function",
+                            "function": {
+                                "name": "list_folder",
+                                "arguments": "{\"parentFolderId\":null}",
+                            },
+                        }
+                    ],
+                },
+                "finish_reason": "tool_calls",
+            }
+        ],
+        "usage": {"prompt_tokens": 12, "completion_tokens": 4, "total_tokens": 16},
+    }
+    if provider == "groq":
+        body["x_groq"] = {"id": "req-groq", "model_version": model}
+    return httpx.Response(200, json=body)
 
 
 def rag_request_json() -> dict:
