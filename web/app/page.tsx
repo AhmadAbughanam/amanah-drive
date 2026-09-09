@@ -63,8 +63,8 @@ const achievements = [
 function PortfolioNav() {
   return (
     <header className="mx-auto flex w-full max-w-[1280px] items-center justify-between px-6 py-7 sm:px-10 lg:px-14">
-      <a href="#top" className="group flex items-center gap-3 outline-none focus-visible:ring-2 focus-visible:ring-[#6e56cf]">
-        <span className="grid h-10 w-10 place-items-center rounded-lg border border-white/20 text-sm font-semibold text-white transition group-hover:border-[#6e56cf]/60 group-hover:bg-[#6e56cf]/10">
+      <a href="#top" className="group flex items-center gap-3 outline-none focus-visible:ring-2 focus-visible:ring-[#ffffff]">
+        <span className="grid h-10 w-10 place-items-center rounded-lg border border-white/20 text-sm font-semibold text-white transition group-hover:border-[#ffffff]/60 group-hover:bg-[#ffffff]/10">
           AA
         </span>
         <span className="text-xs font-semibold uppercase tracking-[0.22em] text-white/76">Ahmad Abughanam</span>
@@ -83,7 +83,7 @@ function PortfolioNav() {
           <span className="h-px w-5 bg-white" />
           <span className="h-px w-3.5 bg-white transition group-open:w-5" />
         </summary>
-        <nav className="absolute right-0 z-50 mt-3 w-52 rounded-[8px] border border-white/12 bg-[#111118] p-3 shadow-[0_18px_50px_rgba(0,0,0,0.55)]" aria-label="Mobile portfolio navigation">
+        <nav className="absolute right-0 z-50 mt-3 w-52 rounded-[8px] border border-white/12 bg-[#0a0a0a] p-3 shadow-[0_18px_50px_rgba(0,0,0,0.55)]" aria-label="Mobile portfolio navigation">
           {navigation.map((item) => (
             <a key={item.href} href={item.href} className="block rounded-[6px] px-3 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-white/70 hover:bg-white/[0.06] hover:text-white">
               {item.label}
@@ -105,7 +105,7 @@ function HeroSection() {
           <span aria-hidden="true">
             Engineering
             <br />
-            <span className="text-[#c9bdfb]">intelligent systems.</span>
+            <span className="text-[#ffffff]">intelligent systems.</span>
           </span>
         </h1>
         <p className="mt-7 max-w-[610px] text-base leading-8 text-white/64 sm:text-lg">
@@ -126,8 +126,8 @@ function HeroSection() {
       </div>
 
       <div className="relative mx-auto w-full max-w-[520px] lg:mr-0">
-        <div className="absolute -right-3 -top-3 h-16 w-16 rounded-lg border border-[#6e56cf]/30" aria-hidden="true" />
-        <div className="relative aspect-[4/5] overflow-hidden rounded-lg border border-white/12 bg-[#111118] shadow-[0_28px_90px_rgba(0,0,0,0.48)]">
+        <div className="absolute -right-3 -top-3 h-16 w-16 rounded-lg border border-[#ffffff]/30" aria-hidden="true" />
+        <div className="relative aspect-[4/5] overflow-hidden rounded-lg border border-white/12 bg-[#0a0a0a] shadow-[0_28px_90px_rgba(0,0,0,0.48)]">
           <Image
             src="/profile.png"
             alt="Black and white side-profile portrait of Ahmad Abughanam"
@@ -136,7 +136,7 @@ function HeroSection() {
             sizes="(max-width: 1024px) 90vw, 42vw"
             className="object-cover object-[50%_52%] grayscale"
           />
-          <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#08080c] to-transparent" aria-hidden="true" />
+          <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-[#000000] to-transparent" aria-hidden="true" />
           <div className="absolute bottom-5 left-5 right-5 flex items-center justify-between border-t border-white/18 pt-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/66">
             <span>Amman, Jordan</span>
             <span>AI + Backend</span>
@@ -149,11 +149,11 @@ function HeroSection() {
 
 function SkillsSection() {
   return (
-    <section id="skills" className="border-y border-white/[0.08] bg-[#0b0b10] px-6 py-20 sm:px-10 lg:py-24">
+    <section id="skills" className="border-y border-white/[0.08] bg-[#000000] px-6 py-20 sm:px-10 lg:py-24">
       <div className="mx-auto max-w-[1120px] text-center">
         <SectionLabel>Skills</SectionLabel>
         <h2 className="mt-4 text-3xl font-semibold tracking-[-0.02em] text-white sm:text-5xl">Technical Skills</h2>
-        <div className="mx-auto mt-8 h-px w-16 bg-[#6e56cf]/50" />
+        <div className="mx-auto mt-8 h-px w-16 bg-[#ffffff]/50" />
         <div className="mx-auto mt-10 flex max-w-[940px] flex-wrap justify-center gap-3">
           {skills.map((skill, index) => (
             <span key={skill} className={`rounded-full border px-4 py-2.5 text-sm transition ${skillStyles[index % skillStyles.length]}`}>
@@ -174,7 +174,7 @@ function ExperienceSection() {
   ];
 
   return (
-    <section id="experience" className="relative overflow-hidden bg-[#020203] px-6 py-20 sm:px-10 lg:py-28">
+    <section id="experience" className="relative overflow-hidden bg-[#000000] px-6 py-20 sm:px-10 lg:py-28">
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/22 to-transparent" aria-hidden="true" />
       <div className="mx-auto max-w-[1180px]">
         <div className="grid gap-8 lg:grid-cols-[0.72fr_1.28fr] lg:gap-20">
@@ -201,7 +201,7 @@ function ExperienceSection() {
               <ol className="space-y-7">
                 {experienceDetails.map((detail, index) => (
                   <li key={detail} className="relative rounded-[8px] border border-white/[0.09] bg-white/[0.035] p-5 text-sm leading-7 text-white/66 sm:p-6 sm:text-base">
-                    <span className={`absolute -left-[43px] top-7 grid h-7 w-7 place-items-center rounded-full border bg-[#020203] text-[10px] font-semibold sm:-left-[59px] ${markerStyles[index % markerStyles.length]}`}>
+                    <span className={`absolute -left-[43px] top-7 grid h-7 w-7 place-items-center rounded-full border bg-[#000000] text-[10px] font-semibold sm:-left-[59px] ${markerStyles[index % markerStyles.length]}`}>
                       0{index + 1}
                     </span>
                     {detail}
@@ -218,11 +218,11 @@ function ExperienceSection() {
 
 function AboutSection() {
   return (
-    <section id="about" className="bg-[#0d0c13] px-6 py-20 sm:px-10 lg:py-28">
+    <section id="about" className="bg-[#0a0a0a] px-6 py-20 sm:px-10 lg:py-28">
       <div className="mx-auto grid max-w-[1180px] items-center gap-12 lg:grid-cols-[0.88fr_1.12fr] lg:gap-20">
         <div className="relative mx-auto w-full max-w-[470px]">
           <div className="absolute -bottom-4 -left-4 h-full w-full rounded-[8px] border border-white/20" aria-hidden="true" />
-          <div className="relative flex aspect-[5/6] flex-col justify-between overflow-hidden rounded-[8px] border border-white/12 bg-[#07070b] p-7 sm:p-9">
+          <div className="relative flex aspect-[5/6] flex-col justify-between overflow-hidden rounded-[8px] border border-white/12 bg-[#0a0a0a] p-7 sm:p-9">
             <div className="absolute inset-x-0 top-1/3 h-px bg-gradient-to-r from-transparent via-white/22 to-transparent" aria-hidden="true" />
             <div className="absolute bottom-1/3 inset-x-0 h-px bg-gradient-to-r from-transparent via-white/14 to-transparent" aria-hidden="true" />
             <div className="flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.18em] text-white/42">
@@ -266,7 +266,7 @@ function AboutSection() {
 
 function ProjectFigure({ src, alt, aspect }: { src: string; alt: string; aspect: string }) {
   return (
-    <figure className={`group relative ${aspect} overflow-hidden rounded-[8px] border border-white/12 bg-[#101016] shadow-[0_20px_60px_rgba(0,0,0,0.4)] transition duration-300 hover:border-white/28`}>
+    <figure className={`group relative ${aspect} overflow-hidden rounded-[8px] border border-white/12 bg-[#0a0a0a] shadow-[0_20px_60px_rgba(0,0,0,0.4)] transition duration-300 hover:border-white/28`}>
       <Image
         src={src}
         alt={alt}
@@ -280,7 +280,7 @@ function ProjectFigure({ src, alt, aspect }: { src: string; alt: string; aspect:
 
 function ProjectsSection() {
   return (
-    <section id="projects" className="bg-[#060608] px-6 py-20 sm:px-10 lg:py-28">
+    <section id="projects" className="bg-[#000000] px-6 py-20 sm:px-10 lg:py-28">
       <div className="mx-auto max-w-[1180px]">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -297,7 +297,7 @@ function ProjectsSection() {
 
           <div>
             <div className="flex items-center gap-4">
-              <span className="text-sm font-semibold text-[#c9bdfb]">01</span>
+              <span className="text-sm font-semibold text-[#ffffff]">01</span>
               <span className="h-px w-16 bg-white/20" aria-hidden="true" />
             </div>
             <h3 className="mt-6 text-4xl font-semibold tracking-[-0.02em] text-white sm:text-6xl">Amanah Drive</h3>
@@ -328,7 +328,7 @@ function ProjectsSection() {
 
           <div className="lg:order-1">
             <div className="flex items-center gap-4">
-              <span className="text-sm font-semibold text-[#c9bdfb]">02</span>
+              <span className="text-sm font-semibold text-[#ffffff]">02</span>
               <span className="h-px w-16 bg-white/20" aria-hidden="true" />
             </div>
             <h3 className="mt-6 text-4xl font-semibold tracking-[-0.02em] text-white sm:text-6xl">Aqarya</h3>
@@ -369,7 +369,7 @@ function ProjectsSection() {
 function CredentialsSection() {
   const numberStyles = ["text-white", "text-white/70", "text-white/50"];
   return (
-    <section className="border-y border-white/[0.08] bg-[#0b0b10] px-6 py-20 sm:px-10 lg:py-28">
+    <section className="border-y border-white/[0.08] bg-[#000000] px-6 py-20 sm:px-10 lg:py-28">
       <div className="mx-auto grid max-w-[1180px] gap-16 lg:grid-cols-[1fr_1fr] lg:gap-20">
         <div>
           <SectionLabel>Achievements</SectionLabel>
@@ -400,7 +400,7 @@ function CredentialsSection() {
 
 function PortfolioFooter() {
   return (
-    <footer id="contact" className="relative overflow-hidden border-t border-white/[0.08] bg-[#030305] px-6 pb-8 pt-16 sm:px-10 sm:pt-24 lg:pt-28">
+    <footer id="contact" className="relative overflow-hidden border-t border-white/[0.08] bg-[#000000] px-6 pb-8 pt-16 sm:px-10 sm:pt-24 lg:pt-28">
       <div className="pointer-events-none absolute inset-x-0 top-8 mx-auto max-w-[1180px] px-6 sm:top-12 sm:px-10">
         <div className="h-px bg-gradient-to-r from-transparent via-white/25 to-transparent" />
       </div>
@@ -408,7 +408,7 @@ function PortfolioFooter() {
       <div className="relative mx-auto max-w-[1180px]">
         <SectionLabel>Contact</SectionLabel>
         <h2 className="mt-6 max-w-[1050px] text-[54px] font-semibold leading-[0.98] tracking-[-0.03em] text-white sm:text-[80px] lg:text-[104px]">
-          Let&apos;s build <span className="text-[#c9bdfb]">something.</span>
+          Let&apos;s build <span className="text-[#ffffff]">something.</span>
         </h2>
 
         <div className="mt-12 grid gap-9 border-y border-white/12 py-9 sm:mt-16 sm:grid-cols-[minmax(0,1.35fr)_minmax(220px,0.65fr)] sm:items-end sm:gap-12 sm:py-11">
@@ -475,7 +475,7 @@ function PortfolioFooter() {
 
 export default function Home() {
   return (
-    <main id="top" className="min-h-screen overflow-x-hidden bg-[#060608] text-white">
+    <main id="top" className="min-h-screen overflow-x-hidden bg-[#000000] text-white">
       <PortfolioNav />
       <HeroSection />
       <SkillsSection />

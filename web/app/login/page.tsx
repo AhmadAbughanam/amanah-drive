@@ -38,18 +38,18 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col bg-[#0a0a0c] text-white">
+    <main className="flex min-h-screen flex-col bg-[#000000] text-white">
       <header className="flex items-center justify-between px-6 py-6 sm:px-10">
         <Link
           href="/"
-          className="group flex items-center gap-3 outline-none focus-visible:ring-2 focus-visible:ring-[#6e56cf]"
+          className="group flex items-center gap-3 outline-none focus-visible:ring-2 focus-visible:ring-[#ffffff]"
           aria-label="Ahmad Abughanam"
         >
           <span className="grid h-9 w-9 place-items-center rounded-lg border border-white/14 text-xs font-semibold text-white transition group-hover:border-white/28">AA</span>
         </Link>
         <Link
           href="/"
-          className="text-[11px] font-medium uppercase tracking-[0.16em] text-white/48 outline-none transition hover:text-white focus-visible:ring-2 focus-visible:ring-[#6e56cf]"
+          className="text-[11px] font-medium uppercase tracking-[0.16em] text-white/48 outline-none transition hover:text-white focus-visible:ring-2 focus-visible:ring-[#ffffff]"
         >
           Back to portfolio
         </Link>
@@ -57,7 +57,7 @@ export default function LoginPage() {
 
       <div className="flex flex-1 items-center justify-center px-6 py-12">
         <form
-          className="w-full max-w-[400px] rounded-lg border border-white/10 bg-[#111114] p-7 sm:p-8"
+          className="w-full max-w-[400px] rounded-lg border border-white/10 bg-[#0a0a0a] p-7 sm:p-8"
           onSubmit={onSubmit}
           noValidate
         >

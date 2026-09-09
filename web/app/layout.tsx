@@ -23,7 +23,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={inter.variable}>
-      <body className="bg-[#0a0a0c] font-sans text-white antialiased">
+      <body className="bg-black font-sans text-white antialiased">
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>

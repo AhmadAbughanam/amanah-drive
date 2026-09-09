@@ -133,7 +133,7 @@ function ChatAnswer({
             return (
               <button
                 aria-label={`Open citation ${reference}`}
-                className="mx-0.5 inline-flex min-w-5 items-center justify-center rounded-[4px] border border-[#6e56cf]/45 bg-[#6e56cf]/15 px-1.5 py-0.5 text-xs font-bold leading-none text-[#c9bdfb] transition hover:border-[#6e56cf]/80 hover:bg-[#6e56cf]/25 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6e56cf]/70"
+                className="mx-0.5 inline-flex min-w-5 items-center justify-center rounded-[4px] border border-[#ffffff]/45 bg-[#ffffff]/15 px-1.5 py-0.5 text-xs font-bold leading-none text-[#ffffff] transition hover:border-[#ffffff]/80 hover:bg-[#ffffff]/25 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffffff]/70"
                 onClick={() => onCitationClick(citation)}
                 type="button"
               >
@@ -147,7 +147,7 @@ function ChatAnswer({
           ul: ({ children }) => <ul className="my-3 list-disc space-y-1 pl-5">{children}</ul>,
           ol: ({ children }) => <ol className="my-3 list-decimal space-y-1 pl-5">{children}</ol>,
           li: ({ children }) => <li className="pl-1">{children}</li>,
-          code: ({ children }) => <code className="rounded-[4px] border border-white/10 bg-white/[0.08] px-1 py-0.5 font-mono text-[0.9em] text-[#c9bdfb]">{children}</code>,
+          code: ({ children }) => <code className="rounded-[4px] border border-white/10 bg-white/[0.08] px-1 py-0.5 font-mono text-[0.9em] text-[#ffffff]">{children}</code>,
         }}
       >
         {content}
@@ -464,62 +464,58 @@ export default function DrivePage() {
 
   if (status === "checking" || (status === "anonymous" && !contents)) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#0a0a0c] px-6 text-white">
+      <main className="flex min-h-screen items-center justify-center bg-[#000000] px-6 text-white">
         <p className={labelClass}>Checking session...</p>
       </main>
     );
   }
 
+  const navItems: { id: AppView; label: string }[] = [
+    { id: "files", label: "Files" },
+    { id: "knowledge", label: "Search & Chat" },
+    { id: "agent", label: "Agent" },
+    { id: "logs", label: "Logs" },
+  ];
+
   return (
-    <main className="min-h-screen bg-[#0a0a0c] px-3 py-3 text-white sm:px-6 sm:py-6">
-      <div className="mx-auto min-h-[calc(100vh-1.5rem)] max-w-[1500px] overflow-hidden rounded-[8px] border border-white/10 bg-[#111114] shadow-[0_34px_120px_rgba(0,0,0,0.65)] sm:min-h-[calc(100vh-3rem)]">
-        <header className="relative border-b border-white/10 bg-[#0d0d10] px-5 py-5 sm:px-8 lg:px-9">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-            <div className="flex items-center gap-4">
-              <ShieldMark />
-              <div>
-                <p className="text-[13px] font-bold uppercase tracking-[0.34em] text-white">Amanah Drive</p>
-                <p className="mt-1 text-[10px] uppercase tracking-[0.18em] text-white/38">Private knowledge workspace</p>
-              </div>
-            </div>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between lg:justify-end">
-              <nav className="grid grid-cols-2 rounded-[8px] border border-white/10 bg-white/[0.025] p-1 sm:grid-cols-4 sm:min-w-[520px]" aria-label="Drive sections">
-                <button
-                  className={`rounded-[6px] px-3 py-3 text-xs font-semibold uppercase tracking-[0.12em] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6e56cf]/70 sm:px-4 ${activeView === "files" ? "border border-[#6e56cf]/45 bg-[#6e56cf]/12 text-[#c9bdfb]" : "border border-transparent text-white/52 hover:bg-white/[0.05] hover:text-white"}`}
-                  type="button"
-                  onClick={() => setActiveView("files")}
-                >
-                  Files
-                </button>
-                <button
-                  className={`rounded-[6px] px-3 py-3 text-xs font-semibold uppercase tracking-[0.12em] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6e56cf]/70 sm:px-4 ${activeView === "knowledge" ? "border border-[#6e56cf]/45 bg-[#6e56cf]/12 text-[#c9bdfb]" : "border border-transparent text-white/52 hover:bg-white/[0.05] hover:text-white"}`}
-                  type="button"
-                  onClick={() => setActiveView("knowledge")}
-                >
-                  Search & Chat
-                </button>
-                <button
-                  className={`rounded-[6px] px-3 py-3 text-xs font-semibold uppercase tracking-[0.12em] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6e56cf]/70 sm:px-4 ${activeView === "logs" ? "border border-[#6e56cf]/45 bg-[#6e56cf]/12 text-[#c9bdfb]" : "border border-transparent text-white/52 hover:bg-white/[0.05] hover:text-white"}`}
-                  type="button"
-                  onClick={() => setActiveView("logs")}
-                >
-                  Logs
-                </button>
-                <button
-                  className={`rounded-[6px] px-3 py-3 text-xs font-semibold uppercase tracking-[0.12em] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3fb950]/70 sm:px-4 ${activeView === "agent" ? "border border-[#3fb950]/45 bg-[#3fb950]/12 text-[#7ee787]" : "border border-transparent text-white/52 hover:bg-white/[0.05] hover:text-white"}`}
-                  type="button"
-                  onClick={() => setActiveView("agent")}
-                >
-                  Agent
-                </button>
-              </nav>
-              <button className={secondaryButtonClass} onClick={signOut} type="button">
-                Logout <span aria-hidden="true" className="ml-2">[-&gt;</span>
-              </button>
+    <main className="min-h-screen bg-black px-3 py-3 text-white sm:px-6 sm:py-6">
+      <div className="mx-auto flex min-h-[calc(100vh-1.5rem)] max-w-[1500px] flex-col overflow-hidden rounded-[8px] border border-white/10 bg-[#0a0a0a] shadow-[0_34px_120px_rgba(0,0,0,0.65)] sm:min-h-[calc(100vh-3rem)] lg:flex-row">
+        {/* Structural change from the prior top-tab nav: a persistent sidebar, matching the
+            dominant pattern across every reference product researched (Notion, Linear, Vercel,
+            file managers) rather than a horizontal tab bar. Collapses to a horizontal strip
+            below the lg breakpoint so mobile isn't left with a fixed-width sidebar eating the
+            viewport. */}
+        <aside className="flex shrink-0 flex-col border-b border-white/10 bg-[#0a0a0a] lg:w-64 lg:border-b-0 lg:border-r">
+          <div className="flex items-center gap-3 border-b border-white/10 px-5 py-5">
+            <ShieldMark />
+            <div className="min-w-0">
+              <p className="truncate text-[13px] font-bold uppercase tracking-[0.28em] text-white">Amanah Drive</p>
+              <p className="mt-1 truncate text-[10px] uppercase tracking-[0.18em] text-white/38">Private workspace</p>
             </div>
           </div>
-        </header>
 
+          <nav className="flex gap-1 overflow-x-auto px-3 py-3 lg:flex-1 lg:flex-col lg:overflow-visible" aria-label="Drive sections">
+            {navItems.map((item) => (
+              <button
+                key={item.id}
+                className={`shrink-0 whitespace-nowrap rounded-lg px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70 ${activeView === item.id ? "bg-white text-black" : "text-white/56 hover:bg-white/[0.06] hover:text-white"}`}
+                type="button"
+                onClick={() => setActiveView(item.id)}
+                aria-current={activeView === item.id ? "page" : undefined}
+              >
+                {item.label}
+              </button>
+            ))}
+          </nav>
+
+          <div className="border-t border-white/10 p-3">
+            <button className={`${secondaryButtonClass} w-full`} onClick={signOut} type="button">
+              Logout <span aria-hidden="true" className="ml-2">[-&gt;</span>
+            </button>
+          </div>
+        </aside>
+
+        <div className="min-w-0 flex-1">
         {activeView === "files" ? (
           <FilesView
             breadcrumbs={breadcrumbs}
@@ -570,6 +566,7 @@ export default function DrivePage() {
         ) : (
           <AgentView run={agentRun} onRunChange={setAgentRun} onFilesChanged={loadContents} />
         )}
+        </div>
       </div>
     </main>
   );
@@ -747,7 +744,7 @@ function AgentView({
           <div className="mt-4 space-y-3">
             {run.steps.map((step) => <AgentTranscriptStep key={`${step.runId}:${step.sequence}`} step={step} />)}
             {run.status === "Pending" || run.status === "Running" ? (
-              <div aria-live="polite" className="rounded-[7px] border border-[#6e56cf]/20 bg-[#6e56cf]/[0.07] px-4 py-3 text-sm text-[#c9bdfb]">
+              <div aria-live="polite" className="rounded-[7px] border border-[#ffffff]/20 bg-[#ffffff]/[0.07] px-4 py-3 text-sm text-[#ffffff]">
                 {run.status === "Pending" ? "Agent run queued…" : "Agent is working…"}
               </div>
             ) : null}
@@ -768,7 +765,7 @@ function AgentView({
 
 function AgentTranscriptStep({ step }: { step: AgentRunStepResponse }) {
   if (step.role === "user") {
-    return <div className="ml-auto max-w-[88%] rounded-[7px] border border-[#6e56cf]/30 bg-[#6e56cf]/10 px-4 py-3 text-sm leading-6 text-[#c9bdfb]"><p className="mb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#c9bdfb]">You</p>{step.content}</div>;
+    return <div className="ml-auto max-w-[88%] rounded-[7px] border border-[#ffffff]/30 bg-[#ffffff]/10 px-4 py-3 text-sm leading-6 text-[#ffffff]"><p className="mb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#ffffff]">You</p>{step.content}</div>;
   }
 
   if (step.role === "assistant") {
@@ -781,7 +778,7 @@ function AgentTranscriptStep({ step }: { step: AgentRunStepResponse }) {
   // happened rather than a fixed color regardless of outcome.
   const toneByStatus: Record<string, { rule: string; badge: string }> = {
     PendingApproval: { rule: "border-l-[#e3b341]/60", badge: statusTone.warning },
-    Executing: { rule: "border-l-[#6e56cf]/60", badge: statusTone.accent },
+    Executing: { rule: "border-l-[#ffffff]/60", badge: statusTone.accent },
     Executed: { rule: "border-l-[#3fb950]/60", badge: statusTone.success },
     Rejected: { rule: "border-l-white/25", badge: statusTone.neutral },
     Invalid: { rule: "border-l-[#f85149]/60", badge: statusTone.danger },
@@ -860,7 +857,7 @@ function FilesView({
   const lastItem = (currentPage - 1) * pageSize + totalItems;
 
   return (
-    <section className="relative bg-[#111114] px-5 py-7 sm:px-8 lg:px-9">
+    <section className="relative bg-[#0a0a0a] px-5 py-7 sm:px-8 lg:px-9">
       <div className="relative mb-8 border-b border-white/10 pb-7">
         <SectionLabel>Secure workspace</SectionLabel>
         <h2 className="mt-3 text-4xl font-semibold tracking-[-0.02em] leading-tight text-white sm:text-5xl">File <span className={portfolioClasses.gradientText}>management</span></h2>
@@ -878,7 +875,7 @@ function FilesView({
           <p className={labelClass}>Create new</p>
           <div className={`${portfolioClasses.insetPanel} mt-5 p-4`}>
             <div className="flex gap-4">
-              <div className="grid h-14 w-14 shrink-0 place-items-center rounded-[8px] border border-[#6e56cf]/30 bg-[#6e56cf]/10 text-[#c9bdfb]">
+              <div className="grid h-14 w-14 shrink-0 place-items-center rounded-[8px] border border-[#ffffff]/30 bg-[#ffffff]/10 text-[#ffffff]">
                 <FolderGlyph />
               </div>
               <div>
@@ -907,7 +904,7 @@ function FilesView({
           <p className={labelClass}>Upload files</p>
           <div className={`${portfolioClasses.insetPanel} mt-5 p-4`}>
             <div className="flex gap-4">
-              <div className="grid h-14 w-14 shrink-0 place-items-center rounded-[8px] border border-[#6e56cf]/30 bg-[#6e56cf]/10 text-[#c9bdfb]">
+              <div className="grid h-14 w-14 shrink-0 place-items-center rounded-[8px] border border-[#ffffff]/30 bg-[#ffffff]/10 text-[#ffffff]">
                 <UploadGlyph />
               </div>
               <div>
@@ -915,7 +912,7 @@ function FilesView({
                 <p className="mt-1 text-sm leading-5 text-white/52">Add files to your drive. Supported formats below.</p>
               </div>
             </div>
-            <label className="mt-5 flex min-h-[136px] cursor-pointer flex-col items-center justify-center rounded-[8px] border border-dashed border-white/20 bg-white/[0.025] px-4 text-center text-sm text-white/52 transition hover:border-[#6e56cf]/55 hover:bg-[#6e56cf]/[0.06] hover:text-white/75">
+            <label className="mt-5 flex min-h-[136px] cursor-pointer flex-col items-center justify-center rounded-[8px] border border-dashed border-white/20 bg-white/[0.025] px-4 text-center text-sm text-white/52 transition hover:border-[#ffffff]/55 hover:bg-[#ffffff]/[0.06] hover:text-white/75">
               <DocumentGlyph />
               <span className="mt-3">Drag and drop files here or click to browse</span>
               <input
@@ -938,7 +935,7 @@ function FilesView({
             </label>
           </div>
 
-          <div className="mt-5 flex gap-3 rounded-[8px] border border-white/10 bg-white/[0.025] p-4 text-[#c9bdfb]">
+          <div className="mt-5 flex gap-3 rounded-[8px] border border-white/10 bg-white/[0.025] p-4 text-[#ffffff]">
             <InfoGlyph />
             <p className="text-sm leading-5 text-white/55">
               <span className="block font-semibold text-white/82">Supported formats</span>
@@ -955,7 +952,7 @@ function FilesView({
                 {breadcrumbs.map((item, index) => (
                   <button
                     key={`${item.id ?? "root"}-${index}`}
-                    className="text-base text-white/72 transition hover:text-[#c9bdfb]"
+                    className="text-base text-white/72 transition hover:text-[#ffffff]"
                     onClick={() => onGoToBreadcrumb(index)}
                     type="button"
                   >
@@ -971,7 +968,7 @@ function FilesView({
                 <span>Search files...</span>
               </div>
               <div className="grid grid-cols-2 gap-1 rounded-[8px] border border-white/10 bg-white/[0.035] p-1">
-                <span className="grid h-10 w-10 place-items-center rounded-[6px] bg-[#6e56cf]/12 text-[#c9bdfb]" aria-hidden="true">=</span>
+                <span className="grid h-10 w-10 place-items-center rounded-[6px] bg-[#ffffff]/12 text-[#ffffff]" aria-hidden="true">=</span>
                 <span className="grid h-10 w-10 place-items-center text-white/42" aria-hidden="true">#</span>
               </div>
             </div>
@@ -992,7 +989,7 @@ function FilesView({
               {contents?.folders.map((folder) => (
                 <div key={folder.id} className="grid gap-4 px-5 py-5 transition hover:bg-white/[0.025] sm:px-7 xl:grid-cols-[minmax(160px,1fr)_70px_75px_130px_300px] xl:items-center xl:gap-3 2xl:grid-cols-[minmax(220px,1fr)_100px_100px_180px_310px] 2xl:gap-4">
                   <button className="flex min-w-0 items-center gap-4 text-left" onClick={() => onEnterFolder(folder)} type="button">
-                    <span className="grid h-14 w-14 shrink-0 place-items-center rounded-[8px] border border-[#6e56cf]/25 bg-[#6e56cf]/[0.07] text-[#c9bdfb]">
+                    <span className="grid h-14 w-14 shrink-0 place-items-center rounded-[8px] border border-[#ffffff]/25 bg-[#ffffff]/[0.07] text-[#ffffff]">
                       <FolderGlyph />
                     </span>
                     <span className="min-w-0">
@@ -1017,7 +1014,7 @@ function FilesView({
               {contents?.files.map((file) => (
                 <div key={file.id} className="grid gap-4 px-5 py-5 transition hover:bg-white/[0.025] sm:px-7 xl:grid-cols-[minmax(160px,1fr)_70px_75px_130px_300px] xl:items-center xl:gap-3 2xl:grid-cols-[minmax(220px,1fr)_100px_100px_180px_310px] 2xl:gap-4">
                   <div className="flex min-w-0 items-center gap-4">
-                    <span className="grid h-14 w-14 shrink-0 place-items-center rounded-[8px] border border-[#6e56cf]/25 bg-[#6e56cf]/[0.07] text-[#c9bdfb]">
+                    <span className="grid h-14 w-14 shrink-0 place-items-center rounded-[8px] border border-[#ffffff]/25 bg-[#ffffff]/[0.07] text-[#ffffff]">
                       <DocumentGlyph />
                     </span>
                     <div className="min-w-0">
@@ -1025,7 +1022,7 @@ function FilesView({
                       <p className="mt-1 text-sm text-white/42">{friendlyContentType(file.contentType)}</p>
                     </div>
                   </div>
-                  <span className="w-fit rounded-[8px] border border-[#6e56cf]/25 bg-[#6e56cf]/[0.07] px-3 py-2 text-xs text-[#c9bdfb]">{fileExtension(file.originalFileName)}</span>
+                  <span className="w-fit rounded-[8px] border border-[#ffffff]/25 bg-[#ffffff]/[0.07] px-3 py-2 text-xs text-[#ffffff]">{fileExtension(file.originalFileName)}</span>
                   <span className="text-sm text-white/52">{formatBytes(file.sizeBytes)}</span>
                   <span className="text-sm leading-5 text-white/52">{formatDate(file.updatedAt)}</span>
                   <div className="flex flex-wrap gap-2">
@@ -1063,7 +1060,7 @@ function FilesView({
               <button className={iconButtonClass} disabled={currentPage <= 1 || isLoading} onClick={() => onPageChange((value) => Math.max(1, value - 1))} type="button" aria-label="Previous page">
                 &lt;
               </button>
-              <span className="grid h-11 w-11 place-items-center rounded-[8px] bg-[#6e56cf] text-sm font-semibold text-[#0a0a0c]">{contents?.page ?? currentPage}</span>
+              <span className="grid h-11 w-11 place-items-center rounded-[8px] bg-[#ffffff] text-sm font-semibold text-[#000000]">{contents?.page ?? currentPage}</span>
               <button
                 className={iconButtonClass}
                 disabled={isLoading || totalItems < pageSize}
@@ -1141,7 +1138,7 @@ function KnowledgeView({
   }
 
   return (
-    <section className="bg-[#050506] px-5 py-7 sm:px-8 lg:px-9">
+    <section className="bg-[#000000] px-5 py-7 sm:px-8 lg:px-9">
       <div className="relative mb-7 flex flex-col gap-4 border-b border-white/10 pb-7 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <SectionLabel>Amanah Drive</SectionLabel>
@@ -1156,12 +1153,12 @@ function KnowledgeView({
             <h3 className="mt-3 text-3xl font-semibold tracking-[-0.02em] leading-tight text-white/92">Find document passages</h3>
           </div>
 
-          <form className="mt-6 rounded-[8px] border border-white/10 bg-[#0d0d10] p-4" onSubmit={onSearch}>
+          <form className="mt-6 rounded-[8px] border border-white/10 bg-[#0a0a0a] p-4" onSubmit={onSearch}>
             <label className={labelClass} htmlFor="search-documents">
               Search documents
             </label>
             <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-              <div className="flex min-w-0 flex-1 items-center gap-3 rounded-[8px] border border-white/12 bg-white/[0.045] px-4 text-white/55 transition focus-within:border-[#6e56cf]/70 focus-within:ring-2 focus-within:ring-[#6e56cf]/20">
+              <div className="flex min-w-0 flex-1 items-center gap-3 rounded-[8px] border border-white/12 bg-white/[0.045] px-4 text-white/55 transition focus-within:border-[#ffffff]/70 focus-within:ring-2 focus-within:ring-[#ffffff]/20">
                 <SearchGlyph />
                 <input
                   id="search-documents"
@@ -1192,10 +1189,10 @@ function KnowledgeView({
             {!searchLoading && hasSearched && !searchError && searchResults.length === 0 ? <p className="text-sm text-white/52">No matching document sections found.</p> : null}
             {!searchLoading && !hasSearched ? <p className="text-sm leading-6 text-white/52">Search processed documents by meaning, not just filenames.</p> : null}
             {searchResults.map((result) => (
-              <article key={result.chunkId} className="rounded-[8px] border border-white/10 bg-white/[0.025] p-4 transition hover:border-[#6e56cf]/30 hover:bg-[#6e56cf]/[0.04] sm:p-5">
+              <article key={result.chunkId} className="rounded-[8px] border border-white/10 bg-white/[0.025] p-4 transition hover:border-[#ffffff]/30 hover:bg-[#ffffff]/[0.04] sm:p-5">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex min-w-0 gap-4">
-                    <span className="mt-1 grid h-11 w-11 shrink-0 place-items-center rounded-[8px] border border-[#6e56cf]/25 bg-[#6e56cf]/10 text-[#c9bdfb]">
+                    <span className="mt-1 grid h-11 w-11 shrink-0 place-items-center rounded-[8px] border border-[#ffffff]/25 bg-[#ffffff]/10 text-[#ffffff]">
                       <DocumentGlyph />
                     </span>
                     <div className="min-w-0">
@@ -1210,7 +1207,7 @@ function KnowledgeView({
                 <div className="mt-5 flex items-center gap-3">
                   <span className={labelClass}>Relevance</span>
                   <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.08]">
-                    <span className="block h-full rounded-full bg-[#6e56cf]" style={{ width: `${Math.max(8, Math.min(100, result.score * 100))}%` }} />
+                    <span className="block h-full rounded-full bg-[#ffffff]" style={{ width: `${Math.max(8, Math.min(100, result.score * 100))}%` }} />
                   </span>
                   <span className="text-sm text-white/55">{formatScore(result.score)}</span>
                 </div>
@@ -1220,7 +1217,7 @@ function KnowledgeView({
             ))}
           </div>
 
-          <div className="mt-6 flex gap-3 rounded-[8px] border border-white/10 bg-white/[0.025] p-4 text-[#c9bdfb]">
+          <div className="mt-6 flex gap-3 rounded-[8px] border border-white/10 bg-white/[0.025] p-4 text-[#ffffff]">
             <InfoGlyph />
             <p className="text-sm leading-6 text-white/55">
               <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-white/82">Search tips</span>
@@ -1235,7 +1232,7 @@ function KnowledgeView({
               <p className={labelClass}>AI chat</p>
               <h3 className="mt-3 text-3xl font-semibold tracking-[-0.02em] leading-tight text-white/92">Ask your drive</h3>
               <p className="mt-2 text-sm text-white/48">Get answers from your documents using AI.</p>
-              {conversationId ? <p className="mt-2 text-xs uppercase tracking-[0.14em] text-[#c9bdfb]">Conversation active</p> : null}
+              {conversationId ? <p className="mt-2 text-xs uppercase tracking-[0.14em] text-[#ffffff]">Conversation active</p> : null}
             </div>
             <button className={secondaryButtonClass} onClick={onNewConversation} type="button">
               New conversation <span aria-hidden="true" className="ml-2">+</span>
@@ -1249,7 +1246,7 @@ function KnowledgeView({
               </div>
             ) : null}
             {chatEntries.map((entry) => (
-              <article key={entry.id} className={entry.role === "user" ? "ml-auto max-w-[760px] rounded-[8px] border border-[#6e56cf]/35 bg-[#6e56cf]/[0.12] px-5 py-4 text-white shadow-[0_18px_35px_rgba(0,0,0,0.28)]" : "mr-auto max-w-[760px] rounded-[8px] border border-white/10 bg-white/[0.045] px-5 py-4 text-white/76"}>
+              <article key={entry.id} className={entry.role === "user" ? "ml-auto max-w-[760px] rounded-[8px] border border-[#ffffff]/35 bg-[#ffffff]/[0.12] px-5 py-4 text-white shadow-[0_18px_35px_rgba(0,0,0,0.28)]" : "mr-auto max-w-[760px] rounded-[8px] border border-white/10 bg-white/[0.045] px-5 py-4 text-white/76"}>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] opacity-65">{entry.role === "user" ? "You" : "Amanah Drive"}</p>
                 {entry.role === "assistant" ? <ChatAnswer content={entry.content} citations={entry.citations ?? []} onCitationClick={(citation) => openCitation(entry.id, citation)} /> : <p className="mt-3 whitespace-pre-wrap text-sm leading-7">{entry.content}</p>}
                 {entry.citations && entry.citations.length > 0 ? (
@@ -1265,12 +1262,12 @@ function KnowledgeView({
                           ref={(node) => {
                             citationCardRefs.current[cardKey] = node;
                           }}
-                          className={`rounded-[8px] border bg-[#6e56cf]/[0.05] p-3 transition ${isActive ? "border-[#6e56cf]/65 ring-1 ring-[#6e56cf]/40" : "border-[#6e56cf]/20"}`}
+                          className={`rounded-[8px] border bg-[#ffffff]/[0.05] p-3 transition ${isActive ? "border-[#ffffff]/65 ring-1 ring-[#ffffff]/40" : "border-[#ffffff]/20"}`}
                           data-citation-active={isActive ? "true" : undefined}
                         >
                           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <p className="text-sm font-semibold text-white/85">[{citation.reference}] {citation.fileName}</p>
-                            <button className="text-xs font-semibold uppercase tracking-[0.14em] text-[#c9bdfb] transition hover:text-white" onClick={() => onDownloadCitation(citation)} type="button">
+                            <button className="text-xs font-semibold uppercase tracking-[0.14em] text-[#ffffff] transition hover:text-white" onClick={() => onDownloadCitation(citation)} type="button">
                               Download
                             </button>
                           </div>
@@ -1294,7 +1291,7 @@ function KnowledgeView({
             <label className="sr-only" htmlFor="chat-question">
               Ask a question
             </label>
-            <div className="rounded-[8px] border border-white/12 bg-white/[0.045] p-3 transition focus-within:border-[#6e56cf]/60 focus-within:ring-2 focus-within:ring-[#6e56cf]/15">
+            <div className="rounded-[8px] border border-white/12 bg-white/[0.045] p-3 transition focus-within:border-[#ffffff]/60 focus-within:ring-2 focus-within:ring-[#ffffff]/15">
               <textarea
                 id="chat-question"
                 className="min-h-16 w-full resize-none bg-transparent px-2 py-2 text-sm text-white outline-none placeholder:text-white/32"
@@ -1304,7 +1301,7 @@ function KnowledgeView({
               />
               <div className="flex items-center justify-between">
                 <span className="text-white/35" aria-hidden="true">@</span>
-                <button className="grid h-12 w-12 place-items-center rounded-[8px] bg-[#6e56cf] text-[#0a0a0c] transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6e56cf] disabled:cursor-not-allowed disabled:opacity-35" disabled={chatLoading} type="submit">
+                <button className="grid h-12 w-12 place-items-center rounded-[8px] bg-[#ffffff] text-[#000000] transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffffff] disabled:cursor-not-allowed disabled:opacity-35" disabled={chatLoading} type="submit">
                   <span className="sr-only">{chatLoading ? "Thinking" : "Send"}</span>
                   <SendGlyph />
                 </button>
@@ -1335,7 +1332,7 @@ function CitationSnippetDialog({ citation, onClose, onDownload }: { citation: Ch
     <dialog
       ref={dialogRef}
       aria-labelledby="citation-dialog-title"
-      className="w-[min(92vw,620px)] rounded-[10px] border border-[#6e56cf]/35 bg-[#0d0d10] p-0 text-white shadow-[0_28px_90px_rgba(0,0,0,0.7)] backdrop:bg-black/75"
+      className="w-[min(92vw,620px)] rounded-[10px] border border-[#ffffff]/35 bg-[#0a0a0a] p-0 text-white shadow-[0_28px_90px_rgba(0,0,0,0.7)] backdrop:bg-black/75"
       onClick={(event) => {
         if (event.target === event.currentTarget) {
           dialogRef.current?.close();
@@ -1466,23 +1463,23 @@ function ObservabilityView() {
   const chartAxis = { fill: "rgba(255,255,255,0.45)", fontSize: 11 };
 
   return (
-    <section className="min-h-[calc(100vh-118px)] bg-[#050506] px-4 py-7 text-white sm:px-7 lg:px-9 lg:py-10">
+    <section className="min-h-[calc(100vh-118px)] bg-[#000000] px-4 py-7 text-white sm:px-7 lg:px-9 lg:py-10">
       <div className="mx-auto max-w-[1380px]">
         <div className="relative flex flex-col gap-6 border-b border-white/10 pb-8 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <SectionLabel className="text-[#6e56cf]">Administration / observability</SectionLabel>
+            <SectionLabel className="text-[#ffffff]">Administration / observability</SectionLabel>
             <h2 className="mt-3 text-4xl font-semibold tracking-[-0.02em] leading-tight text-white sm:text-6xl">System <span className={portfolioClasses.gradientText}>signals</span></h2>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-white/48">Request health, security events, AI usage, activity, and retained structured logs.</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex rounded-[8px] border border-white/12 bg-white/[0.035] p-1" aria-label="Metrics range">
               {(["24h", "7d", "30d"] as const).map((option) => (
-                <button key={option} className={`rounded-[6px] border px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition ${range === option ? "border-[#6e56cf]/45 bg-[#6e56cf]/12 text-[#c9bdfb]" : "border-transparent text-white/50 hover:text-white"}`} onClick={() => setRange(option)} type="button">
+                <button key={option} className={`rounded-[6px] border px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition ${range === option ? "border-[#ffffff]/45 bg-[#ffffff]/12 text-[#ffffff]" : "border-transparent text-white/50 hover:text-white"}`} onClick={() => setRange(option)} type="button">
                   {option}
                 </button>
               ))}
             </div>
-            <button className="rounded-[8px] border border-white/14 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-white/65 transition hover:border-[#6e56cf]/65 hover:text-white" disabled={snapshotLoading || logLoading || activityLoading} onClick={() => setRefreshKey((value) => value + 1)} type="button">
+            <button className="rounded-[8px] border border-white/14 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-white/65 transition hover:border-[#ffffff]/65 hover:text-white" disabled={snapshotLoading || logLoading || activityLoading} onClick={() => setRefreshKey((value) => value + 1)} type="button">
               Refresh
             </button>
           </div>
@@ -1496,13 +1493,13 @@ function ObservabilityView() {
         <div className="mt-7 grid gap-3 lg:grid-cols-[1.3fr_1fr]">
           <SystemHealthHero errorRatePercent={snapshot?.stats.errorRatePercent} requestsToday={snapshot?.stats.requestsToday} range={range} />
           <div className="grid grid-cols-2 gap-3 lg:grid-rows-2">
-            <MetricCard label="Requests today (UTC)" value={formatInteger(snapshot?.stats.requestsToday)} detail="Completed API requests" accent="text-[#c9bdfb]" />
+            <MetricCard label="Requests today (UTC)" value={formatInteger(snapshot?.stats.requestsToday)} detail="Completed API requests" accent="text-[#ffffff]" />
             <MetricCard label="Average latency" value={formatMilliseconds(snapshot?.stats.averageLatencyMilliseconds)} detail={`Across the selected ${range}`} accent="text-[#f0c674]" />
             <MetricCard
               label="AI spend this month"
               value={formatCurrency(snapshot?.stats.aiSpendThisMonthUsd)}
               detail={snapshot?.stats.aiPricingComplete === false ? "Known spend only; pricing is incomplete" : "Estimated from measured model tokens"}
-              accent="text-[#c9bdfb]"
+              accent="text-[#ffffff]"
             />
             <MetricCard label="5xx error rate" value={formatPercent(snapshot?.stats.errorRatePercent)} detail={`Across the selected ${range}`} accent="text-[#ff9891]" />
           </div>
@@ -1604,8 +1601,8 @@ function ObservabilityView() {
           <InsightPanel title="Recent security events" empty="No tagged security events in this range.">
             {snapshot?.recentSecurityEvents.map((item, index) => (
               <div className="grid grid-cols-[10px_minmax(0,1fr)] gap-3 border-b border-white/[0.08] py-4 last:border-0" key={`${item.timestamp}-${index}`}>
-                <span className="mt-1.5 h-2 w-2 rounded-full bg-[#6e56cf] shadow-[0_0_12px_rgba(110,86,207,0.55)]" />
-                <div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#c9bdfb]">{item.event}</p><p className="mt-2 text-sm leading-6 text-white/65">{item.message}</p><p className="mt-2 text-xs text-white/35">{formatDate(item.timestamp)}</p></div>
+                <span className="mt-1.5 h-2 w-2 rounded-full bg-[#ffffff] shadow-[0_0_12px_rgba(110,86,207,0.55)]" />
+                <div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#ffffff]">{item.event}</p><p className="mt-2 text-sm leading-6 text-white/65">{item.message}</p><p className="mt-2 text-xs text-white/35">{formatDate(item.timestamp)}</p></div>
               </div>
             ))}
           </InsightPanel>
@@ -1620,7 +1617,7 @@ function ObservabilityView() {
               ["activity", "Activity"],
               ["errors", "Errors"],
             ] as const).map(([value, label]) => (
-              <button key={value} role="tab" aria-selected={category === value} className={`shrink-0 rounded-[8px] border px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] transition ${category === value ? "border-[#6e56cf]/45 bg-[#6e56cf]/[0.12] text-white" : "border-white/14 text-white/50 hover:border-white/30 hover:text-white"}`} onClick={() => selectCategory(value)} type="button">
+              <button key={value} role="tab" aria-selected={category === value} className={`shrink-0 rounded-[8px] border px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] transition ${category === value ? "border-[#ffffff]/45 bg-[#ffffff]/[0.12] text-white" : "border-white/14 text-white/50 hover:border-white/30 hover:text-white"}`} onClick={() => selectCategory(value)} type="button">
                 {label}
               </button>
             ))}
@@ -1633,7 +1630,7 @@ function ObservabilityView() {
               <form className="grid gap-4 border-b border-white/10 p-5 md:grid-cols-2 xl:grid-cols-[140px_170px_minmax(220px,1fr)_180px_180px_auto] xl:items-end" onSubmit={applyFilters}>
                 <DarkSelect label="Level" value={filters.level} onChange={(value) => setFilters({ ...filters, level: value })} options={[["", "All levels"], ["Information", "Information"], ["Warning", "Warning"], ["Error", "Error"], ["Fatal", "Fatal"], ["Debug", "Debug"]]} />
                 <DarkSelect label="Module" value={filters.source} onChange={(value) => setFilters({ ...filters, source: value })} options={[["", "All modules"], ["Auth", "Auth"], ["Drive", "Drive"], ["Processing", "Processing"], ["SearchChat", "Search / Chat"], ["Admin", "Admin"]]} />
-                <label className="block"><span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/38">Search logs</span><input className="mt-2 w-full rounded-[7px] border border-white/12 bg-black/25 px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/25 focus:border-[#6e56cf]/70" value={filters.search} onChange={(event) => setFilters({ ...filters, search: event.target.value })} placeholder="Message, path, source..." /></label>
+                <label className="block"><span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/38">Search logs</span><input className="mt-2 w-full rounded-[7px] border border-white/12 bg-black/25 px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/25 focus:border-[#ffffff]/70" value={filters.search} onChange={(event) => setFilters({ ...filters, search: event.target.value })} placeholder="Message, path, source..." /></label>
                 <DarkDate label="From" value={filters.from} onChange={(value) => setFilters({ ...filters, from: value })} />
                 <DarkDate label="To" value={filters.to} onChange={(value) => setFilters({ ...filters, to: value })} />
                 <button className={primaryButtonClass} disabled={logLoading} type="submit">Apply</button>
@@ -1697,7 +1694,7 @@ function SystemHealthHero({
   }[status];
 
   return (
-    <article className="flex flex-col justify-between rounded-lg border border-white/10 bg-[#111114] p-6">
+    <article className="flex flex-col justify-between rounded-lg border border-white/10 bg-[#0a0a0a] p-6">
       <div className="flex items-center justify-between">
         <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/38">System health</p>
         <span className={`${portfolioClasses.badge} ${copy.tone}`}>
@@ -1731,18 +1728,18 @@ function ObservabilityActivity({ activity, error, isLoading, onPageChange }: { a
     <div className="min-h-[380px] divide-y divide-white/[0.08]">
       {isLoading && !activity ? <p className="p-6 text-sm text-white/45">Loading recent activity...</p> : null}
       {!isLoading && activity?.entries.length === 0 ? <p className="p-6 text-sm text-white/45">No activity has been recorded yet.</p> : null}
-      {activity?.entries.map((entry) => <article className="grid gap-3 px-5 py-5 sm:grid-cols-[170px_minmax(0,1fr)] sm:px-6" key={entry.id}><div><span className="rounded-full border border-[#6e56cf]/30 bg-[#6e56cf]/10 px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#c9bdfb]">{activityTypeLabel(entry.type)}</span><time className="mt-3 block text-xs text-white/35" dateTime={entry.occurredAt}>{formatDate(entry.occurredAt)}</time></div><div><p className="text-xl font-medium text-white/82">{entry.summary}</p>{entry.fileId ? <p className="mt-2 break-all text-xs text-white/28">File {entry.fileId}</p> : null}{entry.conversationId ? <p className="mt-2 break-all text-xs text-white/28">Conversation {entry.conversationId}</p> : null}</div></article>)}
+      {activity?.entries.map((entry) => <article className="grid gap-3 px-5 py-5 sm:grid-cols-[170px_minmax(0,1fr)] sm:px-6" key={entry.id}><div><span className="rounded-full border border-[#ffffff]/30 bg-[#ffffff]/10 px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#ffffff]">{activityTypeLabel(entry.type)}</span><time className="mt-3 block text-xs text-white/35" dateTime={entry.occurredAt}>{formatDate(entry.occurredAt)}</time></div><div><p className="text-xl font-medium text-white/82">{entry.summary}</p>{entry.fileId ? <p className="mt-2 break-all text-xs text-white/28">File {entry.fileId}</p> : null}{entry.conversationId ? <p className="mt-2 break-all text-xs text-white/28">Conversation {entry.conversationId}</p> : null}</div></article>)}
     </div>
     <div className="flex items-center justify-between border-t border-white/10 px-5 py-5 text-sm text-white/42"><span>Page {activity?.page ?? 1}</span><div className="flex gap-2"><DarkPageButton disabled={isLoading || (activity?.page ?? 1) <= 1} onClick={() => onPageChange(Math.max(1, (activity?.page ?? 1) - 1))}>Previous</DarkPageButton><DarkPageButton disabled={isLoading || !activity?.hasMore} onClick={() => onPageChange((activity?.page ?? 1) + 1)}>Next</DarkPageButton></div></div>
   </div>;
 }
 
 function DarkSelect({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: ReadonlyArray<readonly [string, string]> }) {
-  return <label className="block"><span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/38">{label}</span><select className="mt-2 w-full rounded-[7px] border border-white/12 bg-[#111114] px-3 py-2.5 text-sm text-white outline-none focus:border-[#6e56cf]/70" value={value} onChange={(event) => onChange(event.target.value)}>{options.map(([optionValue, optionLabel]) => <option value={optionValue} key={optionValue || "all"}>{optionLabel}</option>)}</select></label>;
+  return <label className="block"><span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/38">{label}</span><select className="mt-2 w-full rounded-[7px] border border-white/12 bg-[#0a0a0a] px-3 py-2.5 text-sm text-white outline-none focus:border-[#ffffff]/70" value={value} onChange={(event) => onChange(event.target.value)}>{options.map(([optionValue, optionLabel]) => <option value={optionValue} key={optionValue || "all"}>{optionLabel}</option>)}</select></label>;
 }
 
 function DarkDate({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
-  return <label className="block"><span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/38">{label}</span><input type="datetime-local" className="mt-2 w-full rounded-[7px] border border-white/12 bg-[#111114] px-3 py-2.5 text-sm text-white outline-none focus:border-[#6e56cf]/70 [color-scheme:dark]" value={value} onChange={(event) => onChange(event.target.value)} /></label>;
+  return <label className="block"><span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/38">{label}</span><input type="datetime-local" className="mt-2 w-full rounded-[7px] border border-white/12 bg-[#0a0a0a] px-3 py-2.5 text-sm text-white outline-none focus:border-[#ffffff]/70 [color-scheme:dark]" value={value} onChange={(event) => onChange(event.target.value)} /></label>;
 }
 
 function DarkPageButton({ children, disabled, onClick }: { children: React.ReactNode; disabled: boolean; onClick: () => void }) {
@@ -1766,7 +1763,7 @@ function FileMoveControl({
     <div className="flex rounded-[8px] border border-white/12 bg-white/[0.035]">
       <select
         aria-label={`Move ${file.originalFileName} to folder`}
-        className="max-w-[92px] rounded-l-[8px] bg-[#0d0d10] px-2 text-xs text-white/72 outline-none focus:text-white"
+        className="max-w-[92px] rounded-l-[8px] bg-[#0a0a0a] px-2 text-xs text-white/72 outline-none focus:text-white"
         value={target}
         onChange={(event) => onMoveTargetChange(file.id, event.target.value)}
       >
@@ -1777,7 +1774,7 @@ function FileMoveControl({
           </option>
         ))}
       </select>
-      <button className="grid h-11 w-11 place-items-center border-l border-white/10 text-white/72 transition hover:bg-[#6e56cf]/10 hover:text-[#c9bdfb] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6e56cf]/70" onClick={() => onMoveFile(file)} type="button" aria-label={`Move ${file.originalFileName}`}>
+      <button className="grid h-11 w-11 place-items-center border-l border-white/10 text-white/72 transition hover:bg-[#ffffff]/10 hover:text-[#ffffff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffffff]/70" onClick={() => onMoveFile(file)} type="button" aria-label={`Move ${file.originalFileName}`}>
         <FolderGlyph />
       </button>
     </div>
@@ -1786,7 +1783,7 @@ function FileMoveControl({
 
 function ShieldMark() {
   return (
-    <span className="grid h-9 w-9 place-items-center rounded-[7px] border border-[#6e56cf]/55 bg-[#6e56cf]/10 text-[#c9bdfb]" aria-hidden="true">
+    <span className="grid h-9 w-9 place-items-center rounded-[7px] border border-[#ffffff]/55 bg-[#ffffff]/10 text-[#ffffff]" aria-hidden="true">
       <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none">
         <path d="M12 3l7 2.8v5.4c0 4.4-2.8 7.9-7 9.8-4.2-1.9-7-5.4-7-9.8V5.8L12 3z" stroke="currentColor" strokeWidth="1.8" />
         <path d="M12 8v7m-3.2-3.2L12 15l4.2-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
