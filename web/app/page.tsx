@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 
-import { Scribble, SectionLabel } from "@/components/portfolio-theme";
+import { SectionLabel } from "@/components/portfolio-theme";
 import { ContactForm } from "./contact-form";
 
 const navigation = [
@@ -63,8 +63,8 @@ const achievements = [
 function PortfolioNav() {
   return (
     <header className="mx-auto flex w-full max-w-[1280px] items-center justify-between px-6 py-7 sm:px-10 lg:px-14">
-      <a href="#top" className="group flex items-center gap-3 outline-none focus-visible:ring-2 focus-visible:ring-white/70">
-        <span className="grid h-10 w-10 place-items-center rounded-full border border-white/35 text-sm font-semibold text-white transition group-hover:bg-white/10">
+      <a href="#top" className="group flex items-center gap-3 outline-none focus-visible:ring-2 focus-visible:ring-[#6e56cf]">
+        <span className="grid h-10 w-10 place-items-center rounded-lg border border-white/20 text-sm font-semibold text-white transition group-hover:border-[#6e56cf]/60 group-hover:bg-[#6e56cf]/10">
           AA
         </span>
         <span className="text-xs font-semibold uppercase tracking-[0.22em] text-white/76">Ahmad Abughanam</span>
@@ -100,12 +100,12 @@ function HeroSection() {
     <section className="mx-auto grid w-full max-w-[1280px] items-center gap-14 px-6 pb-20 pt-8 sm:px-10 lg:min-h-[690px] lg:grid-cols-[1.08fr_0.92fr] lg:gap-16 lg:px-14 lg:pb-24 lg:pt-12">
       <div className="relative z-10 max-w-[720px]">
         <SectionLabel>Ahmad Maher Abughanam</SectionLabel>
-        <h1 className="mt-6 text-balance text-[46px] font-semibold leading-[1.03] text-white sm:text-[64px] lg:text-[82px]">
+        <h1 className="mt-6 text-balance text-[46px] font-semibold leading-[1.03] tracking-[-0.03em] text-white sm:text-[64px] lg:text-[82px]">
           <span className="sr-only">Ahmad Maher Abughanam</span>
           <span aria-hidden="true">
             Engineering
             <br />
-            <span className="bg-gradient-to-r from-white via-white/55 to-white/90 bg-clip-text text-transparent">intelligent systems.</span>
+            <span className="text-[#c9bdfb]">intelligent systems.</span>
           </span>
         </h1>
         <p className="mt-7 max-w-[610px] text-base leading-8 text-white/64 sm:text-lg">
@@ -126,10 +126,8 @@ function HeroSection() {
       </div>
 
       <div className="relative mx-auto w-full max-w-[520px] lg:mr-0">
-        <div className="absolute -left-5 top-12 h-24 w-px rotate-12 bg-white/30 sm:-left-10" aria-hidden="true" />
-        <div className="absolute -right-3 bottom-16 h-px w-24 -rotate-12 bg-white/22 sm:-right-8" aria-hidden="true" />
-        <Scribble className="absolute -right-2 -top-9 z-10 w-32 text-white/35 sm:w-44" />
-        <div className="relative aspect-[4/5] overflow-hidden rounded-[8px] border border-white/12 bg-[#111118] shadow-[0_28px_90px_rgba(0,0,0,0.48)]">
+        <div className="absolute -right-3 -top-3 h-16 w-16 rounded-lg border border-[#6e56cf]/30" aria-hidden="true" />
+        <div className="relative aspect-[4/5] overflow-hidden rounded-lg border border-white/12 bg-[#111118] shadow-[0_28px_90px_rgba(0,0,0,0.48)]">
           <Image
             src="/profile.png"
             alt="Black and white side-profile portrait of Ahmad Abughanam"
@@ -154,8 +152,8 @@ function SkillsSection() {
     <section id="skills" className="border-y border-white/[0.08] bg-[#0b0b10] px-6 py-20 sm:px-10 lg:py-24">
       <div className="mx-auto max-w-[1120px] text-center">
         <SectionLabel>Skills</SectionLabel>
-        <h2 className="mt-4 text-3xl font-semibold text-white sm:text-5xl">Technical Skills</h2>
-        <Scribble className="mx-auto mt-5 w-40 text-white/30" />
+        <h2 className="mt-4 text-3xl font-semibold tracking-[-0.02em] text-white sm:text-5xl">Technical Skills</h2>
+        <div className="mx-auto mt-8 h-px w-16 bg-[#6e56cf]/50" />
         <div className="mx-auto mt-10 flex max-w-[940px] flex-wrap justify-center gap-3">
           {skills.map((skill, index) => (
             <span key={skill} className={`rounded-full border px-4 py-2.5 text-sm transition ${skillStyles[index % skillStyles.length]}`}>
@@ -182,7 +180,7 @@ function ExperienceSection() {
         <div className="grid gap-8 lg:grid-cols-[0.72fr_1.28fr] lg:gap-20">
           <div>
             <SectionLabel>Experience</SectionLabel>
-            <h2 className="mt-4 text-4xl font-semibold leading-tight text-white sm:text-6xl">Banking IT and automation exposure.</h2>
+            <h2 className="mt-4 text-4xl font-semibold leading-tight tracking-[-0.02em] text-white sm:text-6xl">Banking IT and automation exposure.</h2>
           </div>
 
           <article className="relative border-t border-white/16 pt-8">
@@ -232,20 +230,18 @@ function AboutSection() {
               <span>Amman, Jordan</span>
             </div>
             <div className="relative">
-              <span className="block bg-gradient-to-br from-white via-white/70 to-white/35 bg-clip-text text-[132px] font-semibold leading-none text-transparent sm:text-[168px]" aria-hidden="true">AA</span>
-              <Scribble className="absolute -bottom-8 right-0 w-32 text-white/25 sm:w-40" />
+              <span className="block text-[132px] font-semibold leading-none tracking-[-0.03em] text-white/12 sm:text-[168px]" aria-hidden="true">AA</span>
             </div>
             <div className="border-t border-white/14 pt-5">
               <p className="text-lg font-semibold text-white">AI Engineer</p>
               <p className="mt-2 text-sm leading-6 text-white/52">Backend Software Engineer</p>
             </div>
           </div>
-          <Scribble className="absolute -bottom-12 right-0 w-36 text-white/18" />
         </div>
 
         <div>
           <SectionLabel>About Me</SectionLabel>
-          <h2 className="mt-4 max-w-[650px] text-4xl font-semibold leading-tight text-white sm:text-6xl">Backend systems, AI integration, and automation.</h2>
+          <h2 className="mt-4 max-w-[650px] text-4xl font-semibold leading-tight tracking-[-0.02em] text-white sm:text-6xl">Backend systems, AI integration, and automation.</h2>
           <p className="mt-8 text-base leading-8 text-white/62 sm:text-lg">
             Computer Science and Artificial Intelligence graduate based in Amman, Jordan, focused on secure APIs,
             production-inspired engineering, intelligent applications, and scalable backend systems.
@@ -289,7 +285,7 @@ function ProjectsSection() {
         <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <SectionLabel>Projects</SectionLabel>
-            <h2 className="mt-4 text-4xl font-semibold text-white sm:text-6xl">Selected Work</h2>
+            <h2 className="mt-4 text-4xl font-semibold tracking-[-0.02em] text-white sm:text-6xl">Selected Work</h2>
           </div>
         </div>
 
@@ -301,10 +297,10 @@ function ProjectsSection() {
 
           <div>
             <div className="flex items-center gap-4">
-              <span className="text-sm font-semibold text-white">01</span>
-              <span className="h-px w-16 bg-white/35" aria-hidden="true" />
+              <span className="text-sm font-semibold text-[#c9bdfb]">01</span>
+              <span className="h-px w-16 bg-white/20" aria-hidden="true" />
             </div>
-            <h3 className="mt-6 text-4xl font-semibold text-white sm:text-6xl">Amanah Drive</h3>
+            <h3 className="mt-6 text-4xl font-semibold tracking-[-0.02em] text-white sm:text-6xl">Amanah Drive</h3>
             <p className="mt-7 max-w-[500px] text-base leading-8 text-white/62 sm:text-lg">
               A secure AI-powered storage & knowledge drive with semantic search and RAG.
             </p>
@@ -332,10 +328,10 @@ function ProjectsSection() {
 
           <div className="lg:order-1">
             <div className="flex items-center gap-4">
-              <span className="text-sm font-semibold text-white">02</span>
-              <span className="h-px w-16 bg-white/35" aria-hidden="true" />
+              <span className="text-sm font-semibold text-[#c9bdfb]">02</span>
+              <span className="h-px w-16 bg-white/20" aria-hidden="true" />
             </div>
-            <h3 className="mt-6 text-4xl font-semibold text-white sm:text-6xl">Aqarya</h3>
+            <h3 className="mt-6 text-4xl font-semibold tracking-[-0.02em] text-white sm:text-6xl">Aqarya</h3>
             <p className="mt-7 max-w-[500px] text-base leading-8 text-white/62 sm:text-lg">
               A digital trust and operations layer for property in Jordan — source-authenticated
               listings, a SANAD-gated citizen journey, and a clustered map of verified property records.
@@ -377,7 +373,7 @@ function CredentialsSection() {
       <div className="mx-auto grid max-w-[1180px] gap-16 lg:grid-cols-[1fr_1fr] lg:gap-20">
         <div>
           <SectionLabel>Achievements</SectionLabel>
-          <h2 className="mt-4 text-4xl font-semibold text-white sm:text-5xl">Achievements</h2>
+          <h2 className="mt-4 text-4xl font-semibold tracking-[-0.02em] text-white sm:text-5xl">Achievements</h2>
           <ol className="mt-10 space-y-5">
             {achievements.map((achievement, index) => (
               <li key={achievement} className="grid grid-cols-[42px_1fr] gap-4 border-t border-white/12 pt-5 text-sm leading-7 text-white/62 sm:text-base">
@@ -390,7 +386,7 @@ function CredentialsSection() {
 
         <div>
           <SectionLabel>Certifications</SectionLabel>
-          <h2 className="mt-4 text-4xl font-semibold text-white sm:text-5xl">Certifications</h2>
+          <h2 className="mt-4 text-4xl font-semibold tracking-[-0.02em] text-white sm:text-5xl">Certifications</h2>
           <div className="mt-10 flex flex-wrap gap-3">
             {certifications.map((item, index) => (
               <span key={item} className={`rounded-full border px-4 py-3 text-sm leading-5 ${skillStyles[index % skillStyles.length]}`}>{item}</span>
@@ -407,13 +403,12 @@ function PortfolioFooter() {
     <footer id="contact" className="relative overflow-hidden border-t border-white/[0.08] bg-[#030305] px-6 pb-8 pt-16 sm:px-10 sm:pt-24 lg:pt-28">
       <div className="pointer-events-none absolute inset-x-0 top-8 mx-auto max-w-[1180px] px-6 sm:top-12 sm:px-10">
         <div className="h-px bg-gradient-to-r from-transparent via-white/25 to-transparent" />
-        <Scribble className="absolute right-8 top-[-30px] w-36 text-white/22 sm:right-14 sm:top-[-44px] sm:w-56" />
       </div>
 
       <div className="relative mx-auto max-w-[1180px]">
         <SectionLabel>Contact</SectionLabel>
-        <h2 className="mt-6 max-w-[1050px] font-serif text-[54px] font-medium leading-[0.92] text-white sm:text-[80px] lg:text-[116px]">
-          Let&apos;s build <span className="bg-gradient-to-r from-white via-white/55 to-white/90 bg-clip-text text-transparent">something.</span>
+        <h2 className="mt-6 max-w-[1050px] text-[54px] font-semibold leading-[0.98] tracking-[-0.03em] text-white sm:text-[80px] lg:text-[104px]">
+          Let&apos;s build <span className="text-[#c9bdfb]">something.</span>
         </h2>
 
         <div className="mt-12 grid gap-9 border-y border-white/12 py-9 sm:mt-16 sm:grid-cols-[minmax(0,1.35fr)_minmax(220px,0.65fr)] sm:items-end sm:gap-12 sm:py-11">

@@ -239,7 +239,7 @@ test("agent run shows its transcript, approval, and completed markdown answer", 
   await page.getByRole("button", { name: "Run agent" }).click();
 
   await expect(page.getByText("Rename a folder to “Invoices 2026”?" )).toBeVisible();
-  await expect(page.getByText("Tool · rename folder")).toBeVisible();
+  await expect(page.getByText("rename folder", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "Approve" }).click();
 
   await expect(page.getByText("Completed", { exact: true })).toBeVisible();

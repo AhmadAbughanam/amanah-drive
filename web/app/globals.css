@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+@theme inline {
+  --font-sans: var(--font-inter);
+}
+
 html,
 body {
   min-height: 100%;
@@ -7,9 +11,6 @@ body {
 
 body {
   margin: 0;
-  background: #f7f8fb;
-  color: #172033;
-  font-family: Arial, Helvetica, sans-serif;
 }
 
 button,
