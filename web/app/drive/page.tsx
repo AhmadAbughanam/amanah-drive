@@ -4,8 +4,8 @@ import type { ChangeEvent, FormEvent } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
-import { Area, AreaChart, Bar, CartesianGrid, ComposedChart, Line, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { portfolioClasses, portfolioPalette, Scribble, SectionLabel } from "@/components/portfolio-theme";
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { portfolioClasses, portfolioPalette, SectionLabel, statusTone } from "@/components/portfolio-theme";
 import { apiFetch, apiJson, errorMessage } from "@/lib/api";
 import type { ActivityResponse, AdminLogResponse, AgentRunResponse, AgentRunStepResponse, ChatCitation, ChatHistoryResponse, ChatMessageResponse, ChatResponse, FileItem, Folder, FolderContents, ObservabilitySnapshot, SearchResponse, SearchResult } from "@/lib/types";
 import { useAuth } from "../auth-provider";
@@ -133,7 +133,7 @@ function ChatAnswer({
             return (
               <button
                 aria-label={`Open citation ${reference}`}
-                className="mx-0.5 inline-flex min-w-5 items-center justify-center rounded-[4px] border border-[#f472b6]/45 bg-[#f472b6]/15 px-1.5 py-0.5 text-xs font-bold leading-none text-[#fbcfe8] transition hover:border-[#f472b6]/80 hover:bg-[#f472b6]/25 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f472b6]/70"
+                className="mx-0.5 inline-flex min-w-5 items-center justify-center rounded-[4px] border border-[#6e56cf]/45 bg-[#6e56cf]/15 px-1.5 py-0.5 text-xs font-bold leading-none text-[#c9bdfb] transition hover:border-[#6e56cf]/80 hover:bg-[#6e56cf]/25 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6e56cf]/70"
                 onClick={() => onCitationClick(citation)}
                 type="button"
               >
@@ -147,7 +147,7 @@ function ChatAnswer({
           ul: ({ children }) => <ul className="my-3 list-disc space-y-1 pl-5">{children}</ul>,
           ol: ({ children }) => <ol className="my-3 list-decimal space-y-1 pl-5">{children}</ol>,
           li: ({ children }) => <li className="pl-1">{children}</li>,
-          code: ({ children }) => <code className="rounded-[4px] border border-white/10 bg-white/[0.08] px-1 py-0.5 font-mono text-[0.9em] text-[#e9d5ff]">{children}</code>,
+          code: ({ children }) => <code className="rounded-[4px] border border-white/10 bg-white/[0.08] px-1 py-0.5 font-mono text-[0.9em] text-[#c9bdfb]">{children}</code>,
         }}
       >
         {content}
@@ -464,17 +464,16 @@ export default function DrivePage() {
 
   if (status === "checking" || (status === "anonymous" && !contents)) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[#060608] px-6 text-white">
+      <main className="flex min-h-screen items-center justify-center bg-[#0a0a0c] px-6 text-white">
         <p className={labelClass}>Checking session...</p>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-[#060608] px-3 py-3 text-white sm:px-6 sm:py-6">
-      <div className="mx-auto min-h-[calc(100vh-1.5rem)] max-w-[1500px] overflow-hidden rounded-[8px] border border-white/10 bg-[#0b0b10] shadow-[0_34px_120px_rgba(0,0,0,0.65)] sm:min-h-[calc(100vh-3rem)]">
-        <header className="relative overflow-hidden border-b border-white/10 bg-[#0d0c13] px-5 py-5 sm:px-8 lg:px-9">
-          <Scribble className="pointer-events-none absolute -right-8 -top-8 w-44 text-[#c084fc]/20" />
+    <main className="min-h-screen bg-[#0a0a0c] px-3 py-3 text-white sm:px-6 sm:py-6">
+      <div className="mx-auto min-h-[calc(100vh-1.5rem)] max-w-[1500px] overflow-hidden rounded-[8px] border border-white/10 bg-[#111114] shadow-[0_34px_120px_rgba(0,0,0,0.65)] sm:min-h-[calc(100vh-3rem)]">
+        <header className="relative border-b border-white/10 bg-[#0d0d10] px-5 py-5 sm:px-8 lg:px-9">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-center gap-4">
               <ShieldMark />
@@ -486,28 +485,28 @@ export default function DrivePage() {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between lg:justify-end">
               <nav className="grid grid-cols-2 rounded-[8px] border border-white/10 bg-white/[0.025] p-1 sm:grid-cols-4 sm:min-w-[520px]" aria-label="Drive sections">
                 <button
-                  className={`rounded-[6px] px-3 py-3 text-xs font-semibold uppercase tracking-[0.12em] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c084fc]/70 sm:px-4 ${activeView === "files" ? "border border-[#c084fc]/45 bg-[#c084fc]/12 text-[#e9d5ff]" : "border border-transparent text-white/52 hover:bg-white/[0.05] hover:text-white"}`}
+                  className={`rounded-[6px] px-3 py-3 text-xs font-semibold uppercase tracking-[0.12em] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6e56cf]/70 sm:px-4 ${activeView === "files" ? "border border-[#6e56cf]/45 bg-[#6e56cf]/12 text-[#c9bdfb]" : "border border-transparent text-white/52 hover:bg-white/[0.05] hover:text-white"}`}
                   type="button"
                   onClick={() => setActiveView("files")}
                 >
                   Files
                 </button>
                 <button
-                  className={`rounded-[6px] px-3 py-3 text-xs font-semibold uppercase tracking-[0.12em] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f472b6]/70 sm:px-4 ${activeView === "knowledge" ? "border border-[#f472b6]/45 bg-[#f472b6]/12 text-[#fbcfe8]" : "border border-transparent text-white/52 hover:bg-white/[0.05] hover:text-white"}`}
+                  className={`rounded-[6px] px-3 py-3 text-xs font-semibold uppercase tracking-[0.12em] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6e56cf]/70 sm:px-4 ${activeView === "knowledge" ? "border border-[#6e56cf]/45 bg-[#6e56cf]/12 text-[#c9bdfb]" : "border border-transparent text-white/52 hover:bg-white/[0.05] hover:text-white"}`}
                   type="button"
                   onClick={() => setActiveView("knowledge")}
                 >
                   Search & Chat
                 </button>
                 <button
-                  className={`rounded-[6px] px-3 py-3 text-xs font-semibold uppercase tracking-[0.12em] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#60a5fa]/70 sm:px-4 ${activeView === "logs" ? "border border-[#60a5fa]/45 bg-[#60a5fa]/12 text-[#bfdbfe]" : "border border-transparent text-white/52 hover:bg-white/[0.05] hover:text-white"}`}
+                  className={`rounded-[6px] px-3 py-3 text-xs font-semibold uppercase tracking-[0.12em] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6e56cf]/70 sm:px-4 ${activeView === "logs" ? "border border-[#6e56cf]/45 bg-[#6e56cf]/12 text-[#c9bdfb]" : "border border-transparent text-white/52 hover:bg-white/[0.05] hover:text-white"}`}
                   type="button"
                   onClick={() => setActiveView("logs")}
                 >
                   Logs
                 </button>
                 <button
-                  className={`rounded-[6px] px-3 py-3 text-xs font-semibold uppercase tracking-[0.12em] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#34d399]/70 sm:px-4 ${activeView === "agent" ? "border border-[#34d399]/45 bg-[#34d399]/12 text-[#a7f3d0]" : "border border-transparent text-white/52 hover:bg-white/[0.05] hover:text-white"}`}
+                  className={`rounded-[6px] px-3 py-3 text-xs font-semibold uppercase tracking-[0.12em] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#3fb950]/70 sm:px-4 ${activeView === "agent" ? "border border-[#3fb950]/45 bg-[#3fb950]/12 text-[#7ee787]" : "border border-transparent text-white/52 hover:bg-white/[0.05] hover:text-white"}`}
                   type="button"
                   onClick={() => setActiveView("agent")}
                 >
@@ -682,11 +681,20 @@ function AgentView({
     <section className="grid gap-5 px-5 py-6 sm:px-8 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:px-9">
       <div className={`${panelClass} h-fit p-5`}>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <SectionLabel className="text-[#a7f3d0]">File agent</SectionLabel>
+          <SectionLabel className="text-[#7ee787]">File agent</SectionLabel>
           {run ? <button className={secondaryButtonClass} disabled={isBusy || isRunActive || isAwaitingApproval} onClick={startNewConversation} type="button">New conversation</button> : null}
         </div>
         <h1 className="mt-3 text-2xl font-semibold tracking-[-0.03em] text-white">Ask the agent to work with your files.</h1>
         <p className="mt-2 text-sm leading-6 text-white/55">It can inspect your drive immediately and will ask before making a rename or move.</p>
+
+        {/* Capability transparency: tell the user what the agent can and can't do before they
+            type, rather than a blank box that only reveals its limits through trial and error. */}
+        <div className="mt-4 flex flex-wrap gap-1.5 text-[11px]">
+          {["Search & read files", "Create & copy files", "Rename & move (asks first)", "Read GitHub repos"].map((capability) => (
+            <span key={capability} className="rounded-full border border-white/12 bg-white/[0.03] px-2.5 py-1 text-white/58">{capability}</span>
+          ))}
+        </div>
+
         <form className="mt-5 space-y-3" onSubmit={startRun}>
           <label className="block text-xs font-semibold uppercase tracking-[0.12em] text-white/58" htmlFor="agent-instruction">Instruction</label>
           <textarea
@@ -732,20 +740,20 @@ function AgentView({
       </div>
 
       <div className={`${panelClass} min-h-[430px] p-5`}>
-        <SectionLabel className="text-[#a7f3d0]">Conversation transcript</SectionLabel>
+        <SectionLabel className="text-[#7ee787]">Conversation transcript</SectionLabel>
         {!run ? (
           <div className="flex min-h-80 items-center justify-center text-center text-sm leading-6 text-white/45">Your active agent conversation will appear here.</div>
         ) : (
           <div className="mt-4 space-y-3">
             {run.steps.map((step) => <AgentTranscriptStep key={`${step.runId}:${step.sequence}`} step={step} />)}
             {run.status === "Pending" || run.status === "Running" ? (
-              <div aria-live="polite" className="rounded-[7px] border border-[#60a5fa]/20 bg-[#60a5fa]/[0.07] px-4 py-3 text-sm text-[#bfdbfe]">
+              <div aria-live="polite" className="rounded-[7px] border border-[#6e56cf]/20 bg-[#6e56cf]/[0.07] px-4 py-3 text-sm text-[#c9bdfb]">
                 {run.status === "Pending" ? "Agent run queued…" : "Agent is working…"}
               </div>
             ) : null}
             {run.status === "Completed" ? (
               <div className="rounded-[7px] border border-emerald-200/20 bg-emerald-300/[0.07] px-4 py-3">
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#a7f3d0]">Completed</p>
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#7ee787]">Completed</p>
                 <ChatAnswer content={run.finalAnswer ?? "The agent completed its run."} citations={[]} onCitationClick={() => undefined} />
               </div>
             ) : null}
@@ -760,21 +768,34 @@ function AgentView({
 
 function AgentTranscriptStep({ step }: { step: AgentRunStepResponse }) {
   if (step.role === "user") {
-    return <div className="ml-auto max-w-[88%] rounded-[7px] border border-[#c084fc]/30 bg-[#c084fc]/10 px-4 py-3 text-sm leading-6 text-[#f3e8ff]"><p className="mb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#d8b4fe]">You</p>{step.content}</div>;
+    return <div className="ml-auto max-w-[88%] rounded-[7px] border border-[#6e56cf]/30 bg-[#6e56cf]/10 px-4 py-3 text-sm leading-6 text-[#c9bdfb]"><p className="mb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#c9bdfb]">You</p>{step.content}</div>;
   }
 
   if (step.role === "assistant") {
     return step.content ? <div className="max-w-[88%] rounded-[7px] border border-white/10 bg-white/[0.035] px-4 py-3 text-sm leading-6 text-white/75"><p className="mb-1 text-[10px] font-bold uppercase tracking-[0.14em] text-white/45">Agent</p>{step.content}</div> : null;
   }
 
+  // Deliberately not a chat bubble: a tool call is the system doing something, not someone
+  // talking, so it reads as a distinct system-trace entry — full width, a left rule instead of
+  // a border-all card, monospace tool name — and its accent color reflects what actually
+  // happened rather than a fixed color regardless of outcome.
+  const toneByStatus: Record<string, { rule: string; badge: string }> = {
+    PendingApproval: { rule: "border-l-[#e3b341]/60", badge: statusTone.warning },
+    Executing: { rule: "border-l-[#6e56cf]/60", badge: statusTone.accent },
+    Executed: { rule: "border-l-[#3fb950]/60", badge: statusTone.success },
+    Rejected: { rule: "border-l-white/25", badge: statusTone.neutral },
+    Invalid: { rule: "border-l-[#f85149]/60", badge: statusTone.danger },
+  };
+  const tone = (step.status && toneByStatus[step.status]) || toneByStatus.Executed;
+
   return (
-    <div className="rounded-[7px] border border-[#34d399]/25 bg-[#34d399]/10 px-4 py-3">
+    <div className={`border-l-2 ${tone.rule} bg-white/[0.02] py-2.5 pl-4 pr-3`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#a7f3d0]">Tool · {formatToolName(step.toolName)}</p>
-        {step.status ? <span className="rounded-full border border-white/10 bg-black/15 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.1em] text-white/60">{formatToolStatus(step.status)}</span> : null}
+        <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.1em] text-white/50">{formatToolName(step.toolName)}</p>
+        {step.status ? <span className={`${portfolioClasses.badge} ${tone.badge}`}>{formatToolStatus(step.status)}</span> : null}
       </div>
-      {step.argumentsSummary ? <p className="mt-2 text-sm text-white/85">{step.argumentsSummary}</p> : null}
-      {step.resultSummary ? <p className="mt-1 text-xs leading-5 text-white/52">{step.resultSummary}</p> : null}
+      {step.argumentsSummary ? <p className="mt-1.5 text-sm text-white/85">{step.argumentsSummary}</p> : null}
+      {step.resultSummary ? <p className="mt-1 text-xs leading-5 text-white/48">{step.resultSummary}</p> : null}
     </div>
   );
 }
@@ -839,12 +860,11 @@ function FilesView({
   const lastItem = (currentPage - 1) * pageSize + totalItems;
 
   return (
-    <section className="relative bg-[#0b0b10] px-5 py-7 sm:px-8 lg:px-9">
-      <div className="relative mb-8 overflow-hidden border-b border-white/10 pb-7">
+    <section className="relative bg-[#111114] px-5 py-7 sm:px-8 lg:px-9">
+      <div className="relative mb-8 border-b border-white/10 pb-7">
         <SectionLabel>Secure workspace</SectionLabel>
-        <h2 className="mt-3 font-serif text-4xl font-normal leading-tight text-white sm:text-5xl">File <span className={portfolioClasses.gradientText}>management</span></h2>
+        <h2 className="mt-3 text-4xl font-semibold tracking-[-0.02em] leading-tight text-white sm:text-5xl">File <span className={portfolioClasses.gradientText}>management</span></h2>
         <p className="mt-2 text-base text-white/58">Organize, manage, and access your secure files.</p>
-        <Scribble className="pointer-events-none absolute -right-8 -top-5 hidden w-52 text-[#60a5fa]/22 sm:block" />
       </div>
 
       {error ? (
@@ -858,7 +878,7 @@ function FilesView({
           <p className={labelClass}>Create new</p>
           <div className={`${portfolioClasses.insetPanel} mt-5 p-4`}>
             <div className="flex gap-4">
-              <div className="grid h-14 w-14 shrink-0 place-items-center rounded-[8px] border border-[#c084fc]/30 bg-[#c084fc]/10 text-[#e9d5ff]">
+              <div className="grid h-14 w-14 shrink-0 place-items-center rounded-[8px] border border-[#6e56cf]/30 bg-[#6e56cf]/10 text-[#c9bdfb]">
                 <FolderGlyph />
               </div>
               <div>
@@ -887,7 +907,7 @@ function FilesView({
           <p className={labelClass}>Upload files</p>
           <div className={`${portfolioClasses.insetPanel} mt-5 p-4`}>
             <div className="flex gap-4">
-              <div className="grid h-14 w-14 shrink-0 place-items-center rounded-[8px] border border-[#60a5fa]/30 bg-[#60a5fa]/10 text-[#bfdbfe]">
+              <div className="grid h-14 w-14 shrink-0 place-items-center rounded-[8px] border border-[#6e56cf]/30 bg-[#6e56cf]/10 text-[#c9bdfb]">
                 <UploadGlyph />
               </div>
               <div>
@@ -895,7 +915,7 @@ function FilesView({
                 <p className="mt-1 text-sm leading-5 text-white/52">Add files to your drive. Supported formats below.</p>
               </div>
             </div>
-            <label className="mt-5 flex min-h-[136px] cursor-pointer flex-col items-center justify-center rounded-[8px] border border-dashed border-white/20 bg-white/[0.025] px-4 text-center text-sm text-white/52 transition hover:border-[#60a5fa]/55 hover:bg-[#60a5fa]/[0.06] hover:text-white/75">
+            <label className="mt-5 flex min-h-[136px] cursor-pointer flex-col items-center justify-center rounded-[8px] border border-dashed border-white/20 bg-white/[0.025] px-4 text-center text-sm text-white/52 transition hover:border-[#6e56cf]/55 hover:bg-[#6e56cf]/[0.06] hover:text-white/75">
               <DocumentGlyph />
               <span className="mt-3">Drag and drop files here or click to browse</span>
               <input
@@ -918,7 +938,7 @@ function FilesView({
             </label>
           </div>
 
-          <div className="mt-5 flex gap-3 rounded-[8px] border border-white/10 bg-white/[0.025] p-4 text-[#bfdbfe]">
+          <div className="mt-5 flex gap-3 rounded-[8px] border border-white/10 bg-white/[0.025] p-4 text-[#c9bdfb]">
             <InfoGlyph />
             <p className="text-sm leading-5 text-white/55">
               <span className="block font-semibold text-white/82">Supported formats</span>
@@ -935,7 +955,7 @@ function FilesView({
                 {breadcrumbs.map((item, index) => (
                   <button
                     key={`${item.id ?? "root"}-${index}`}
-                    className="text-base text-white/72 transition hover:text-[#e9d5ff]"
+                    className="text-base text-white/72 transition hover:text-[#c9bdfb]"
                     onClick={() => onGoToBreadcrumb(index)}
                     type="button"
                   >
@@ -951,7 +971,7 @@ function FilesView({
                 <span>Search files...</span>
               </div>
               <div className="grid grid-cols-2 gap-1 rounded-[8px] border border-white/10 bg-white/[0.035] p-1">
-                <span className="grid h-10 w-10 place-items-center rounded-[6px] bg-[#c084fc]/12 text-[#e9d5ff]" aria-hidden="true">=</span>
+                <span className="grid h-10 w-10 place-items-center rounded-[6px] bg-[#6e56cf]/12 text-[#c9bdfb]" aria-hidden="true">=</span>
                 <span className="grid h-10 w-10 place-items-center text-white/42" aria-hidden="true">#</span>
               </div>
             </div>
@@ -972,7 +992,7 @@ function FilesView({
               {contents?.folders.map((folder) => (
                 <div key={folder.id} className="grid gap-4 px-5 py-5 transition hover:bg-white/[0.025] sm:px-7 xl:grid-cols-[minmax(160px,1fr)_70px_75px_130px_300px] xl:items-center xl:gap-3 2xl:grid-cols-[minmax(220px,1fr)_100px_100px_180px_310px] 2xl:gap-4">
                   <button className="flex min-w-0 items-center gap-4 text-left" onClick={() => onEnterFolder(folder)} type="button">
-                    <span className="grid h-14 w-14 shrink-0 place-items-center rounded-[8px] border border-[#c084fc]/25 bg-[#c084fc]/[0.07] text-[#e9d5ff]">
+                    <span className="grid h-14 w-14 shrink-0 place-items-center rounded-[8px] border border-[#6e56cf]/25 bg-[#6e56cf]/[0.07] text-[#c9bdfb]">
                       <FolderGlyph />
                     </span>
                     <span className="min-w-0">
@@ -997,7 +1017,7 @@ function FilesView({
               {contents?.files.map((file) => (
                 <div key={file.id} className="grid gap-4 px-5 py-5 transition hover:bg-white/[0.025] sm:px-7 xl:grid-cols-[minmax(160px,1fr)_70px_75px_130px_300px] xl:items-center xl:gap-3 2xl:grid-cols-[minmax(220px,1fr)_100px_100px_180px_310px] 2xl:gap-4">
                   <div className="flex min-w-0 items-center gap-4">
-                    <span className="grid h-14 w-14 shrink-0 place-items-center rounded-[8px] border border-[#60a5fa]/25 bg-[#60a5fa]/[0.07] text-[#bfdbfe]">
+                    <span className="grid h-14 w-14 shrink-0 place-items-center rounded-[8px] border border-[#6e56cf]/25 bg-[#6e56cf]/[0.07] text-[#c9bdfb]">
                       <DocumentGlyph />
                     </span>
                     <div className="min-w-0">
@@ -1005,7 +1025,7 @@ function FilesView({
                       <p className="mt-1 text-sm text-white/42">{friendlyContentType(file.contentType)}</p>
                     </div>
                   </div>
-                  <span className="w-fit rounded-[8px] border border-[#f472b6]/25 bg-[#f472b6]/[0.07] px-3 py-2 text-xs text-[#fbcfe8]">{fileExtension(file.originalFileName)}</span>
+                  <span className="w-fit rounded-[8px] border border-[#6e56cf]/25 bg-[#6e56cf]/[0.07] px-3 py-2 text-xs text-[#c9bdfb]">{fileExtension(file.originalFileName)}</span>
                   <span className="text-sm text-white/52">{formatBytes(file.sizeBytes)}</span>
                   <span className="text-sm leading-5 text-white/52">{formatDate(file.updatedAt)}</span>
                   <div className="flex flex-wrap gap-2">
@@ -1043,7 +1063,7 @@ function FilesView({
               <button className={iconButtonClass} disabled={currentPage <= 1 || isLoading} onClick={() => onPageChange((value) => Math.max(1, value - 1))} type="button" aria-label="Previous page">
                 &lt;
               </button>
-              <span className="grid h-11 w-11 place-items-center rounded-[8px] bg-gradient-to-br from-[#c084fc] via-[#f472b6] to-[#60a5fa] text-sm font-semibold text-[#060608]">{contents?.page ?? currentPage}</span>
+              <span className="grid h-11 w-11 place-items-center rounded-[8px] bg-[#6e56cf] text-sm font-semibold text-[#0a0a0c]">{contents?.page ?? currentPage}</span>
               <button
                 className={iconButtonClass}
                 disabled={isLoading || totalItems < pageSize}
@@ -1121,28 +1141,27 @@ function KnowledgeView({
   }
 
   return (
-    <section className="bg-[#020203] px-5 py-7 sm:px-8 lg:px-9">
-      <div className="relative mb-7 flex flex-col gap-4 overflow-hidden border-b border-white/10 pb-7 lg:flex-row lg:items-end lg:justify-between">
+    <section className="bg-[#050506] px-5 py-7 sm:px-8 lg:px-9">
+      <div className="relative mb-7 flex flex-col gap-4 border-b border-white/10 pb-7 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <SectionLabel>Amanah Drive</SectionLabel>
-          <h2 className="mt-2 font-serif text-4xl font-normal leading-tight text-white sm:text-5xl">Search <span className={portfolioClasses.gradientText}>& Chat</span></h2>
+          <h2 className="mt-2 text-4xl font-semibold tracking-[-0.02em] leading-tight text-white sm:text-5xl">Search <span className={portfolioClasses.gradientText}>& Chat</span></h2>
         </div>
-        <Scribble className="pointer-events-none absolute -right-8 -top-6 hidden w-52 text-[#f472b6]/22 sm:block" />
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,0.86fr)_minmax(0,1.14fr)]">
         <section className={`${panelClass} flex min-h-[650px] flex-col p-5 sm:p-6`}>
           <div>
             <p className={labelClass}>Semantic search</p>
-            <h3 className="mt-3 font-serif text-3xl font-normal leading-tight text-white/92">Find document passages</h3>
+            <h3 className="mt-3 text-3xl font-semibold tracking-[-0.02em] leading-tight text-white/92">Find document passages</h3>
           </div>
 
-          <form className="mt-6 rounded-[8px] border border-white/10 bg-[#0d0c13] p-4" onSubmit={onSearch}>
+          <form className="mt-6 rounded-[8px] border border-white/10 bg-[#0d0d10] p-4" onSubmit={onSearch}>
             <label className={labelClass} htmlFor="search-documents">
               Search documents
             </label>
             <div className="mt-4 flex flex-col gap-3 sm:flex-row">
-              <div className="flex min-w-0 flex-1 items-center gap-3 rounded-[8px] border border-white/12 bg-white/[0.045] px-4 text-white/55 transition focus-within:border-[#c084fc]/70 focus-within:ring-2 focus-within:ring-[#c084fc]/20">
+              <div className="flex min-w-0 flex-1 items-center gap-3 rounded-[8px] border border-white/12 bg-white/[0.045] px-4 text-white/55 transition focus-within:border-[#6e56cf]/70 focus-within:ring-2 focus-within:ring-[#6e56cf]/20">
                 <SearchGlyph />
                 <input
                   id="search-documents"
@@ -1173,14 +1192,14 @@ function KnowledgeView({
             {!searchLoading && hasSearched && !searchError && searchResults.length === 0 ? <p className="text-sm text-white/52">No matching document sections found.</p> : null}
             {!searchLoading && !hasSearched ? <p className="text-sm leading-6 text-white/52">Search processed documents by meaning, not just filenames.</p> : null}
             {searchResults.map((result) => (
-              <article key={result.chunkId} className="rounded-[8px] border border-white/10 bg-white/[0.025] p-4 transition hover:border-[#60a5fa]/30 hover:bg-[#60a5fa]/[0.04] sm:p-5">
+              <article key={result.chunkId} className="rounded-[8px] border border-white/10 bg-white/[0.025] p-4 transition hover:border-[#6e56cf]/30 hover:bg-[#6e56cf]/[0.04] sm:p-5">
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex min-w-0 gap-4">
-                    <span className="mt-1 grid h-11 w-11 shrink-0 place-items-center rounded-[8px] border border-[#60a5fa]/25 bg-[#60a5fa]/10 text-[#bfdbfe]">
+                    <span className="mt-1 grid h-11 w-11 shrink-0 place-items-center rounded-[8px] border border-[#6e56cf]/25 bg-[#6e56cf]/10 text-[#c9bdfb]">
                       <DocumentGlyph />
                     </span>
                     <div className="min-w-0">
-                      <h4 className="truncate font-serif text-2xl font-normal text-white/90">{result.fileName}</h4>
+                      <h4 className="truncate text-2xl font-semibold tracking-[-0.015em] text-white/90">{result.fileName}</h4>
                       <p className="mt-2 text-xs uppercase tracking-[0.14em] text-white/38">Semantic match</p>
                     </div>
                   </div>
@@ -1191,7 +1210,7 @@ function KnowledgeView({
                 <div className="mt-5 flex items-center gap-3">
                   <span className={labelClass}>Relevance</span>
                   <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.08]">
-                    <span className="block h-full rounded-full bg-gradient-to-r from-[#c084fc] via-[#f472b6] to-[#60a5fa]" style={{ width: `${Math.max(8, Math.min(100, result.score * 100))}%` }} />
+                    <span className="block h-full rounded-full bg-[#6e56cf]" style={{ width: `${Math.max(8, Math.min(100, result.score * 100))}%` }} />
                   </span>
                   <span className="text-sm text-white/55">{formatScore(result.score)}</span>
                 </div>
@@ -1201,7 +1220,7 @@ function KnowledgeView({
             ))}
           </div>
 
-          <div className="mt-6 flex gap-3 rounded-[8px] border border-white/10 bg-white/[0.025] p-4 text-[#bfdbfe]">
+          <div className="mt-6 flex gap-3 rounded-[8px] border border-white/10 bg-white/[0.025] p-4 text-[#c9bdfb]">
             <InfoGlyph />
             <p className="text-sm leading-6 text-white/55">
               <span className="block text-xs font-semibold uppercase tracking-[0.18em] text-white/82">Search tips</span>
@@ -1214,9 +1233,9 @@ function KnowledgeView({
           <div className="flex flex-col gap-4 border-b border-white/10 bg-white/[0.018] p-5 sm:flex-row sm:items-start sm:justify-between sm:p-6">
             <div>
               <p className={labelClass}>AI chat</p>
-              <h3 className="mt-3 font-serif text-3xl font-normal leading-tight text-white/92">Ask your drive</h3>
+              <h3 className="mt-3 text-3xl font-semibold tracking-[-0.02em] leading-tight text-white/92">Ask your drive</h3>
               <p className="mt-2 text-sm text-white/48">Get answers from your documents using AI.</p>
-              {conversationId ? <p className="mt-2 text-xs uppercase tracking-[0.14em] text-[#fbcfe8]">Conversation active</p> : null}
+              {conversationId ? <p className="mt-2 text-xs uppercase tracking-[0.14em] text-[#c9bdfb]">Conversation active</p> : null}
             </div>
             <button className={secondaryButtonClass} onClick={onNewConversation} type="button">
               New conversation <span aria-hidden="true" className="ml-2">+</span>
@@ -1230,7 +1249,7 @@ function KnowledgeView({
               </div>
             ) : null}
             {chatEntries.map((entry) => (
-              <article key={entry.id} className={entry.role === "user" ? "ml-auto max-w-[760px] rounded-[8px] border border-[#c084fc]/35 bg-gradient-to-br from-[#c084fc]/20 via-[#f472b6]/12 to-[#60a5fa]/15 px-5 py-4 text-white shadow-[0_18px_35px_rgba(0,0,0,0.28)]" : "mr-auto max-w-[760px] rounded-[8px] border border-white/10 bg-white/[0.045] px-5 py-4 text-white/76"}>
+              <article key={entry.id} className={entry.role === "user" ? "ml-auto max-w-[760px] rounded-[8px] border border-[#6e56cf]/35 bg-[#6e56cf]/[0.12] px-5 py-4 text-white shadow-[0_18px_35px_rgba(0,0,0,0.28)]" : "mr-auto max-w-[760px] rounded-[8px] border border-white/10 bg-white/[0.045] px-5 py-4 text-white/76"}>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] opacity-65">{entry.role === "user" ? "You" : "Amanah Drive"}</p>
                 {entry.role === "assistant" ? <ChatAnswer content={entry.content} citations={entry.citations ?? []} onCitationClick={(citation) => openCitation(entry.id, citation)} /> : <p className="mt-3 whitespace-pre-wrap text-sm leading-7">{entry.content}</p>}
                 {entry.citations && entry.citations.length > 0 ? (
@@ -1246,12 +1265,12 @@ function KnowledgeView({
                           ref={(node) => {
                             citationCardRefs.current[cardKey] = node;
                           }}
-                          className={`rounded-[8px] border bg-[#60a5fa]/[0.05] p-3 transition ${isActive ? "border-[#f472b6]/65 ring-1 ring-[#f472b6]/40" : "border-[#60a5fa]/20"}`}
+                          className={`rounded-[8px] border bg-[#6e56cf]/[0.05] p-3 transition ${isActive ? "border-[#6e56cf]/65 ring-1 ring-[#6e56cf]/40" : "border-[#6e56cf]/20"}`}
                           data-citation-active={isActive ? "true" : undefined}
                         >
                           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <p className="text-sm font-semibold text-white/85">[{citation.reference}] {citation.fileName}</p>
-                            <button className="text-xs font-semibold uppercase tracking-[0.14em] text-[#bfdbfe] transition hover:text-white" onClick={() => onDownloadCitation(citation)} type="button">
+                            <button className="text-xs font-semibold uppercase tracking-[0.14em] text-[#c9bdfb] transition hover:text-white" onClick={() => onDownloadCitation(citation)} type="button">
                               Download
                             </button>
                           </div>
@@ -1275,7 +1294,7 @@ function KnowledgeView({
             <label className="sr-only" htmlFor="chat-question">
               Ask a question
             </label>
-            <div className="rounded-[8px] border border-white/12 bg-white/[0.045] p-3 transition focus-within:border-[#f472b6]/60 focus-within:ring-2 focus-within:ring-[#f472b6]/15">
+            <div className="rounded-[8px] border border-white/12 bg-white/[0.045] p-3 transition focus-within:border-[#6e56cf]/60 focus-within:ring-2 focus-within:ring-[#6e56cf]/15">
               <textarea
                 id="chat-question"
                 className="min-h-16 w-full resize-none bg-transparent px-2 py-2 text-sm text-white outline-none placeholder:text-white/32"
@@ -1285,7 +1304,7 @@ function KnowledgeView({
               />
               <div className="flex items-center justify-between">
                 <span className="text-white/35" aria-hidden="true">@</span>
-                <button className="grid h-12 w-12 place-items-center rounded-[8px] bg-gradient-to-br from-[#c084fc] via-[#f472b6] to-[#60a5fa] text-[#060608] transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f472b6] disabled:cursor-not-allowed disabled:opacity-35" disabled={chatLoading} type="submit">
+                <button className="grid h-12 w-12 place-items-center rounded-[8px] bg-[#6e56cf] text-[#0a0a0c] transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6e56cf] disabled:cursor-not-allowed disabled:opacity-35" disabled={chatLoading} type="submit">
                   <span className="sr-only">{chatLoading ? "Thinking" : "Send"}</span>
                   <SendGlyph />
                 </button>
@@ -1316,7 +1335,7 @@ function CitationSnippetDialog({ citation, onClose, onDownload }: { citation: Ch
     <dialog
       ref={dialogRef}
       aria-labelledby="citation-dialog-title"
-      className="w-[min(92vw,620px)] rounded-[10px] border border-[#f472b6]/35 bg-[#0d0c13] p-0 text-white shadow-[0_28px_90px_rgba(0,0,0,0.7)] backdrop:bg-black/75"
+      className="w-[min(92vw,620px)] rounded-[10px] border border-[#6e56cf]/35 bg-[#0d0d10] p-0 text-white shadow-[0_28px_90px_rgba(0,0,0,0.7)] backdrop:bg-black/75"
       onClick={(event) => {
         if (event.target === event.currentTarget) {
           dialogRef.current?.close();
@@ -1328,7 +1347,7 @@ function CitationSnippetDialog({ citation, onClose, onDownload }: { citation: Ch
         <div className="flex items-start justify-between gap-5">
           <div>
             <p className={labelClass}>Citation [{citation.reference}]</p>
-            <h4 id="citation-dialog-title" className="mt-2 break-words font-serif text-3xl font-normal text-white/92">{citation.fileName}</h4>
+            <h4 id="citation-dialog-title" className="mt-2 break-words text-3xl font-semibold tracking-[-0.02em] text-white/92">{citation.fileName}</h4>
           </div>
           <button className={iconButtonClass} onClick={() => dialogRef.current?.close()} type="button" aria-label="Close citation">
             ×
@@ -1447,24 +1466,23 @@ function ObservabilityView() {
   const chartAxis = { fill: "rgba(255,255,255,0.45)", fontSize: 11 };
 
   return (
-    <section className="min-h-[calc(100vh-118px)] bg-[#030305] px-4 py-7 text-white sm:px-7 lg:px-9 lg:py-10">
+    <section className="min-h-[calc(100vh-118px)] bg-[#050506] px-4 py-7 text-white sm:px-7 lg:px-9 lg:py-10">
       <div className="mx-auto max-w-[1380px]">
-        <div className="relative flex flex-col gap-6 overflow-hidden border-b border-white/10 pb-8 lg:flex-row lg:items-end lg:justify-between">
+        <div className="relative flex flex-col gap-6 border-b border-white/10 pb-8 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <SectionLabel className="text-[#c084fc]">Administration / observability</SectionLabel>
-            <h2 className="mt-3 font-serif text-4xl font-normal leading-tight text-white sm:text-6xl">System <span className={portfolioClasses.gradientText}>signals</span></h2>
+            <SectionLabel className="text-[#6e56cf]">Administration / observability</SectionLabel>
+            <h2 className="mt-3 text-4xl font-semibold tracking-[-0.02em] leading-tight text-white sm:text-6xl">System <span className={portfolioClasses.gradientText}>signals</span></h2>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-white/48">Request health, security events, AI usage, activity, and retained structured logs.</p>
           </div>
-          <Scribble className="pointer-events-none absolute -right-8 -top-8 hidden w-52 text-[#c084fc]/20 md:block" />
           <div className="flex flex-wrap items-center gap-3">
             <div className="flex rounded-[8px] border border-white/12 bg-white/[0.035] p-1" aria-label="Metrics range">
               {(["24h", "7d", "30d"] as const).map((option) => (
-                <button key={option} className={`rounded-[6px] border px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition ${range === option ? "border-[#c084fc]/45 bg-[#c084fc]/12 text-[#e9d5ff]" : "border-transparent text-white/50 hover:text-white"}`} onClick={() => setRange(option)} type="button">
+                <button key={option} className={`rounded-[6px] border px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition ${range === option ? "border-[#6e56cf]/45 bg-[#6e56cf]/12 text-[#c9bdfb]" : "border-transparent text-white/50 hover:text-white"}`} onClick={() => setRange(option)} type="button">
                   {option}
                 </button>
               ))}
             </div>
-            <button className="rounded-[8px] border border-white/14 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-white/65 transition hover:border-[#60a5fa]/65 hover:text-white" disabled={snapshotLoading || logLoading || activityLoading} onClick={() => setRefreshKey((value) => value + 1)} type="button">
+            <button className="rounded-[8px] border border-white/14 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-white/65 transition hover:border-[#6e56cf]/65 hover:text-white" disabled={snapshotLoading || logLoading || activityLoading} onClick={() => setRefreshKey((value) => value + 1)} type="button">
               Refresh
             </button>
           </div>
@@ -1472,69 +1490,103 @@ function ObservabilityView() {
 
         {snapshotError ? <div className="mt-6 rounded-[8px] border border-red-400/25 bg-red-500/10 px-4 py-3 text-sm text-red-200" role="alert">{snapshotError}</div> : null}
 
-        <div className="mt-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <MetricCard label="Requests today (UTC)" value={formatInteger(snapshot?.stats.requestsToday)} detail="Completed API requests" accent="text-[#bfdbfe]" />
-          <MetricCard label="5xx error rate" value={formatPercent(snapshot?.stats.errorRatePercent)} detail={`Across the selected ${range}`} accent="text-[#fda4af]" />
-          <MetricCard label="Average latency" value={formatMilliseconds(snapshot?.stats.averageLatencyMilliseconds)} detail={`Across the selected ${range}`} accent="text-[#fde68a]" />
-          <MetricCard
-            label="AI spend this month"
-            value={formatCurrency(snapshot?.stats.aiSpendThisMonthUsd)}
-            detail={snapshot?.stats.aiPricingComplete === false ? "Known spend only; pricing is incomplete" : "Estimated from measured model tokens"}
-            accent="text-[#e9d5ff]"
-          />
+        {/* Progressive disclosure: one hero signal answers "is everything okay?" before the
+            detail tiles and charts below it — not four equal-weight numbers competing for
+            attention at once. */}
+        <div className="mt-7 grid gap-3 lg:grid-cols-[1.3fr_1fr]">
+          <SystemHealthHero errorRatePercent={snapshot?.stats.errorRatePercent} requestsToday={snapshot?.stats.requestsToday} range={range} />
+          <div className="grid grid-cols-2 gap-3 lg:grid-rows-2">
+            <MetricCard label="Requests today (UTC)" value={formatInteger(snapshot?.stats.requestsToday)} detail="Completed API requests" accent="text-[#c9bdfb]" />
+            <MetricCard label="Average latency" value={formatMilliseconds(snapshot?.stats.averageLatencyMilliseconds)} detail={`Across the selected ${range}`} accent="text-[#f0c674]" />
+            <MetricCard
+              label="AI spend this month"
+              value={formatCurrency(snapshot?.stats.aiSpendThisMonthUsd)}
+              detail={snapshot?.stats.aiPricingComplete === false ? "Known spend only; pricing is incomplete" : "Estimated from measured model tokens"}
+              accent="text-[#c9bdfb]"
+            />
+            <MetricCard label="5xx error rate" value={formatPercent(snapshot?.stats.errorRatePercent)} detail={`Across the selected ${range}`} accent="text-[#ff9891]" />
+          </div>
         </div>
 
+        {/* Each panel is single-axis by design: two measures on different scales (count vs
+            percent, tokens vs USD) become two panels, not one dual-axis chart — dual axes are
+            a well-known reading-error trap (the two scales imply a false correlation between
+            series). Categorical colors (accent + teal) are the one pair actually validated for
+            CVD-safe adjacency (see the dataviz skill); every other panel here is a single series,
+            so it can safely carry a status hue when the metric is itself a status signal
+            (error rate, security events) without competing against anything else on screen. */}
         <div className="mt-6 grid gap-4 xl:grid-cols-2">
-          <ChartPanel eyebrow="API traffic" title="Request volume and 5xx rate">
-            <ResponsiveContainer width="100%" height={270}>
-              <ComposedChart data={requestChart} margin={{ top: 10, right: 4, left: -24, bottom: 0 }}>
+          <ChartPanel eyebrow="API traffic" title="Request volume">
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={requestChart} margin={{ top: 10, right: 4, left: -24, bottom: 0 }}>
                 <CartesianGrid stroke="rgba(255,255,255,0.07)" vertical={false} />
                 <XAxis dataKey="label" tick={chartAxis} axisLine={false} tickLine={false} minTickGap={24} />
-                <YAxis yAxisId="requests" tick={chartAxis} axisLine={false} tickLine={false} allowDecimals={false} />
-                <YAxis yAxisId="rate" orientation="right" tick={chartAxis} axisLine={false} tickLine={false} unit="%" />
+                <YAxis tick={chartAxis} axisLine={false} tickLine={false} allowDecimals={false} />
                 <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: "#fff" }} />
-                <Bar yAxisId="requests" dataKey="requests" fill={portfolioPalette.blue} radius={[3, 3, 0, 0]} maxBarSize={24} />
-                <Line yAxisId="rate" type="monotone" dataKey="errorRatePercent" name="5xx rate %" stroke={portfolioPalette.pink} strokeWidth={2} dot={false} />
-              </ComposedChart>
+                <Bar dataKey="requests" name="Requests" fill={portfolioPalette.accent} radius={[3, 3, 0, 0]} maxBarSize={24} />
+              </BarChart>
             </ResponsiveContainer>
           </ChartPanel>
 
-          <ChartPanel eyebrow="Log mix" title="Level distribution">
-            <ResponsiveContainer width="100%" height={270}>
-              <AreaChart data={snapshot?.logLevels ?? []} margin={{ top: 10, right: 4, left: -24, bottom: 0 }}>
-                <defs><linearGradient id="levelFill" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={portfolioPalette.purple} stopOpacity={0.7} /><stop offset="95%" stopColor={portfolioPalette.purple} stopOpacity={0.04} /></linearGradient></defs>
+          <ChartPanel eyebrow="API traffic" title="5xx error rate">
+            <ResponsiveContainer width="100%" height={220}>
+              <AreaChart data={requestChart} margin={{ top: 10, right: 4, left: -24, bottom: 0 }}>
                 <CartesianGrid stroke="rgba(255,255,255,0.07)" vertical={false} />
-                <XAxis dataKey="level" tick={chartAxis} axisLine={false} tickLine={false} />
-                <YAxis tick={chartAxis} axisLine={false} tickLine={false} allowDecimals={false} />
+                <XAxis dataKey="label" tick={chartAxis} axisLine={false} tickLine={false} minTickGap={24} />
+                <YAxis tick={chartAxis} axisLine={false} tickLine={false} unit="%" />
                 <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: "#fff" }} />
-                <Area type="monotone" dataKey="count" stroke={portfolioPalette.purple} fill="url(#levelFill)" strokeWidth={2} />
+                <Area type="monotone" dataKey="errorRatePercent" name="5xx rate %" stroke={portfolioPalette.danger} fill={portfolioPalette.danger} fillOpacity={0.16} strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
           </ChartPanel>
 
-          <ChartPanel eyebrow="AI / cost" title="Token and estimated cost usage">
-            <ResponsiveContainer width="100%" height={270}>
-              <ComposedChart data={aiChart} margin={{ top: 10, right: 4, left: -24, bottom: 0 }}>
+          <ChartPanel eyebrow="Log mix" title="Level distribution">
+            <ResponsiveContainer width="100%" height={220}>
+              <AreaChart data={snapshot?.logLevels ?? []} margin={{ top: 10, right: 4, left: -24, bottom: 0 }}>
+                <defs><linearGradient id="levelFill" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor={portfolioPalette.accent} stopOpacity={0.7} /><stop offset="95%" stopColor={portfolioPalette.accent} stopOpacity={0.04} /></linearGradient></defs>
                 <CartesianGrid stroke="rgba(255,255,255,0.07)" vertical={false} />
-                <XAxis dataKey="label" tick={chartAxis} axisLine={false} tickLine={false} minTickGap={24} />
-                <YAxis yAxisId="tokens" tick={chartAxis} axisLine={false} tickLine={false} allowDecimals={false} />
-                <YAxis yAxisId="cost" orientation="right" tick={chartAxis} axisLine={false} tickLine={false} tickFormatter={(value) => `$${Number(value).toFixed(3)}`} />
+                <XAxis dataKey="level" tick={chartAxis} axisLine={false} tickLine={false} />
+                <YAxis tick={chartAxis} axisLine={false} tickLine={false} allowDecimals={false} />
                 <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: "#fff" }} />
-                <Area yAxisId="tokens" type="monotone" dataKey="inputTokens" name="Input tokens" stackId="tokens" stroke={portfolioPalette.blue} fill={portfolioPalette.blue} fillOpacity={0.42} />
-                <Area yAxisId="tokens" type="monotone" dataKey="outputTokens" name="Output tokens" stackId="tokens" stroke={portfolioPalette.pink} fill={portfolioPalette.pink} fillOpacity={0.42} />
-                <Line yAxisId="cost" type="monotone" dataKey="estimatedCostUsd" name="Estimated cost (USD)" stroke="#fde68a" strokeWidth={2} dot={false} />
-              </ComposedChart>
+                <Area type="monotone" dataKey="count" stroke={portfolioPalette.accent} fill="url(#levelFill)" strokeWidth={2} />
+              </AreaChart>
             </ResponsiveContainer>
           </ChartPanel>
 
           <ChartPanel eyebrow="Security" title="Security event timeline">
-            <ResponsiveContainer width="100%" height={270}>
+            <ResponsiveContainer width="100%" height={220}>
               <AreaChart data={securityChart} margin={{ top: 10, right: 4, left: -24, bottom: 0 }}>
                 <CartesianGrid stroke="rgba(255,255,255,0.07)" vertical={false} />
                 <XAxis dataKey="label" tick={chartAxis} axisLine={false} tickLine={false} minTickGap={24} />
                 <YAxis tick={chartAxis} axisLine={false} tickLine={false} allowDecimals={false} />
                 <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: "#fff" }} />
-                <Area type="stepAfter" dataKey="events" stroke={portfolioPalette.pink} fill={portfolioPalette.pink} fillOpacity={0.22} strokeWidth={2} />
+                <Area type="stepAfter" dataKey="events" name="Events" stroke={portfolioPalette.warning} fill={portfolioPalette.warning} fillOpacity={0.16} strokeWidth={2} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </ChartPanel>
+
+          <ChartPanel eyebrow="AI usage" title="Token volume">
+            <ResponsiveContainer width="100%" height={220}>
+              <AreaChart data={aiChart} margin={{ top: 10, right: 4, left: -24, bottom: 0 }}>
+                <CartesianGrid stroke="rgba(255,255,255,0.07)" vertical={false} />
+                <XAxis dataKey="label" tick={chartAxis} axisLine={false} tickLine={false} minTickGap={24} />
+                <YAxis tick={chartAxis} axisLine={false} tickLine={false} allowDecimals={false} />
+                <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: "#fff" }} />
+                <Legend wrapperStyle={{ fontSize: 11, color: "rgba(255,255,255,0.55)" }} />
+                <Area type="monotone" dataKey="inputTokens" name="Input tokens" stackId="tokens" stroke={portfolioPalette.accent} fill={portfolioPalette.accent} fillOpacity={0.38} />
+                <Area type="monotone" dataKey="outputTokens" name="Output tokens" stackId="tokens" stroke="#0d9488" fill="#0d9488" fillOpacity={0.38} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </ChartPanel>
+
+          <ChartPanel eyebrow="AI usage" title="Estimated cost (USD)">
+            <ResponsiveContainer width="100%" height={220}>
+              <AreaChart data={aiChart} margin={{ top: 10, right: 4, left: -24, bottom: 0 }}>
+                <CartesianGrid stroke="rgba(255,255,255,0.07)" vertical={false} />
+                <XAxis dataKey="label" tick={chartAxis} axisLine={false} tickLine={false} minTickGap={24} />
+                <YAxis tick={chartAxis} axisLine={false} tickLine={false} tickFormatter={(value) => `$${Number(value).toFixed(3)}`} />
+                <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: "#fff" }} />
+                <Area type="monotone" dataKey="estimatedCostUsd" name="Estimated cost (USD)" stroke={portfolioPalette.warning} fill={portfolioPalette.warning} fillOpacity={0.16} strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
           </ChartPanel>
@@ -1552,8 +1604,8 @@ function ObservabilityView() {
           <InsightPanel title="Recent security events" empty="No tagged security events in this range.">
             {snapshot?.recentSecurityEvents.map((item, index) => (
               <div className="grid grid-cols-[10px_minmax(0,1fr)] gap-3 border-b border-white/[0.08] py-4 last:border-0" key={`${item.timestamp}-${index}`}>
-                <span className="mt-1.5 h-2 w-2 rounded-full bg-[#f472b6] shadow-[0_0_12px_rgba(244,114,182,0.65)]" />
-                <div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#fbcfe8]">{item.event}</p><p className="mt-2 text-sm leading-6 text-white/65">{item.message}</p><p className="mt-2 text-xs text-white/35">{formatDate(item.timestamp)}</p></div>
+                <span className="mt-1.5 h-2 w-2 rounded-full bg-[#6e56cf] shadow-[0_0_12px_rgba(110,86,207,0.55)]" />
+                <div><p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#c9bdfb]">{item.event}</p><p className="mt-2 text-sm leading-6 text-white/65">{item.message}</p><p className="mt-2 text-xs text-white/35">{formatDate(item.timestamp)}</p></div>
               </div>
             ))}
           </InsightPanel>
@@ -1568,7 +1620,7 @@ function ObservabilityView() {
               ["activity", "Activity"],
               ["errors", "Errors"],
             ] as const).map(([value, label]) => (
-              <button key={value} role="tab" aria-selected={category === value} className={`shrink-0 rounded-[8px] border px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] transition ${category === value ? "border-[#c084fc]/45 bg-gradient-to-r from-[#c084fc]/15 via-[#f472b6]/10 to-[#60a5fa]/15 text-white" : "border-white/14 text-white/50 hover:border-white/30 hover:text-white"}`} onClick={() => selectCategory(value)} type="button">
+              <button key={value} role="tab" aria-selected={category === value} className={`shrink-0 rounded-[8px] border px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] transition ${category === value ? "border-[#6e56cf]/45 bg-[#6e56cf]/[0.12] text-white" : "border-white/14 text-white/50 hover:border-white/30 hover:text-white"}`} onClick={() => selectCategory(value)} type="button">
                 {label}
               </button>
             ))}
@@ -1581,7 +1633,7 @@ function ObservabilityView() {
               <form className="grid gap-4 border-b border-white/10 p-5 md:grid-cols-2 xl:grid-cols-[140px_170px_minmax(220px,1fr)_180px_180px_auto] xl:items-end" onSubmit={applyFilters}>
                 <DarkSelect label="Level" value={filters.level} onChange={(value) => setFilters({ ...filters, level: value })} options={[["", "All levels"], ["Information", "Information"], ["Warning", "Warning"], ["Error", "Error"], ["Fatal", "Fatal"], ["Debug", "Debug"]]} />
                 <DarkSelect label="Module" value={filters.source} onChange={(value) => setFilters({ ...filters, source: value })} options={[["", "All modules"], ["Auth", "Auth"], ["Drive", "Drive"], ["Processing", "Processing"], ["SearchChat", "Search / Chat"], ["Admin", "Admin"]]} />
-                <label className="block"><span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/38">Search logs</span><input className="mt-2 w-full rounded-[7px] border border-white/12 bg-black/25 px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/25 focus:border-[#c084fc]/70" value={filters.search} onChange={(event) => setFilters({ ...filters, search: event.target.value })} placeholder="Message, path, source..." /></label>
+                <label className="block"><span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/38">Search logs</span><input className="mt-2 w-full rounded-[7px] border border-white/12 bg-black/25 px-3 py-2.5 text-sm text-white outline-none placeholder:text-white/25 focus:border-[#6e56cf]/70" value={filters.search} onChange={(event) => setFilters({ ...filters, search: event.target.value })} placeholder="Message, path, source..." /></label>
                 <DarkDate label="From" value={filters.from} onChange={(value) => setFilters({ ...filters, from: value })} />
                 <DarkDate label="To" value={filters.to} onChange={(value) => setFilters({ ...filters, to: value })} />
                 <button className={primaryButtonClass} disabled={logLoading} type="submit">Apply</button>
@@ -1618,18 +1670,59 @@ function ObservabilityView() {
   );
 }
 
+function SystemHealthHero({
+  errorRatePercent,
+  requestsToday,
+  range,
+}: {
+  errorRatePercent: number | undefined;
+  requestsToday: number | undefined;
+  range: "24h" | "7d" | "30d";
+}) {
+  // A simple, defensible health heuristic from the one number that most directly answers
+  // "is everything okay?" — the same signal a real on-call dashboard would lead with.
+  const hasData = errorRatePercent !== undefined && requestsToday !== undefined && requestsToday > 0;
+  const status: "good" | "warning" | "danger" | "unknown" = !hasData
+    ? "unknown"
+    : errorRatePercent! < 1
+      ? "good"
+      : errorRatePercent! < 5
+        ? "warning"
+        : "danger";
+  const copy = {
+    good: { label: "Operating normally", tone: statusTone.success, dot: "bg-[#3fb950]" },
+    warning: { label: "Elevated error rate", tone: statusTone.warning, dot: "bg-[#e3b341]" },
+    danger: { label: "Degraded — high error rate", tone: statusTone.danger, dot: "bg-[#f85149]" },
+    unknown: { label: "No traffic yet", tone: statusTone.neutral, dot: "bg-white/30" },
+  }[status];
+
+  return (
+    <article className="flex flex-col justify-between rounded-lg border border-white/10 bg-[#111114] p-6">
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/38">System health</p>
+        <span className={`${portfolioClasses.badge} ${copy.tone}`}>
+          <span className={`h-1.5 w-1.5 rounded-full ${copy.dot}`} aria-hidden="true" />
+          {copy.label}
+        </span>
+      </div>
+      <p className="mt-6 text-6xl font-semibold tracking-[-0.03em] text-white">{hasData ? formatPercent(errorRatePercent) : "—"}</p>
+      <p className="mt-3 text-sm text-white/48">5xx error rate across the selected {range}{hasData ? ` · ${formatInteger(requestsToday)} requests today` : ""}</p>
+    </article>
+  );
+}
+
 function MetricCard({ label, value, detail, accent }: { label: string; value: string; detail: string; accent: string }) {
-  return <article className="rounded-[8px] border border-white/10 bg-white/[0.035] p-5"><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/38">{label}</p><p className={`mt-4 font-serif text-4xl ${accent}`}>{value}</p><p className="mt-3 text-xs leading-5 text-white/35">{detail}</p></article>;
+  return <article className="rounded-[8px] border border-white/10 bg-white/[0.035] p-5"><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/38">{label}</p><p className={`mt-4 text-4xl font-semibold tracking-[-0.02em] ${accent}`}>{value}</p><p className="mt-3 text-xs leading-5 text-white/35">{detail}</p></article>;
 }
 
 function ChartPanel({ eyebrow, title, children }: { eyebrow: string; title: string; children: React.ReactNode }) {
-  return <section className="min-w-0 rounded-[8px] border border-white/10 bg-white/[0.03] p-4 sm:p-5"><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">{eyebrow}</p><h3 className="mt-2 font-serif text-2xl text-white/90">{title}</h3><div className="mt-5 h-[270px] min-w-0">{children}</div></section>;
+  return <section className="min-w-0 rounded-[8px] border border-white/10 bg-white/[0.03] p-4 sm:p-5"><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/35">{eyebrow}</p><h3 className="mt-2 text-2xl font-semibold tracking-[-0.015em] text-white/90">{title}</h3><div className="mt-5 h-[270px] min-w-0">{children}</div></section>;
 }
 
 function InsightPanel({ title, empty, children }: { title: string; empty: string; children: React.ReactNode }) {
   const items = Array.isArray(children) ? children.filter(Boolean) : children;
   const isEmpty = Array.isArray(items) && items.length === 0;
-  return <section className="rounded-[8px] border border-white/10 bg-white/[0.025] p-5"><h3 className="font-serif text-2xl text-white/90">{title}</h3><div className="mt-3 max-h-[330px] overflow-y-auto">{isEmpty ? <p className="py-5 text-sm text-white/38">{empty}</p> : children}</div></section>;
+  return <section className="rounded-[8px] border border-white/10 bg-white/[0.025] p-5"><h3 className="text-2xl font-semibold tracking-[-0.015em] text-white/90">{title}</h3><div className="mt-3 max-h-[330px] overflow-y-auto">{isEmpty ? <p className="py-5 text-sm text-white/38">{empty}</p> : children}</div></section>;
 }
 
 function ObservabilityActivity({ activity, error, isLoading, onPageChange }: { activity: ActivityResponse | null; error: string | null; isLoading: boolean; onPageChange: (page: number) => void }) {
@@ -1638,18 +1731,18 @@ function ObservabilityActivity({ activity, error, isLoading, onPageChange }: { a
     <div className="min-h-[380px] divide-y divide-white/[0.08]">
       {isLoading && !activity ? <p className="p-6 text-sm text-white/45">Loading recent activity...</p> : null}
       {!isLoading && activity?.entries.length === 0 ? <p className="p-6 text-sm text-white/45">No activity has been recorded yet.</p> : null}
-      {activity?.entries.map((entry) => <article className="grid gap-3 px-5 py-5 sm:grid-cols-[170px_minmax(0,1fr)] sm:px-6" key={entry.id}><div><span className="rounded-full border border-[#c084fc]/30 bg-[#c084fc]/10 px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#e9d5ff]">{activityTypeLabel(entry.type)}</span><time className="mt-3 block text-xs text-white/35" dateTime={entry.occurredAt}>{formatDate(entry.occurredAt)}</time></div><div><p className="font-serif text-xl text-white/82">{entry.summary}</p>{entry.fileId ? <p className="mt-2 break-all text-xs text-white/28">File {entry.fileId}</p> : null}{entry.conversationId ? <p className="mt-2 break-all text-xs text-white/28">Conversation {entry.conversationId}</p> : null}</div></article>)}
+      {activity?.entries.map((entry) => <article className="grid gap-3 px-5 py-5 sm:grid-cols-[170px_minmax(0,1fr)] sm:px-6" key={entry.id}><div><span className="rounded-full border border-[#6e56cf]/30 bg-[#6e56cf]/10 px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#c9bdfb]">{activityTypeLabel(entry.type)}</span><time className="mt-3 block text-xs text-white/35" dateTime={entry.occurredAt}>{formatDate(entry.occurredAt)}</time></div><div><p className="text-xl font-medium text-white/82">{entry.summary}</p>{entry.fileId ? <p className="mt-2 break-all text-xs text-white/28">File {entry.fileId}</p> : null}{entry.conversationId ? <p className="mt-2 break-all text-xs text-white/28">Conversation {entry.conversationId}</p> : null}</div></article>)}
     </div>
     <div className="flex items-center justify-between border-t border-white/10 px-5 py-5 text-sm text-white/42"><span>Page {activity?.page ?? 1}</span><div className="flex gap-2"><DarkPageButton disabled={isLoading || (activity?.page ?? 1) <= 1} onClick={() => onPageChange(Math.max(1, (activity?.page ?? 1) - 1))}>Previous</DarkPageButton><DarkPageButton disabled={isLoading || !activity?.hasMore} onClick={() => onPageChange((activity?.page ?? 1) + 1)}>Next</DarkPageButton></div></div>
   </div>;
 }
 
 function DarkSelect({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: ReadonlyArray<readonly [string, string]> }) {
-  return <label className="block"><span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/38">{label}</span><select className="mt-2 w-full rounded-[7px] border border-white/12 bg-[#101016] px-3 py-2.5 text-sm text-white outline-none focus:border-[#c084fc]/70" value={value} onChange={(event) => onChange(event.target.value)}>{options.map(([optionValue, optionLabel]) => <option value={optionValue} key={optionValue || "all"}>{optionLabel}</option>)}</select></label>;
+  return <label className="block"><span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/38">{label}</span><select className="mt-2 w-full rounded-[7px] border border-white/12 bg-[#111114] px-3 py-2.5 text-sm text-white outline-none focus:border-[#6e56cf]/70" value={value} onChange={(event) => onChange(event.target.value)}>{options.map(([optionValue, optionLabel]) => <option value={optionValue} key={optionValue || "all"}>{optionLabel}</option>)}</select></label>;
 }
 
 function DarkDate({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
-  return <label className="block"><span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/38">{label}</span><input type="datetime-local" className="mt-2 w-full rounded-[7px] border border-white/12 bg-[#101016] px-3 py-2.5 text-sm text-white outline-none focus:border-[#60a5fa]/70 [color-scheme:dark]" value={value} onChange={(event) => onChange(event.target.value)} /></label>;
+  return <label className="block"><span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/38">{label}</span><input type="datetime-local" className="mt-2 w-full rounded-[7px] border border-white/12 bg-[#111114] px-3 py-2.5 text-sm text-white outline-none focus:border-[#6e56cf]/70 [color-scheme:dark]" value={value} onChange={(event) => onChange(event.target.value)} /></label>;
 }
 
 function DarkPageButton({ children, disabled, onClick }: { children: React.ReactNode; disabled: boolean; onClick: () => void }) {
@@ -1673,7 +1766,7 @@ function FileMoveControl({
     <div className="flex rounded-[8px] border border-white/12 bg-white/[0.035]">
       <select
         aria-label={`Move ${file.originalFileName} to folder`}
-        className="max-w-[92px] rounded-l-[8px] bg-[#0d0c13] px-2 text-xs text-white/72 outline-none focus:text-white"
+        className="max-w-[92px] rounded-l-[8px] bg-[#0d0d10] px-2 text-xs text-white/72 outline-none focus:text-white"
         value={target}
         onChange={(event) => onMoveTargetChange(file.id, event.target.value)}
       >
@@ -1684,7 +1777,7 @@ function FileMoveControl({
           </option>
         ))}
       </select>
-      <button className="grid h-11 w-11 place-items-center border-l border-white/10 text-white/72 transition hover:bg-[#c084fc]/10 hover:text-[#e9d5ff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c084fc]/70" onClick={() => onMoveFile(file)} type="button" aria-label={`Move ${file.originalFileName}`}>
+      <button className="grid h-11 w-11 place-items-center border-l border-white/10 text-white/72 transition hover:bg-[#6e56cf]/10 hover:text-[#c9bdfb] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6e56cf]/70" onClick={() => onMoveFile(file)} type="button" aria-label={`Move ${file.originalFileName}`}>
         <FolderGlyph />
       </button>
     </div>
@@ -1693,7 +1786,7 @@ function FileMoveControl({
 
 function ShieldMark() {
   return (
-    <span className="grid h-9 w-9 place-items-center rounded-[7px] border border-[#c084fc]/55 bg-[#c084fc]/10 text-[#e9d5ff]" aria-hidden="true">
+    <span className="grid h-9 w-9 place-items-center rounded-[7px] border border-[#6e56cf]/55 bg-[#6e56cf]/10 text-[#c9bdfb]" aria-hidden="true">
       <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none">
         <path d="M12 3l7 2.8v5.4c0 4.4-2.8 7.9-7 9.8-4.2-1.9-7-5.4-7-9.8V5.8L12 3z" stroke="currentColor" strokeWidth="1.8" />
         <path d="M12 8v7m-3.2-3.2L12 15l4.2-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
