@@ -137,7 +137,7 @@ The API is a modular monolith: one deployable ASP.NET Core service, one physical
 - `Modules/Agent` owns persisted agent runs, iteration limits, and approval/resume orchestration.
 - `Modules/AgentTools` owns the approval metadata, runtime tool registry, Drive tools, and read-only GitHub tools.
   See [Agent Reference](agent.md) for the full design — the turn loop, approval gating, run states, and safety reasoning.
-- `Modules/Admin` owns authenticated operational views, including persisted logs and the activity-feed projection.
+- `Modules/Admin` owns authenticated operational views, including persisted logs, derived metrics, normalized Jaeger trace queries, and the activity-feed projection.
 - `Shared/DomainEvents` owns the lightweight in-process dispatcher contracts and failure isolation.
 - `Shared/Infrastructure` owns cross-cutting infrastructure: DbContext, migrations, external AI HTTP client, CORS, security headers, file-logging configuration, OpenTelemetry tracing, and host-level wiring.
 
@@ -145,7 +145,7 @@ Modules communicate through DI interfaces or plain IDs/DTOs, not direct cross-mo
 
 Module-owned domain-event contracts provide optional in-process notifications for the Admin activity feed. Drive, Processing, and SearchChat publish facts only after their direct business work is committed; Admin handlers project those facts into `activity_entries`. The shared dispatcher isolates handler failures, so activity recording cannot become a prerequisite for upload, processing, or chat behavior. These notifications do not replace direct module calls or provide durable cross-process delivery.
 
-The Admin module also owns observability read models. It aggregates retained, redacted Serilog events for request/error/security views and stores measured AI operation usage in `ai_usage_records`. The shared AI client reports usage through `IAiUsageRecorder`; it does not access Admin entities directly. Per-model prices are operator configuration, and unmatched billable usage remains explicitly unpriced.
+The Admin module also owns observability read models. It aggregates retained, redacted Serilog events for request/error/security metrics, stores measured AI operation usage in `ai_usage_records`, and queries Jaeger's private HTTP API through a bounded typed client. The trace endpoint returns only normalized service, operation, timing, hierarchy, and error data; it does not expose raw span tags that could contain sensitive values. Its server span and Jaeger-query HTTP calls are excluded from tracing so the observer does not pollute the trace stream it is reading. The shared AI client reports usage through `IAiUsageRecorder`; it does not access Admin entities directly. Per-model prices are operator configuration, and unmatched billable usage remains explicitly unpriced.
 
 Future split candidates are Auth/User, Drive/File metadata, Processing worker, Search/Chat, AI service, and Web frontend. That split is not happening now; revisit it only with a concrete reason such as independent scaling, deployment ownership, heavy processing load, or separate data ownership.
 
@@ -153,8 +153,8 @@ See [Architecture Decision Records](decisions/README.md) for the reasoning behin
 
 ## Local Tracing
 
-Docker Compose starts Jaeger all-in-one with in-memory trace storage. Open <http://localhost:16686>, select `amanah-drive-api` or `amanah-drive-ai-service`, and search for traces. Requests crossing from the API to the AI service use W3C `traceparent` propagation and appear under one trace ID.
+Docker Compose starts Jaeger all-in-one with in-memory trace storage. The authenticated dashboard's Observability → Traces view queries it through `GET /admin/traces`, so production operators do not need public access to Jaeger's unauthenticated API. The loopback-only Jaeger UI remains available at <http://localhost:16686> for deeper local inspection. Requests crossing from the API to the AI service use W3C `traceparent` propagation and appear under one trace ID.
 
-Tracing is not a readiness dependency. Set `OTEL_TRACING_ENABLED=false` to disable export; if Jaeger is unavailable, the API and AI service continue serving requests while their background exporters report and discard failed exports.
+Tracing is not a readiness dependency. Set `OTEL_TRACING_ENABLED=false` to disable export; if Jaeger is unavailable, the API and AI service continue serving requests while their background exporters report and discard failed exports, and the trace view reports its isolated unavailable state without affecting Metrics or Logs.
 
 Keep this file focused on layout and boundaries. Larger tradeoffs belong in the ADRs.

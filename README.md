@@ -28,14 +28,14 @@ The interface screenshots use deterministic sample data so the repository images
 - Semantic search over stored document chunks.
 - RAG chat with citations and persisted conversation history.
 - Approval-aware agent runs with persisted cross-run conversation history, twelve Drive tools, and two read-only GitHub tools.
-- Authenticated Next.js dashboard for file management, search, chat, agent runs, activity, logs, and operational metrics.
+- Authenticated Next.js dashboard for file management, search, chat, agent runs, activity, and a unified metrics/logs/traces observability workspace.
 - Portfolio landing page and login flow.
 - Docker Compose environment for PostgreSQL, API, AI service, and web app.
 - CI jobs for API, AI service, and web build/test checks, dependency audits, and CodeQL analysis.
 - Interactive OpenAPI documentation for the API at `/docs` when enabled.
 - Durable rolling API logs and an authenticated observability dashboard for request health, errors, security events, activity, and measured AI usage/cost.
 - Non-critical in-process domain notifications projected into an authenticated activity feed.
-- Connected API-to-AI-service traces in a local in-memory Jaeger instance.
+- Connected API-to-AI-service traces in a local in-memory Jaeger instance, normalized through an authenticated in-app trace explorer.
 - Retry, timeout, and circuit-breaker resilience around API-to-AI-service and AI-service-to-Hugging-Face calls.
 - Versioned GHCR image publishing on tagged releases.
 - A documented, trace-informed load test of the real running stack.
@@ -373,6 +373,12 @@ CSRF posture in V1: application mutations require a bearer access token, while r
 
 - Added persisted agent runs with bounded tool-calling, explicit approval/rejection for destructive operations, and usage tracking.
 - Added Drive and read-only GitHub tools, along with an Agent dashboard view that shows the run transcript and pending approvals.
+
+### Phase 25 - Unified Observability Workspace
+
+- Renamed the dashboard's Logs destination to Observability and separated Metrics, Traces, and Logs into explicit views.
+- Added an authenticated API facade over the private Jaeger query service with normalized trace and span timelines.
+- Kept trace storage optional and isolated: if Jaeger is unavailable, logs, metrics, and application readiness continue working.
 
 ## Future Improvements
 

@@ -7,11 +7,12 @@ import ReactMarkdown from "react-markdown";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { portfolioClasses, portfolioPalette, SectionLabel, statusTone } from "@/components/portfolio-theme";
 import { apiFetch, apiJson, errorMessage } from "@/lib/api";
-import type { ActivityResponse, AdminLogResponse, AgentRunResponse, AgentRunStepResponse, ChatCitation, ChatHistoryResponse, ChatMessageResponse, ChatResponse, FileItem, Folder, FolderContents, ObservabilitySnapshot, SearchResponse, SearchResult } from "@/lib/types";
+import type { ActivityResponse, AdminLogResponse, AgentRunResponse, AgentRunStepResponse, ChatCitation, ChatHistoryResponse, ChatMessageResponse, ChatResponse, FileItem, Folder, FolderContents, ObservabilitySnapshot, SearchResponse, SearchResult, TraceSearchResponse } from "@/lib/types";
 import { useAuth } from "../auth-provider";
 
 type Breadcrumb = { id: string | null; name: string };
 type AppView = "files" | "knowledge" | "logs" | "agent";
+type ObservabilitySection = "metrics" | "traces" | "logs";
 type ObservabilityCategory = "api" | "security" | "ai" | "activity" | "errors";
 type LogFilters = { level: string; search: string; source: string; from: string; to: string };
 type ChatEntry = {
@@ -479,7 +480,7 @@ export default function DrivePage() {
     { id: "files", label: "Files" },
     { id: "knowledge", label: "Search & Chat" },
     { id: "agent", label: "Agent" },
-    { id: "logs", label: "Logs" },
+    { id: "logs", label: "Observability" },
   ];
 
   return (
@@ -1424,6 +1425,7 @@ function CitationSnippetDialog({ citation, onClose, onDownload }: { citation: Ch
 
 function ObservabilityView() {
   const [range, setRange] = useState<"24h" | "7d" | "30d">("24h");
+  const [section, setSection] = useState<ObservabilitySection>("metrics");
   const [category, setCategory] = useState<ObservabilityCategory>("api");
   const [snapshot, setSnapshot] = useState<ObservabilitySnapshot | null>(null);
   const [snapshotError, setSnapshotError] = useState<string | null>(null);
@@ -1439,6 +1441,10 @@ function ObservabilityView() {
   const [activityPage, setActivityPage] = useState(1);
   const [activityLoading, setActivityLoading] = useState(false);
   const [activityError, setActivityError] = useState<string | null>(null);
+  const [traces, setTraces] = useState<TraceSearchResponse | null>(null);
+  const [traceService, setTraceService] = useState("");
+  const [traceLoading, setTraceLoading] = useState(false);
+  const [traceError, setTraceError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
   const loadSnapshot = useCallback(async () => {
@@ -1484,23 +1490,48 @@ function ObservabilityView() {
     }
   }, [activityPage]);
 
-  useEffect(() => {
-    void loadSnapshot();
-  }, [loadSnapshot, refreshKey]);
+  const loadTraces = useCallback(async () => {
+    setTraceLoading(true);
+    setTraceError(null);
+    try {
+      const params = new URLSearchParams({ range, limit: "20" });
+      if (traceService) params.set("service", traceService);
+      const response = await apiJson<TraceSearchResponse>(`/admin/traces?${params}`);
+      setTraces(response);
+      if (!traceService && response.service) setTraceService(response.service);
+    } catch (err) {
+      setTraceError(err instanceof Error ? err.message : "Unable to load distributed traces.");
+    } finally {
+      setTraceLoading(false);
+    }
+  }, [range, traceService]);
 
   useEffect(() => {
+    if (section !== "metrics") return;
+    void loadSnapshot();
+  }, [loadSnapshot, refreshKey, section]);
+
+  useEffect(() => {
+    if (section !== "logs") return;
     if (category === "activity") {
       void loadActivity();
       return;
     }
     void loadLogs();
-  }, [category, loadActivity, loadLogs, refreshKey]);
+  }, [category, loadActivity, loadLogs, refreshKey, section]);
 
   useEffect(() => {
-    if (category !== "activity") return;
+    if (section !== "logs" || category !== "activity") return;
     const refresh = window.setInterval(() => void loadActivity(), 15_000);
     return () => window.clearInterval(refresh);
-  }, [category, loadActivity]);
+  }, [category, loadActivity, section]);
+
+  useEffect(() => {
+    if (section !== "traces") return;
+    void loadTraces();
+    const refresh = window.setInterval(() => void loadTraces(), 15_000);
+    return () => window.clearInterval(refresh);
+  }, [loadTraces, refreshKey, section]);
 
   function selectCategory(nextCategory: ObservabilityCategory) {
     setCategory(nextCategory);
@@ -1527,22 +1558,40 @@ function ObservabilityView() {
           <div>
             <SectionLabel className="text-[#ffffff]">Administration / observability</SectionLabel>
             <h2 className="mt-3 text-4xl font-semibold tracking-[-0.02em] leading-tight text-white sm:text-6xl">System <span className={portfolioClasses.gradientText}>signals</span></h2>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/48">Request health, security events, AI usage, activity, and retained structured logs.</p>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/48">Metrics explain system health, traces connect work across services, and logs preserve the underlying events.</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex rounded-[8px] border border-white/12 bg-white/[0.035] p-1" aria-label="Metrics range">
+            <div className="flex rounded-[8px] border border-white/12 bg-white/[0.035] p-1" aria-label="Observability range">
               {(["24h", "7d", "30d"] as const).map((option) => (
                 <button key={option} className={`rounded-[6px] border px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition ${range === option ? "border-[#ffffff]/45 bg-[#ffffff]/12 text-[#ffffff]" : "border-transparent text-white/50 hover:text-white"}`} onClick={() => setRange(option)} type="button">
                   {option}
                 </button>
               ))}
             </div>
-            <button className="rounded-[8px] border border-white/14 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-white/65 transition hover:border-[#ffffff]/65 hover:text-white" disabled={snapshotLoading || logLoading || activityLoading} onClick={() => setRefreshKey((value) => value + 1)} type="button">
+            <button className="rounded-[8px] border border-white/14 px-4 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-white/65 transition hover:border-[#ffffff]/65 hover:text-white" disabled={snapshotLoading || logLoading || activityLoading || traceLoading} onClick={() => setRefreshKey((value) => value + 1)} type="button">
               Refresh
             </button>
           </div>
         </div>
 
+        <div className="mt-6 flex flex-wrap gap-2" role="tablist" aria-label="Observability signals">
+          {([[
+            "metrics",
+            "Metrics",
+          ], [
+            "traces",
+            "Traces",
+          ], [
+            "logs",
+            "Logs",
+          ]] as const).map(([value, label]) => (
+            <button key={value} role="tab" aria-selected={section === value} className={`rounded-[8px] border px-5 py-2.5 text-xs font-semibold uppercase tracking-[0.14em] transition ${section === value ? "border-white bg-white text-black" : "border-white/14 text-white/50 hover:border-white/30 hover:text-white"}`} onClick={() => setSection(value)} type="button">
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {section === "metrics" ? <>
         {snapshotError ? <div className="mt-6 rounded-[8px] border border-red-400/25 bg-red-500/10 px-4 py-3 text-sm text-red-200" role="alert">{snapshotError}</div> : null}
 
         {/* Progressive disclosure: one hero signal answers "is everything okay?" before the
@@ -1665,8 +1714,19 @@ function ObservabilityView() {
             ))}
           </InsightPanel>
         </div>
+        </> : null}
 
-        <div className="mt-8 border-t border-white/10 pt-7">
+        {section === "traces" ? (
+          <TraceExplorer
+            data={traces}
+            error={traceError}
+            isLoading={traceLoading}
+            selectedService={traceService}
+            onServiceChange={setTraceService}
+          />
+        ) : null}
+
+        {section === "logs" ? <div className="mt-8 border-t border-white/10 pt-7">
           <div className="flex flex-wrap gap-2 pb-2" role="tablist" aria-label="Observability categories">
             {([
               ["api", "API"],
@@ -1719,7 +1779,7 @@ function ObservabilityView() {
               </div>
             </div>
           )}
-        </div>
+        </div> : null}
       </div>
     </section>
   );
@@ -1939,6 +1999,108 @@ function formatScore(score: number) {
   return score.toFixed(3);
 }
 
+function TraceExplorer({
+  data,
+  error,
+  isLoading,
+  selectedService,
+  onServiceChange,
+}: {
+  data: TraceSearchResponse | null;
+  error: string | null;
+  isLoading: boolean;
+  selectedService: string;
+  onServiceChange: (service: string) => void;
+}) {
+  return (
+    <div className="mt-7">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <MetricCard
+          label="Trace storage"
+          value={data ? (data.available ? "Online" : "Offline") : "--"}
+          detail="Private Jaeger query service"
+          accent={data?.available ? "text-emerald-200" : data ? "text-red-200" : "text-white"}
+        />
+        <MetricCard label="Recent traces" value={formatInteger(data?.traces.length)} detail="Newest matching traces, up to 20" accent="text-white" />
+        <MetricCard label="Reporting services" value={formatInteger(data?.services.length)} detail="Services currently known to Jaeger" accent="text-[#f0c674]" />
+      </div>
+
+      <section className="mt-5 overflow-hidden rounded-[8px] border border-white/12 bg-white/[0.025]">
+        <div className="flex flex-col gap-4 border-b border-white/10 p-5 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/38">Distributed request flow</p>
+            <h3 className="mt-2 text-2xl font-semibold tracking-[-0.015em] text-white/90">Trace explorer</h3>
+            <p className="mt-2 text-sm leading-6 text-white/42">Follow one request across the API and AI service. This view refreshes every 15 seconds while open.</p>
+          </div>
+          <label className="block min-w-64">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/38">Service</span>
+            <select
+              aria-label="Trace service"
+              className="mt-2 w-full rounded-[7px] border border-white/12 bg-[#0a0a0a] px-3 py-2.5 text-sm text-white outline-none focus:border-white/70"
+              value={selectedService}
+              onChange={(event) => onServiceChange(event.target.value)}
+              disabled={!data?.available || data.services.length === 0}
+            >
+              {data?.services.length ? null : <option value="">No services reported</option>}
+              {data?.services.map((service) => <option value={service} key={service}>{service}</option>)}
+            </select>
+          </label>
+        </div>
+
+        {error ? <div className="m-5 rounded-[8px] border border-red-400/25 bg-red-500/10 px-4 py-3 text-sm text-red-200" role="alert">{error}</div> : null}
+        {data?.message ? <div className={`m-5 rounded-[8px] border px-4 py-3 text-sm ${data.available ? "border-amber-300/20 bg-amber-300/10 text-amber-100" : "border-red-400/25 bg-red-500/10 text-red-200"}`} role="status">{data.message}</div> : null}
+        {isLoading && !data ? <p className="p-6 text-sm text-white/45">Loading distributed traces...</p> : null}
+        {!isLoading && data?.available && data.traces.length === 0 ? <p className="p-6 text-sm text-white/45">No traces match this service and time range yet.</p> : null}
+
+        <div className="divide-y divide-white/[0.08]">
+          {data?.traces.map((trace) => (
+            <details className="group px-5 py-5 sm:px-6" key={trace.traceId}>
+              <summary className="grid cursor-pointer list-none gap-4 outline-none md:grid-cols-[minmax(0,1fr)_120px_110px_100px_24px] md:items-center [&::-webkit-details-marker]:hidden">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={`rounded-full border px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.14em] ${trace.hasError ? "border-red-300/25 bg-red-400/10 text-red-200" : "border-emerald-200/20 bg-emerald-300/10 text-emerald-100"}`}>{trace.hasError ? "Error" : "Success"}</span>
+                    <span className="font-mono text-[10px] text-white/30">{shortTraceId(trace.traceId)}</span>
+                  </div>
+                  <p className="mt-2 truncate text-sm font-medium text-white/82">{trace.operationName}</p>
+                  <p className="mt-1 truncate text-xs text-white/38">{trace.services.join(" → ")}</p>
+                </div>
+                <div><p className="text-[9px] uppercase tracking-[0.14em] text-white/30">Duration</p><p className="mt-1 text-sm text-white/70">{formatTraceDuration(trace.durationMilliseconds)}</p></div>
+                <div><p className="text-[9px] uppercase tracking-[0.14em] text-white/30">Spans</p><p className="mt-1 text-sm text-white/70">{trace.spanCount} / {trace.serviceCount} svc</p></div>
+                <time className="text-xs text-white/38" dateTime={trace.startTime}>{formatTraceTime(trace.startTime)}</time>
+                <span className="text-white/35 transition group-open:rotate-45" aria-hidden="true">+</span>
+              </summary>
+
+              <div className="mt-5 border-t border-white/[0.08] pt-5">
+                <div className="mb-3 grid grid-cols-[minmax(160px,0.9fr)_minmax(220px,1.4fr)] gap-4 text-[9px] font-semibold uppercase tracking-[0.15em] text-white/28">
+                  <span>Service / operation</span><span>Timeline · {formatTraceDuration(trace.durationMilliseconds)}</span>
+                </div>
+                <div className="space-y-2 overflow-x-auto">
+                  {trace.spans.map((span) => {
+                    const total = Math.max(trace.durationMilliseconds, 0.01);
+                    const left = Math.min(99, Math.max(0, span.offsetMilliseconds / total * 100));
+                    const width = Math.min(100 - left, Math.max(1.25, span.durationMilliseconds / total * 100));
+                    return (
+                      <div className="grid min-w-[620px] grid-cols-[minmax(160px,0.9fr)_minmax(220px,1.4fr)] items-center gap-4" key={span.spanId}>
+                        <div className="min-w-0" style={{ paddingLeft: Math.min(span.depth, 6) * 12 }}>
+                          <p className={`truncate text-xs ${span.hasError ? "text-red-200" : "text-white/72"}`}>{span.operationName}</p>
+                          <p className="mt-0.5 truncate text-[10px] text-white/30">{span.service} · {formatTraceDuration(span.durationMilliseconds)}</p>
+                        </div>
+                        <div className="relative h-7 overflow-hidden rounded bg-white/[0.035]" title={`${span.service}: ${span.operationName}`}>
+                          <span className={`absolute top-1.5 h-4 rounded-sm ${span.hasError ? "bg-red-400/75" : "bg-white/65"}`} style={{ left: `${left}%`, width: `${width}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </details>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function formatPercentage(score: number) {
   return `${Math.round(Math.max(0, Math.min(1, score)) * 100)}%`;
 }
@@ -1985,6 +2147,22 @@ function formatPercent(value: number | undefined) {
 
 function formatMilliseconds(value: number | undefined) {
   return value === undefined ? "--" : `${value.toFixed(value >= 100 ? 0 : 1)} ms`;
+}
+
+function formatTraceDuration(value: number) {
+  if (value < 1) return `${Math.max(0, value * 1_000).toFixed(0)} μs`;
+  if (value < 1_000) return `${value.toFixed(value >= 100 ? 0 : 1)} ms`;
+  return `${(value / 1_000).toFixed(2)} s`;
+}
+
+function formatTraceTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Unknown";
+  return new Intl.DateTimeFormat("en", { hour: "numeric", minute: "2-digit", second: "2-digit" }).format(date);
+}
+
+function shortTraceId(value: string) {
+  return value.length <= 12 ? value : `${value.slice(0, 6)}…${value.slice(-6)}`;
 }
 
 function formatCurrency(value: number | undefined) {

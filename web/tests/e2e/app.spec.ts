@@ -91,7 +91,8 @@ test("authenticated admin log viewer renders persisted entries", async ({ page }
   });
 
   await signIn(page);
-  await page.getByRole("button", { name: "Logs" }).click();
+  await page.getByRole("button", { name: "Observability" }).click();
+  await page.getByRole("tab", { name: "Logs" }).click();
 
   await expect(page.getByRole("heading", { name: "System signals" })).toBeVisible();
   await expect(page.getByText("Document processing job {JobId} failed")).toBeVisible();
@@ -120,11 +121,54 @@ test("authenticated activity view renders domain entries", async ({ page }) => {
   });
 
   await signIn(page);
-  await page.getByRole("button", { name: "Logs" }).click();
+  await page.getByRole("button", { name: "Observability" }).click();
+  await page.getByRole("tab", { name: "Logs" }).click();
   await page.getByRole("tab", { name: "Activity" }).click();
 
   await expect(page.getByText("Finished processing report.pdf")).toBeVisible();
   await expect(page.getByText("Processed", { exact: true })).toBeVisible();
+});
+
+test("observability traces render cross-service spans", async ({ page }) => {
+  await mockApi(page, {
+    loginSucceeds: true,
+    adminTraces: {
+      available: true,
+      message: null,
+      range: "24h",
+      from: "2026-08-29T11:00:00Z",
+      to: "2026-08-30T11:00:00Z",
+      service: "amanah-drive-api",
+      services: ["amanah-drive-ai-service", "amanah-drive-api"],
+      traces: [{
+        traceId: "abc123def456abc123def456abc123de",
+        rootService: "amanah-drive-api",
+        operationName: "POST /chat",
+        startTime: "2026-08-30T10:59:00Z",
+        durationMilliseconds: 420,
+        spanCount: 2,
+        serviceCount: 2,
+        hasError: false,
+        services: ["amanah-drive-api", "amanah-drive-ai-service"],
+        spans: [
+          { spanId: "root", parentSpanId: null, service: "amanah-drive-api", operationName: "POST /chat", startTime: "2026-08-30T10:59:00Z", durationMilliseconds: 420, offsetMilliseconds: 0, depth: 0, hasError: false },
+          { spanId: "child", parentSpanId: "root", service: "amanah-drive-ai-service", operationName: "POST /rag/answer", startTime: "2026-08-30T10:59:00.050Z", durationMilliseconds: 300, offsetMilliseconds: 50, depth: 1, hasError: false },
+        ],
+      }],
+    },
+  });
+
+  await signIn(page);
+  await page.getByRole("button", { name: "Observability" }).click();
+
+  await expect(page.getByRole("tab", { name: "Metrics" })).toHaveAttribute("aria-selected", "true");
+  await page.getByRole("tab", { name: "Traces" }).click();
+  await expect(page.getByRole("heading", { name: "Trace explorer" })).toBeVisible();
+  const traceSummary = page.locator("summary").filter({ hasText: "POST /chat" });
+  await expect(traceSummary).toBeVisible();
+  await traceSummary.click();
+  await expect(page.getByText("POST /rag/answer", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Trace service")).toHaveValue("amanah-drive-api");
 });
 
 test("search results render in the authenticated app", async ({ page }) => {
@@ -467,6 +511,7 @@ async function mockApi(
       }>;
     };
     observability?: Record<string, unknown>;
+    adminTraces?: Record<string, unknown>;
     agentStartResponse?: Record<string, unknown>;
     agentStartResponses?: Array<Record<string, unknown>>;
     agentStartRequests?: Array<Record<string, unknown>>;
@@ -591,6 +636,22 @@ async function mockApi(
         security: [{ timestamp: "2026-08-29T11:00:00Z", events: 1 }],
         recentSecurityEvents: [{ timestamp: "2026-08-29T11:00:00Z", event: "LoginFailed", message: "Admin login failed", source: "AuthService" }],
         topErrors: [{ signature: "Processing failed", message: "Processing failed", exceptionType: null, level: "Error", count: 1, lastSeen: "2026-08-29T11:00:00Z" }],
+      },
+    });
+  });
+
+  await page.route(`${apiBaseUrl}/admin/traces**`, async (route) => {
+    await route.fulfill({
+      status: 200,
+      json: options.adminTraces ?? {
+        available: true,
+        message: "Jaeger is connected, but no trace-producing services have reported data in its current in-memory session.",
+        range: "24h",
+        from: "2026-08-28T12:00:00Z",
+        to: "2026-08-29T12:00:00Z",
+        service: null,
+        services: [],
+        traces: [],
       },
     });
   });

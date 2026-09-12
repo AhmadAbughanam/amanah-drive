@@ -14,6 +14,7 @@ The browsable OpenAPI/Scalar UI is available at `/docs` in Development, or when 
 | GET | `/admin/logs` | Bearer JWT | Return redacted persisted API logs with optional `level`, `search`, `category`, `source`, `from`, `to`, `page`, and `pageSize` filters. |
 | GET | `/admin/activity` | Bearer JWT | Return recent domain activity with optional `type`, `search`, `page`, and `pageSize` filters. |
 | GET | `/admin/observability` | Bearer JWT | Return request, error, AI usage/cost, and security aggregates for `range=24h`, `7d`, or `30d`. |
+| GET | `/admin/traces` | Bearer JWT | Return up to 50 normalized Jaeger traces with span timelines; accepts `range=24h`, `7d`, or `30d`, optional `service`, and optional `limit`. |
 | POST | `/auth/register` | Bootstrap token header | Create the single admin account during bootstrap. |
 | POST | `/auth/login` | No | Exchange admin credentials for a JWT access token and refresh cookie. |
 | POST | `/auth/refresh` | Refresh cookie | Rotate the refresh token and issue a new access token. |

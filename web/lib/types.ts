@@ -197,6 +197,42 @@ export type ObservabilitySnapshot = {
   topErrors: TopErrorSummary[];
 };
 
+export type TraceSpanSummary = {
+  spanId: string;
+  parentSpanId: string | null;
+  service: string;
+  operationName: string;
+  startTime: string;
+  durationMilliseconds: number;
+  offsetMilliseconds: number;
+  depth: number;
+  hasError: boolean;
+};
+
+export type TraceSummary = {
+  traceId: string;
+  rootService: string;
+  operationName: string;
+  startTime: string;
+  durationMilliseconds: number;
+  spanCount: number;
+  serviceCount: number;
+  hasError: boolean;
+  services: string[];
+  spans: TraceSpanSummary[];
+};
+
+export type TraceSearchResponse = {
+  available: boolean;
+  message: string | null;
+  range: "24h" | "7d" | "30d";
+  from: string;
+  to: string;
+  service: string | null;
+  services: string[];
+  traces: TraceSummary[];
+};
+
 export type ApiErrorBody = {
   message?: string;
   title?: string;

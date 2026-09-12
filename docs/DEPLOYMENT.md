@@ -156,12 +156,21 @@ Nothing above should ever appear in a commit, a workflow file, a log line, or a 
 
 Just push to `main` (directly or via a merged PR). That's the entire process — no manual step is required on the happy path. Watch progress in the repository's **Actions** tab.
 
-## How to view logs
+## How to inspect metrics, traces, and logs
 
-**Structured application logs** (recommended first stop — persisted, filterable, and viewable in the dashboard itself): log into the app at `https://ahmadabughanam.com`, open the **Logs** tab. Or query directly:
+Log into the app at `https://ahmadabughanam.com` and open **Observability**. Use **Metrics** for request/error/security/AI aggregates, **Traces** to follow requests across the API and AI service, and **Logs** for retained structured events. Jaeger stays private; the Traces view reaches it through the authenticated API.
+
+**Structured application logs** can also be queried directly:
 
 ```bash
 curl -s "https://ahmadabughanam.com/api/admin/logs?pageSize=50" \
+  -H "Authorization: Bearer <your access token>"
+```
+
+**Distributed traces** can be queried through the same authenticated boundary:
+
+```bash
+curl -s "https://ahmadabughanam.com/api/admin/traces?range=24h&limit=20" \
   -H "Authorization: Bearer <your access token>"
 ```
 

@@ -13,4 +13,7 @@ public sealed class TelemetryOptions
 
     [Required]
     public string ServiceName { get; init; } = "amanah-drive-api";
+
+    [Required]
+    public string JaegerQueryBaseUrl { get; init; } = "http://localhost:16686";
 }

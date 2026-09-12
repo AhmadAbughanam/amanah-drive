@@ -63,6 +63,7 @@ services:
       Telemetry__TracingEnabled: ${OTEL_TRACING_ENABLED:-true}
       Telemetry__ServiceName: amanah-drive-api
       Telemetry__OtlpEndpoint: ${OTEL_EXPORTER_OTLP_GRPC_ENDPOINT:-http://jaeger:4317}
+      Telemetry__JaegerQueryBaseUrl: ${JAEGER_QUERY_BASE_URL:-http://jaeger:16686}
     volumes:
       - api_logs:/var/log/amanah-drive
       - api_storage:/var/lib/amanah-drive/storage

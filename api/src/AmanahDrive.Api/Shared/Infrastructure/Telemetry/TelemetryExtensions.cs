@@ -17,6 +17,7 @@ public static class TelemetryExtensions
             .Bind(configuration.GetSection(TelemetryOptions.SectionName))
             .ValidateDataAnnotations()
             .Validate(value => Uri.TryCreate(value.OtlpEndpoint, UriKind.Absolute, out _), "Telemetry:OtlpEndpoint must be an absolute URI.")
+            .Validate(value => Uri.TryCreate(value.JaegerQueryBaseUrl, UriKind.Absolute, out _), "Telemetry:JaegerQueryBaseUrl must be an absolute URI.")
             .ValidateOnStart();
 
         if (!options.TracingEnabled)
@@ -31,7 +32,9 @@ public static class TelemetryExtensions
                 .AddAspNetCoreInstrumentation(instrumentation =>
                 {
                     instrumentation.RecordException = true;
-                    instrumentation.Filter = context => !context.Request.Path.StartsWithSegments("/health");
+                    instrumentation.Filter = context =>
+                        !context.Request.Path.StartsWithSegments("/health") &&
+                        !context.Request.Path.StartsWithSegments("/admin/traces");
                 })
                 .AddHttpClientInstrumentation(instrumentation => instrumentation.RecordException = true)
                 .AddOtlpExporter(exporter =>

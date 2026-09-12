@@ -4,9 +4,11 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using AmanahDrive.Api.Modules.Admin.Activity;
 using AmanahDrive.Api.Modules.Admin.Models;
+using AmanahDrive.Api.Modules.Admin.Observability;
 using AmanahDrive.Api.Shared.Infrastructure.Data;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Testcontainers.PostgreSql;
 
 namespace AmanahDrive.Api.Tests;
@@ -20,6 +22,7 @@ public sealed class AdminLogEndpointTests : IAsyncLifetime
         .Build();
 
     private readonly string _logDirectory = Path.Combine(Path.GetTempPath(), $"amanah-drive-log-tests-{Guid.NewGuid():N}");
+    private readonly StubTraceReader _traceReader = new();
     private AmanahDriveApiFactory _factory = null!;
 
     public async Task InitializeAsync()
@@ -66,6 +69,11 @@ public sealed class AdminLogEndpointTests : IAsyncLifetime
                 ["LoggingFiles:MaxPageSize"] = "2",
                 ["AdminActivity:DefaultPageSize"] = "1",
                 ["AdminActivity:MaxPageSize"] = "2"
+            },
+            configureServices: services =>
+            {
+                services.RemoveAll<ITraceReader>();
+                services.AddSingleton<ITraceReader>(_traceReader);
             });
         await _factory.ResetDatabaseAsync();
     }
@@ -137,6 +145,31 @@ public sealed class AdminLogEndpointTests : IAsyncLifetime
         var response = await _factory.CreateClient().GetAsync("/admin/observability");
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetTraces_WithoutBearerToken_ReturnsUnauthorized()
+    {
+        var response = await _factory.CreateClient().GetAsync("/admin/traces");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetTraces_ReturnsNormalizedDataAndClampsLimit()
+    {
+        var client = await CreateAuthorizedClientAsync();
+
+        var response = await client.GetAsync("/admin/traces?range=7d&service=amanah-drive-ai-service&limit=999");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<TraceSearchResponse>();
+        Assert.NotNull(result);
+        Assert.True(result.Available);
+        Assert.Equal("amanah-drive-ai-service", result.Service);
+        Assert.Equal("trace-1", Assert.Single(result.Traces).TraceId);
+        Assert.Equal(50, _traceReader.LastLimit);
+        Assert.Equal("7d", _traceReader.LastRange);
     }
 
     [Fact]
@@ -325,4 +358,36 @@ public sealed class AdminLogEndpointTests : IAsyncLifetime
     private sealed record SecurityEventSummaryDto(string Event);
 
     private sealed record TopErrorSummaryDto(string? ExceptionType);
+
+    private sealed class StubTraceReader : ITraceReader
+    {
+        public string? LastRange { get; private set; }
+        public int LastLimit { get; private set; }
+
+        public Task<TraceSearchResponse> SearchAsync(string? range, string? service, int limit, CancellationToken cancellationToken)
+        {
+            LastRange = range;
+            LastLimit = limit;
+            var now = DateTimeOffset.UtcNow;
+            return Task.FromResult(new TraceSearchResponse(
+                true,
+                null,
+                range ?? "24h",
+                now.AddDays(-7),
+                now,
+                service,
+                ["amanah-drive-api", "amanah-drive-ai-service"],
+                [new TraceSummary(
+                    "trace-1",
+                    "amanah-drive-api",
+                    "POST /chat",
+                    now,
+                    125,
+                    1,
+                    1,
+                    false,
+                    ["amanah-drive-api"],
+                    [])]));
+        }
+    }
 }

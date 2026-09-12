@@ -33,6 +33,13 @@ public static class AdminEndpoints
             .Produces(StatusCodes.Status401Unauthorized)
             .RequireAuthorization();
 
+        app.MapGet("/admin/traces", GetTracesAsync)
+            .WithTags("Admin")
+            .WithSummary("Return recent distributed traces from the private Jaeger query service.")
+            .Produces<TraceSearchResponse>(StatusCodes.Status200OK)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .RequireAuthorization();
+
         return app;
     }
 
@@ -65,6 +72,14 @@ public static class AdminEndpoints
         IObservabilityService observabilityService,
         CancellationToken cancellationToken) =>
         observabilityService.GetSnapshotAsync(range, cancellationToken);
+
+    private static Task<TraceSearchResponse> GetTracesAsync(
+        string? range,
+        string? service,
+        int? limit,
+        ITraceReader traceReader,
+        CancellationToken cancellationToken) =>
+        traceReader.SearchAsync(range, service, Math.Clamp(limit ?? 20, 1, 50), cancellationToken);
 
     private static async Task<ActivityPageResponse> GetActivityAsync(
         string? type,

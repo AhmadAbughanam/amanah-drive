@@ -9,6 +9,7 @@ using AmanahDrive.Api.Modules.SearchChat.Events;
 using AmanahDrive.Api.Shared.DomainEvents;
 using AmanahDrive.Api.Shared.Infrastructure.Logging;
 using AmanahDrive.Api.Shared.Infrastructure.Observability;
+using AmanahDrive.Api.Shared.Infrastructure.Telemetry;
 
 namespace AmanahDrive.Api.Modules.Admin;
 
@@ -44,6 +45,13 @@ public static class AdminModule
         services.AddSingleton<ILogReader, CompactJsonLogReader>();
         services.AddScoped<IAiUsageRecorder, AiUsageRecorder>();
         services.AddScoped<IObservabilityService, ObservabilityService>();
+        var telemetryOptions = configuration.GetSection(TelemetryOptions.SectionName).Get<TelemetryOptions>()
+            ?? new TelemetryOptions();
+        services.AddHttpClient<ITraceReader, JaegerTraceReader>(client =>
+        {
+            client.BaseAddress = new Uri(telemetryOptions.JaegerQueryBaseUrl);
+            client.Timeout = TimeSpan.FromSeconds(5);
+        });
         services.AddScoped<ActivityEventHandler>();
         services.AddScoped<IDomainEventHandler<FileUploadedEvent>>(services => services.GetRequiredService<ActivityEventHandler>());
         services.AddScoped<IDomainEventHandler<ProcessingCompletedEvent>>(services => services.GetRequiredService<ActivityEventHandler>());

@@ -174,3 +174,9 @@
 - Added persisted, iteration-bounded agent runs with tool-role message isolation, explicit approval/rejection, and usage recording.
 - Added Drive and read-only GitHub tools, plus an Agent dashboard for instructions, tool transcripts, and pending-approval decisions.
 - Added conversation continuity across separate bounded runs, including ownership checks, terminal-run follow-up gating, accumulated transcripts, and a fresh-conversation UI action.
+
+### Phase 25 - Unified Observability Workspace
+
+- Reframed the dashboard's Logs destination as an Observability workspace with explicit Metrics, Traces, and Logs views.
+- Added authenticated `GET /admin/traces` access to normalized Jaeger trace summaries and span timelines without exposing Jaeger's unauthenticated query API publicly.
+- Added service and time-range filtering, automatic trace refresh, inline cross-service waterfall visualization, and graceful trace-only failure states.
