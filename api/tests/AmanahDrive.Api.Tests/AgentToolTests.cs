@@ -1,5 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text;
+using System.Text.Json;
 using AmanahDrive.Api.Modules.AgentTools;
 using AmanahDrive.Api.Modules.AgentTools.Tools;
 using AmanahDrive.Api.Modules.Auth.Models;
@@ -130,6 +132,80 @@ public sealed class AgentToolTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task CreateFile_WritesUtf8ContentAndQueuesProcessingWithoutOverwriting()
+    {
+        var folder = await SeedFolderAsync("Agent files");
+        using var scope = _factory.Services.CreateScope();
+        var tool = scope.ServiceProvider.GetRequiredService<IAgentTool<CreateFileToolRequest, CreateFileToolResponse>>();
+        var context = new AgentToolContext(_userId);
+        const string text = "# Agent note\n\nمرحبا from the agent.";
+
+        var created = await tool.ExecuteAsync(context, new CreateFileToolRequest("agent-note.md", text, folder.Id), CancellationToken.None);
+        var collision = await tool.ExecuteAsync(context, new CreateFileToolRequest("agent-note.md", "replacement", folder.Id), CancellationToken.None);
+
+        Assert.Equal(AgentToolStatus.Success, created.Status);
+        Assert.NotNull(created.Value);
+        Assert.Equal(folder.Id, created.Value.File.FolderId);
+        Assert.Equal("agent-note.md", created.Value.File.OriginalFileName);
+        Assert.Equal("text/markdown", created.Value.File.ContentType);
+        Assert.Equal(Encoding.UTF8.GetByteCount(text), created.Value.File.SizeBytes);
+        Assert.NotNull(created.Value.File.ProcessingJobId);
+        Assert.Equal(AgentToolStatus.Conflict, collision.Status);
+        Assert.Equal("A file with that name already exists in this location.", collision.ErrorMessage);
+
+        var dbContext = scope.ServiceProvider.GetRequiredService<AmanahDriveDbContext>();
+        var storedFile = await dbContext.FileItems.SingleAsync(file => file.Id == created.Value.File.Id);
+        Assert.Equal(ProcessingJobStatus.Pending, await dbContext.ProcessingJobs
+            .Where(job => job.FileItemId == storedFile.Id)
+            .Select(job => job.Status)
+            .SingleAsync());
+        Assert.Equal(1, await dbContext.FileItems.CountAsync(file => file.FolderId == folder.Id && file.OriginalFileName == "agent-note.md"));
+
+        var storage = scope.ServiceProvider.GetRequiredService<IFileStorage>();
+        await using var storedContent = await storage.OpenReadAsync(storedFile.StorageKey!, CancellationToken.None);
+        using var reader = new StreamReader(storedContent, Encoding.UTF8);
+        Assert.Equal(text, await reader.ReadToEndAsync());
+    }
+
+    [Fact]
+    public async Task CreateFile_WhenContentExceedsDriveLimit_ReturnsInvalidInsteadOfThrowing()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var tool = scope.ServiceProvider.GetRequiredService<IAgentTool<CreateFileToolRequest, CreateFileToolResponse>>();
+        var oversizedContent = new string('x', (10 * 1024 * 1024) + 1);
+
+        var result = await tool.ExecuteAsync(
+            new AgentToolContext(_userId),
+            new CreateFileToolRequest("too-large.txt", oversizedContent, null),
+            CancellationToken.None);
+
+        Assert.Equal(AgentToolStatus.Invalid, result.Status);
+        Assert.Equal("File exceeds the maximum allowed size.", result.ErrorMessage);
+        Assert.False(await scope.ServiceProvider.GetRequiredService<AmanahDriveDbContext>().FileItems
+            .AnyAsync(file => file.OriginalFileName == "too-large.txt"));
+    }
+
+    [Fact]
+    public async Task CreateFile_RegistryInvokerReturnsModelFacingFileAndProcessingMetadata()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var registry = scope.ServiceProvider.GetRequiredService<IAgentToolRegistry>();
+        Assert.True(registry.TryGet("create_file", out var tool));
+
+        var result = await tool.InvokeAsync(
+            new AgentToolContext(_userId),
+            JsonSerializer.Serialize(new { name = "model-output.txt", content = "Trace this output.", folderId = (Guid?)null }),
+            CancellationToken.None);
+
+        Assert.Equal(AgentToolStatus.Success, result.Status);
+        using var output = JsonDocument.Parse(result.ResultJson);
+        Assert.Equal("Success", output.RootElement.GetProperty("status").GetString());
+        var file = output.RootElement.GetProperty("value").GetProperty("file");
+        Assert.Equal("model-output.txt", file.GetProperty("originalFileName").GetString());
+        Assert.NotEqual(Guid.Empty, file.GetProperty("processingJobId").GetGuid());
+    }
+
+    [Fact]
     public async Task CopyFile_CopiesBytesAndRejectsDestinationNameCollisions()
     {
         var sourceFile = await SeedFileAsync("source.txt", "same bytes"u8.ToArray());
@@ -234,6 +310,7 @@ public sealed class AgentToolTests : IAsyncLifetime
         Assert.False(scope.ServiceProvider.GetRequiredService<IAgentTool<ListGitHubDirectoryRequest, GitHubDirectoryResponse>>().RequiresApproval);
         Assert.False(scope.ServiceProvider.GetRequiredService<IAgentTool<ReadGitHubFileRequest, GitHubFileTextResponse>>().RequiresApproval);
         Assert.False(scope.ServiceProvider.GetRequiredService<IAgentTool<CreateFolderToolRequest, CreateFolderToolResponse>>().RequiresApproval);
+        Assert.False(scope.ServiceProvider.GetRequiredService<IAgentTool<CreateFileToolRequest, CreateFileToolResponse>>().RequiresApproval);
         Assert.False(scope.ServiceProvider.GetRequiredService<IAgentTool<CopyFileToolRequest, CopyFileToolResponse>>().RequiresApproval);
         Assert.True(scope.ServiceProvider.GetRequiredService<IAgentTool<RenameFolderToolRequest, RenameFolderToolResponse>>().RequiresApproval);
         Assert.True(scope.ServiceProvider.GetRequiredService<IAgentTool<RenameFileToolRequest, RenameFileToolResponse>>().RequiresApproval);
@@ -242,6 +319,7 @@ public sealed class AgentToolTests : IAsyncLifetime
         Assert.True(scope.ServiceProvider.GetRequiredService<IAgentTool<DeleteFileToolRequest, DeleteFileToolResponse>>().RequiresApproval);
         Assert.True(scope.ServiceProvider.GetRequiredService<IAgentTool<DeleteFolderToolRequest, DeleteFolderToolResponse>>().RequiresApproval);
         var registeredNames = scope.ServiceProvider.GetRequiredService<IAgentToolRegistry>().Tools.Select(tool => tool.Name);
+        Assert.Contains("create_file", registeredNames);
         Assert.Contains("move_folder", registeredNames);
         Assert.Contains("delete_file", registeredNames);
         Assert.Contains("delete_folder", registeredNames);

@@ -18,7 +18,7 @@ flowchart TB
         AgentModule["Agent module<br/>endpoints + AgentRunService"]
         Worker["AgentRunWorker<br/>background loop"]
         Registry["AgentTools module<br/>AgentToolRegistry — dispatch"]
-        DriveTools["11 Drive tools"]
+        DriveTools["12 Drive tools"]
         GitHubTools["2 GitHub tools"]
     end
 
@@ -51,6 +51,7 @@ flowchart TB
 | `search_files` | Auto | Semantic search over processed chunks |
 | `read_file_text` | Auto | Reads a file's extracted text (capped at 100k chars, truncation flagged) |
 | `create_folder` | Auto | Creates a folder — non-destructive |
+| `create_file` | Auto | Creates a non-empty UTF-8 text, Markdown, or CSV file without overwriting an existing file; queues normal extraction/embedding |
 | `copy_file` | Auto | Duplicates a file — non-destructive, re-runs extraction/embedding on the copy rather than cloning vectors |
 | `rename_folder` | **Required** | Renames a folder |
 | `rename_file` | **Required** | Renames a file |
@@ -61,7 +62,7 @@ flowchart TB
 | `list_github_directory` | Auto | Lists a GitHub repo path (read-only) |
 | `read_github_file` | Auto | Reads a GitHub file's text content (same cap/truncation pattern as `read_file_text`) |
 
-The tools have three safety tiers. Read operations and non-destructive additions such as create/copy run automatically. Reversible changes to existing items, rename/move, pause for approval. Delete is a distinct, always-gated tier because this app has no trash, soft-delete, or undo path. `delete_folder` follows the existing Drive behavior for non-empty folders: it recursively removes descendant folders, database records, and every contained file's stored bytes. The system prompt also tells the model not to propose deletion unless the user clearly requested it. See [`DriveAgentTools.cs`](../api/src/AmanahDrive.Api/Modules/AgentTools/Tools/DriveAgentTools.cs) and [`GitHubAgentTools.cs`](../api/src/AmanahDrive.Api/Modules/AgentTools/Tools/GitHubAgentTools.cs) for the implementations, and `IAgentTool.RequiresApproval` for where that flag actually lives.
+The tools have three safety tiers. Read operations and non-destructive additions such as create/copy run automatically. `create_file` uses the same Drive upload path as the Files UI, so it applies ownership, name-collision, MIME, and size validation and creates the normal pending processing job; it cannot overwrite an existing file. Reversible changes to existing items, rename/move, pause for approval. Delete is a distinct, always-gated tier because this app has no trash, soft-delete, or undo path. `delete_folder` follows the existing Drive behavior for non-empty folders: it recursively removes descendant folders, database records, and every contained file's stored bytes. The system prompt also tells the model not to propose deletion unless the user clearly requested it. See [`DriveAgentTools.cs`](../api/src/AmanahDrive.Api/Modules/AgentTools/Tools/DriveAgentTools.cs) and [`GitHubAgentTools.cs`](../api/src/AmanahDrive.Api/Modules/AgentTools/Tools/GitHubAgentTools.cs) for the implementations, and `IAgentTool.RequiresApproval` for where that flag actually lives.
 
 ## How one turn executes
 

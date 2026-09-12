@@ -150,6 +150,35 @@ public sealed class CreateFolderTool(IDriveService driveService) : IAgentTool<Cr
     }
 }
 
+public sealed record CreateFileToolRequest(string Name, string Content, Guid? FolderId);
+
+public sealed record CreateFileToolResponse(FileItemResponse File);
+
+public sealed class CreateFileTool(IDriveService driveService) : IAgentTool<CreateFileToolRequest, CreateFileToolResponse>
+{
+    public string Name => "create_file";
+
+    public bool RequiresApproval => false;
+
+    public async Task<AgentToolResult<CreateFileToolResponse>> ExecuteAsync(AgentToolContext context, CreateFileToolRequest request, CancellationToken cancellationToken)
+    {
+        var bytes = Encoding.UTF8.GetBytes(request.Content ?? string.Empty);
+        await using var content = new MemoryStream(bytes, writable: false);
+        var result = await driveService.UploadFileAsync(
+            context.UserId,
+            new UploadFileCommand(request.Name, GetContentType(request.Name), bytes.LongLength, request.FolderId, content),
+            cancellationToken);
+        return DriveToolResultMapper.ToAgentResult(result, file => new CreateFileToolResponse(file));
+    }
+
+    private static string GetContentType(string? fileName) => (Path.GetExtension(fileName) ?? string.Empty).ToLowerInvariant() switch
+    {
+        ".csv" => "text/csv",
+        ".md" or ".markdown" => "text/markdown",
+        _ => "text/plain"
+    };
+}
+
 public sealed record CopyFileToolRequest(Guid SourceFileId, Guid? DestinationFolderId, string Name);
 
 public sealed record CopyFileToolResponse(FileItemResponse File);
@@ -284,6 +313,7 @@ internal static class DriveToolResultMapper
             DriveOperationStatus.NotFound => AgentToolResult<TResult>.NotFound(),
             DriveOperationStatus.Conflict => AgentToolResult<TResult>.Conflict(result.ErrorMessage!),
             DriveOperationStatus.Invalid => AgentToolResult<TResult>.Invalid(result.ErrorMessage!),
+            DriveOperationStatus.PayloadTooLarge => AgentToolResult<TResult>.Invalid("File exceeds the maximum allowed size."),
             _ => throw new InvalidOperationException("Drive service returned an unsupported tool result.")
         };
     }

@@ -10,6 +10,7 @@ public static class AgentToolsModule
         services.AddScoped<IAgentTool<SearchFilesRequest, SearchFilesResponse>, SearchFilesTool>();
         services.AddScoped<IAgentTool<ReadFileTextRequest, ReadFileTextResponse>, ReadFileTextTool>();
         services.AddScoped<IAgentTool<CreateFolderToolRequest, CreateFolderToolResponse>, CreateFolderTool>();
+        services.AddScoped<IAgentTool<CreateFileToolRequest, CreateFileToolResponse>, CreateFileTool>();
         services.AddScoped<IAgentTool<CopyFileToolRequest, CopyFileToolResponse>, CopyFileTool>();
         services.AddScoped<IAgentTool<RenameFolderToolRequest, RenameFolderToolResponse>, RenameFolderTool>();
         services.AddScoped<IAgentTool<RenameFileToolRequest, RenameFileToolResponse>, RenameFileTool>();
@@ -23,6 +24,7 @@ public static class AgentToolsModule
         services.AddScoped<IAgentToolInvoker, AgentToolInvoker<SearchFilesRequest, SearchFilesResponse>>();
         services.AddScoped<IAgentToolInvoker, AgentToolInvoker<ReadFileTextRequest, ReadFileTextResponse>>();
         services.AddScoped<IAgentToolInvoker, AgentToolInvoker<CreateFolderToolRequest, CreateFolderToolResponse>>();
+        services.AddScoped<IAgentToolInvoker, AgentToolInvoker<CreateFileToolRequest, CreateFileToolResponse>>();
         services.AddScoped<IAgentToolInvoker, AgentToolInvoker<CopyFileToolRequest, CopyFileToolResponse>>();
         services.AddScoped<IAgentToolInvoker, AgentToolInvoker<RenameFolderToolRequest, RenameFolderToolResponse>>();
         services.AddScoped<IAgentToolInvoker, AgentToolInvoker<RenameFileToolRequest, RenameFileToolResponse>>();

@@ -163,6 +163,29 @@ public sealed class AgentRunServiceTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task CreateFileTool_ExecutesWithoutApprovalAndFeedsItsOutputBackToTheModel()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var service = scope.ServiceProvider.GetRequiredService<IAgentRunService>();
+        _aiClient.Enqueue(ToolCall("create_file", "{\"name\":\"agent-note.md\",\"content\":\"Created by the agent.\",\"folderId\":null}"));
+        _aiClient.Enqueue(Final("I created agent-note.md."));
+
+        var started = await service.StartAsync(_userId, "Create an agent note", null, CancellationToken.None);
+        Assert.True(await service.ProcessNextPendingRunAsync(CancellationToken.None));
+        var completed = (await service.GetAsync(_userId, started.Id, CancellationToken.None))!;
+
+        Assert.Equal(AgentRunStatus.Completed, completed.Status);
+        var toolStep = Assert.Single(completed.Steps, step => step.ToolName == "create_file");
+        Assert.False(toolStep.RequiresApproval);
+        Assert.Equal(AgentToolCallStatus.Executed, toolStep.ToolCallStatus);
+        Assert.Contains("agent-note.md", toolStep.Content);
+        Assert.Contains("processingJobId", toolStep.Content);
+        Assert.Equal(1, _toolRegistry.InvocationCount("create_file"));
+        var toolMessage = Assert.Single(_aiClient.AgentRequests[1].Messages, message => message.Role == "tool");
+        Assert.Equal(toolStep.Content, toolMessage.Content);
+    }
+
+    [Fact]
     public async Task IterationCap_StopsRunBeforeNinthModelCall()
     {
         using var scope = _factory.Services.CreateScope();
@@ -420,6 +443,8 @@ public sealed class AgentRunServiceTests : IAsyncLifetime
         private readonly IReadOnlyDictionary<string, FakeAgentToolInvoker> _tools = new[]
         {
             new FakeAgentToolInvoker("create_folder", requiresApproval: false),
+            new FakeAgentToolInvoker("create_file", requiresApproval: false,
+                "{\"status\":\"Success\",\"value\":{\"file\":{\"originalFileName\":\"agent-note.md\",\"processingJobId\":\"00000000-0000-0000-0000-000000000002\"}}}"),
             new FakeAgentToolInvoker("rename_folder", requiresApproval: true),
             new FakeAgentToolInvoker("move_file", requiresApproval: true)
         }.ToDictionary(tool => tool.Metadata.Name, StringComparer.Ordinal);
@@ -436,7 +461,7 @@ public sealed class AgentRunServiceTests : IAsyncLifetime
         public int InvocationCount(string name) => _tools[name].InvocationCount;
     }
 
-    private sealed class FakeAgentToolInvoker(string name, bool requiresApproval) : IAgentToolInvoker
+    private sealed class FakeAgentToolInvoker(string name, bool requiresApproval, string resultJson = "{\"status\":\"Success\"}") : IAgentToolInvoker
     {
         private int _invocationCount;
 
@@ -449,7 +474,7 @@ public sealed class AgentRunServiceTests : IAsyncLifetime
         public Task<AgentToolInvocationResult> InvokeAsync(AgentToolContext context, string argumentsJson, CancellationToken cancellationToken)
         {
             Interlocked.Increment(ref _invocationCount);
-            return Task.FromResult(new AgentToolInvocationResult(AgentToolStatus.Success, "{\"status\":\"Success\"}"));
+            return Task.FromResult(new AgentToolInvocationResult(AgentToolStatus.Success, resultJson));
         }
     }
 }

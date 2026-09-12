@@ -140,6 +140,7 @@ public static class AgentEndpoints
             "search_files" => string.IsNullOrWhiteSpace(query) ? "Search files" : $"Search files for “{query}”",
             "read_file_text" => "Read extracted text from a file",
             "create_folder" => string.IsNullOrWhiteSpace(name) ? "Create a folder" : $"Create folder “{name}”",
+            "create_file" => string.IsNullOrWhiteSpace(name) ? "Create a text file" : $"Create text file “{name}”",
             "copy_file" => string.IsNullOrWhiteSpace(name) ? "Copy a file" : $"Copy a file as “{name}”",
             "rename_folder" => string.IsNullOrWhiteSpace(name) ? "Rename a folder" : $"Rename a folder to “{name}”",
             "rename_file" => string.IsNullOrWhiteSpace(name) ? "Rename a file" : $"Rename a file to “{name}”",
