@@ -209,7 +209,7 @@ Response `200`:
 }
 ```
 
-Citation granularity in V1 is chunk-level. Chunks are assigned one-based references from their request order, so the first chunk is cited as `[1]`, the second as `[2]`, and so on. The AI service returns the same number as the citation `reference`; the API maps that ordinal back to its internal chunk and file identifiers. Internal chunk GUIDs are not sent as citation references or injected into the retrieved-chunk prompt. The response includes citation metadata for every supplied chunk; inline numeric markers identify the chunks cited by the generated answer. Character-level citation spans are not returned.
+Citation granularity in V1 is chunk-level. Chunks are assigned one-based references from their request order, so the first chunk is cited as `[1]`, the second as `[2]`, and so on. The AI service returns citation entries only for valid, distinct numeric markers that appear in the generated answer. The API independently parses those answer markers and maps each ordinal back to the retrieved database chunk; file identity, filename, snippet, chunk index, and relevance therefore come from API-owned retrieval data rather than model-returned metadata. Internal chunk GUIDs are not sent as citation references or injected into the retrieved-chunk prompt. Character-level citation spans are not returned.
 
 `usage` contains measured tokenizer counts when the model/provider exposes them. A count may be `null` when an upstream response omits usage data; callers must not estimate missing token counts from character length.
 

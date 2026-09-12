@@ -155,9 +155,7 @@ public static class SearchChatEndpoints
             return Results.StatusCode(StatusCodes.Status502BadGateway);
         }
 
-        var citations = answer.Citations
-            .Select((citation, index) => ToChatCitation(citation, retrievedChunks, options.Value.SnippetLength, index + 1))
-            .ToList();
+        var citations = CreateChatCitations(answer.Answer, retrievedChunks, options.Value.SnippetLength);
 
         var userMessage = new ChatMessage
         {
@@ -257,22 +255,67 @@ public static class SearchChatEndpoints
     private static SearchResult ToSearchResult(RetrievedChunk chunk, int snippetLength) =>
         new(chunk.ChunkId, chunk.FileId, chunk.FileName, chunk.ChunkIndex, CreateSnippet(chunk.Text, snippetLength), chunk.Score);
 
-    private static ChatCitation ToChatCitation(RagCitation citation, IReadOnlyList<RetrievedChunk> retrievedChunks, int snippetLength, int fallbackReference)
+    private static IReadOnlyList<ChatCitation> CreateChatCitations(string answer, IReadOnlyList<RetrievedChunk> retrievedChunks, int snippetLength)
     {
-        var hasValidReference = int.TryParse(citation.Reference, NumberStyles.None, CultureInfo.InvariantCulture, out var parsedReference)
-            && parsedReference >= 1
-            && parsedReference <= retrievedChunks.Count;
-        var reference = hasValidReference ? parsedReference : fallbackReference;
-        var matchedChunk = hasValidReference ? retrievedChunks[parsedReference - 1] : null;
+        return FindCitationReferences(answer, retrievedChunks.Count)
+            .Select(reference =>
+            {
+                var chunk = retrievedChunks[reference - 1];
+                return new ChatCitation(
+                    reference,
+                    chunk.ChunkId,
+                    chunk.FileId,
+                    chunk.FileName,
+                    CreateSnippet(chunk.Text, snippetLength),
+                    chunk.ChunkIndex,
+                    chunk.Score);
+            })
+            .ToList();
+    }
 
-        return new ChatCitation(
-            reference,
-            matchedChunk?.ChunkId ?? Guid.Empty,
-            matchedChunk?.FileId,
-            matchedChunk?.FileName ?? citation.FileName,
-            string.IsNullOrWhiteSpace(citation.Snippet)
-                ? CreateSnippet(matchedChunk?.Text ?? string.Empty, snippetLength)
-                : CreateSnippet(citation.Snippet, snippetLength));
+    private static IReadOnlyList<int> FindCitationReferences(string answer, int chunkCount)
+    {
+        var references = new List<int>();
+        var seen = new HashSet<int>();
+        var insideCode = false;
+
+        for (var index = 0; index < answer.Length; index++)
+        {
+            if (answer[index] == '`' && (index == 0 || answer[index - 1] != '\\'))
+            {
+                while (index + 1 < answer.Length && answer[index + 1] == '`')
+                {
+                    index++;
+                }
+
+                insideCode = !insideCode;
+                continue;
+            }
+
+            if (insideCode || answer[index] != '[')
+            {
+                continue;
+            }
+
+            var closingBracket = answer.IndexOf(']', index + 1);
+            if (closingBracket < 0)
+            {
+                break;
+            }
+
+            var candidate = answer.AsSpan(index + 1, closingBracket - index - 1);
+            if (int.TryParse(candidate, NumberStyles.None, CultureInfo.InvariantCulture, out var reference)
+                && reference >= 1
+                && reference <= chunkCount
+                && seen.Add(reference))
+            {
+                references.Add(reference);
+            }
+
+            index = closingBracket;
+        }
+
+        return references;
     }
 
     private static string CreateSnippet(string text, int maxLength)
@@ -360,7 +403,14 @@ public sealed record ChatRequest([Required, MaxLength(4000)] string Question, Gu
 
 public sealed record ChatResponse(Guid ConversationId, string Answer, IReadOnlyCollection<ChatCitation> Citations);
 
-public sealed record ChatCitation(int Reference, Guid ChunkId, Guid? FileId, string FileName, string Snippet);
+public sealed record ChatCitation(
+    int Reference,
+    Guid ChunkId,
+    Guid? FileId,
+    string FileName,
+    string Snippet,
+    int? ChunkIndex = null,
+    double? RelevanceScore = null);
 
 public sealed record ChatHistoryResponse(Guid ConversationId, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, int Page, int PageSize, IReadOnlyCollection<ChatMessageResponse> Messages);
 

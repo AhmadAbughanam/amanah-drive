@@ -149,7 +149,7 @@ test("search results render in the authenticated app", async ({ page }) => {
 
   await expect(page.getByText("notes.txt")).toBeVisible();
   await expect(page.getByText("Amanah Drive stores processed document chunks for semantic search.")).toBeVisible();
-  await expect(page.getByText("Chunk 1 / Score 0.870")).toBeVisible();
+  await expect(page.getByText("Passage 2 / Score 0.870")).toBeVisible();
 });
 
 test("empty search state renders clearly", async ({ page }) => {
@@ -164,8 +164,10 @@ test("empty search state renders clearly", async ({ page }) => {
 });
 
 test("chat answer with citation renders", async ({ page }) => {
+  const downloadRequests: Array<{ url: string; authorization: string | undefined }> = [];
   await mockApi(page, {
     loginSucceeds: true,
+    downloadRequests,
     chatResponse: {
       conversationId: "44444444-4444-4444-4444-444444444444",
       answer: "Amanah Drive uses retrieved chunks to ground answers.[1] It can cite the same source twice.[1] Inline code `[1]` stays literal.",
@@ -176,6 +178,8 @@ test("chat answer with citation renders", async ({ page }) => {
           fileId: "22222222-2222-2222-2222-222222222222",
           fileName: "notes.txt",
           snippet: "Retrieved chunks are passed to the AI service with the user question.",
+          chunkIndex: 1,
+          relevanceScore: 0.87,
         },
       ],
     },
@@ -189,6 +193,8 @@ test("chat answer with citation renders", async ({ page }) => {
   await expect(page.getByText("How are answers grounded?")).toBeVisible();
   await expect(page.getByText("Amanah Drive uses retrieved chunks to ground answers.")).toBeVisible();
   await expect(page.getByText("Retrieved chunks are passed to the AI service with the user question.")).toBeVisible();
+  await expect(page.getByText("Where this answer came from")).toBeVisible();
+  await expect(page.getByText("Passage 2 · 87% match")).toBeVisible();
   await expect(page.getByRole("button", { name: "Open citation 1" })).toHaveCount(2);
   await expect(page.locator("code").getByText("[1]")).toBeVisible();
 
@@ -197,7 +203,14 @@ test("chat answer with citation renders", async ({ page }) => {
   await expect(page.locator('[data-citation-active="true"]')).toContainText("notes.txt");
   const dialog = page.getByRole("dialog", { name: "notes.txt" });
   await expect(dialog).toContainText("Retrieved chunks are passed to the AI service with the user question.");
-  await expect(dialog.getByRole("button", { name: "Download source" })).toBeVisible();
+  await expect(dialog).toContainText("Passage 2");
+  await expect(dialog).toContainText("87% relevance");
+  const downloadStarted = page.waitForEvent("download");
+  await dialog.getByRole("button", { name: "Download original" }).click();
+  const download = await downloadStarted;
+  expect(download.suggestedFilename()).toBe("notes.txt");
+  expect(downloadRequests).toHaveLength(1);
+  expect(downloadRequests[0].authorization).toBe("Bearer test-access-token");
 });
 
 test("chat error state renders cleanly", async ({ page }) => {
@@ -423,6 +436,8 @@ async function mockApi(
         fileId: string | null;
         fileName: string;
         snippet: string;
+        chunkIndex: number | null;
+        relevanceScore: number | null;
       }>;
     };
     chatStatus?: number;
@@ -459,6 +474,7 @@ async function mockApi(
     agentRejectResponse?: Record<string, unknown>;
     agentPollResponses?: Array<Record<string, unknown>>;
     agentPollRequests?: string[];
+    downloadRequests?: Array<{ url: string; authorization: string | undefined }>;
   },
 ) {
   await page.route(`${apiBaseUrl}/auth/login`, async (route) => {
@@ -512,6 +528,21 @@ async function mockApi(
             updatedAt: "2026-08-11T00:00:00Z",
           },
         ],
+      },
+    });
+  });
+
+  await page.route(/\/drive\/files\/[^/]+\/download$/, async (route) => {
+    options.downloadRequests?.push({
+      url: route.request().url(),
+      authorization: route.request().headers().authorization,
+    });
+    await route.fulfill({
+      status: 200,
+      body: "downloaded source contents",
+      headers: {
+        "Content-Type": "text/plain",
+        "Content-Disposition": "attachment; filename=notes.txt",
       },
     });
   });

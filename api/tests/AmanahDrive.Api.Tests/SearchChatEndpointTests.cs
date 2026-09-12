@@ -101,11 +101,13 @@ public sealed class SearchChatEndpointTests : IAsyncLifetime
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await ReadJsonAsync<ChatResponseDto>(response);
         Assert.NotEqual(Guid.Empty, body.ConversationId);
-        Assert.Equal("Grounded answer from retrieved chunks.", body.Answer);
+        Assert.Equal("Grounded answer from retrieved chunks. [1]", body.Answer);
         Assert.Single(body.Citations);
         Assert.Equal(1, body.Citations[0].Reference);
         Assert.Equal(chunks.LeaseChunkId, body.Citations[0].ChunkId);
         Assert.Equal("lease.pdf", body.Citations[0].FileName);
+        Assert.Equal(0, body.Citations[0].ChunkIndex);
+        Assert.Equal(1, body.Citations[0].RelevanceScore);
 
         using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<AmanahDriveDbContext>();
@@ -137,7 +139,7 @@ public sealed class SearchChatEndpointTests : IAsyncLifetime
     [Theory]
     [InlineData("not-a-number")]
     [InlineData("99")]
-    public async Task Chat_UsesSequentialReferenceWhenCitationReferenceIsInvalid(string citationReference)
+    public async Task Chat_DoesNotInventSourceMetadataForInvalidCitationReference(string citationReference)
     {
         var client = await CreateAuthorizedClientAsync();
         await SeedChunksAsync();
@@ -151,8 +153,25 @@ public sealed class SearchChatEndpointTests : IAsyncLifetime
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var body = await ReadJsonAsync<ChatResponseDto>(response);
-        Assert.Single(body.Citations);
-        Assert.Equal(1, body.Citations[0].Reference);
+        Assert.Empty(body.Citations);
+    }
+
+    [Fact]
+    public async Task Chat_ReturnsOnlyReferencedSourcesInFirstMentionOrderWithoutDuplicates()
+    {
+        var client = await CreateAuthorizedClientAsync();
+        var chunks = await SeedChunksAsync();
+        _aiClient.AnswerOverride = "Policy first [2], policy again [2], then lease [1]. Inline code `[2]` is not a citation.";
+
+        var response = await client.PostAsJsonAsync("/chat", new
+        {
+            Question = "What do the documents say?"
+        });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await ReadJsonAsync<ChatResponseDto>(response);
+        Assert.Equal([2, 1], body.Citations.Select(citation => citation.Reference));
+        Assert.Equal([chunks.PolicyChunkId, chunks.LeaseChunkId], body.Citations.Select(citation => citation.ChunkId));
     }
 
     [Fact]
@@ -199,7 +218,7 @@ public sealed class SearchChatEndpointTests : IAsyncLifetime
         Assert.Equal("user", secondRequest.History.ElementAt(0).Role);
         Assert.Equal("What is the renewal rule?", secondRequest.History.ElementAt(0).Content);
         Assert.Equal("assistant", secondRequest.History.ElementAt(1).Role);
-        Assert.Equal("Grounded answer from retrieved chunks.", secondRequest.History.ElementAt(1).Content);
+        Assert.Equal("Grounded answer from retrieved chunks. [1]", secondRequest.History.ElementAt(1).Content);
 
         using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<AmanahDriveDbContext>();
@@ -229,7 +248,7 @@ public sealed class SearchChatEndpointTests : IAsyncLifetime
         Assert.Equal("user", history.Messages[0].Role);
         Assert.Equal("What is the renewal rule?", history.Messages[0].Content);
         Assert.Equal("assistant", history.Messages[1].Role);
-        Assert.Equal("Grounded answer from retrieved chunks.", history.Messages[1].Content);
+        Assert.Equal("Grounded answer from retrieved chunks. [1]", history.Messages[1].Content);
         Assert.Single(history.Messages[1].Citations);
         Assert.Equal(1, history.Messages[1].Citations[0].Reference);
     }
@@ -404,7 +423,7 @@ public sealed class SearchChatEndpointTests : IAsyncLifetime
 
     private sealed record ChatResponseDto(Guid ConversationId, string Answer, IReadOnlyList<ChatCitationDto> Citations);
 
-    private sealed record ChatCitationDto(int Reference, Guid ChunkId, Guid? FileId, string FileName, string Snippet);
+    private sealed record ChatCitationDto(int Reference, Guid ChunkId, Guid? FileId, string FileName, string Snippet, int? ChunkIndex, double? RelevanceScore);
 
     private sealed record ChatHistoryResponseDto(Guid ConversationId, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, int Page, int PageSize, IReadOnlyList<ChatMessageDto> Messages);
 
@@ -417,6 +436,8 @@ public sealed class SearchChatEndpointTests : IAsyncLifetime
         public string CitationReference { get; set; } = "1";
 
         public int? CitedChunkIndex { get; set; }
+
+        public string? AnswerOverride { get; set; }
 
         public Task<ExtractResponse> ExtractAsync(string fileName, string contentType, Stream fileStream, CancellationToken cancellationToken) =>
             Task.FromResult(new ExtractResponse("unused", contentType, 6));
@@ -439,7 +460,7 @@ public sealed class SearchChatEndpointTests : IAsyncLifetime
             var citationIndex = CitedChunkIndex ?? int.Parse(CitationReference) - 1;
             var citedChunk = request.Chunks.ElementAt(citationIndex);
             return Task.FromResult(new RagAnswerResponse(
-                "Grounded answer from retrieved chunks.",
+                AnswerOverride ?? $"Grounded answer from retrieved chunks. [{CitationReference}]",
                 "fake",
                 [
                     new RagCitation(CitationReference, citedChunk.FileName, citedChunk.Text)

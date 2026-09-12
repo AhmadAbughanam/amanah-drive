@@ -362,7 +362,7 @@ export default function DrivePage() {
   async function downloadSource(fileId: string | null | undefined, fileName: string, onFailure: (message: string | null) => void) {
     if (!fileId) {
       onFailure("This citation is not linked to a downloadable file.");
-      return;
+      return false;
     }
 
     onFailure(null);
@@ -377,10 +377,15 @@ export default function DrivePage() {
       const anchor = document.createElement("a");
       anchor.href = url;
       anchor.download = fileName || "source-file";
+      anchor.hidden = true;
+      document.body.appendChild(anchor);
       anchor.click();
-      URL.revokeObjectURL(url);
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
+      return true;
     } catch (err) {
       onFailure(err instanceof Error ? err.message : "Download failed.");
+      return false;
     }
   }
 
@@ -1109,7 +1114,7 @@ function KnowledgeView({
   searchResults: SearchResult[];
   onAskQuestion: (event: FormEvent<HTMLFormElement>) => Promise<void>;
   onChatQuestionChange: (value: string) => void;
-  onDownloadCitation: (citation: ChatCitation) => void;
+  onDownloadCitation: (citation: ChatCitation) => Promise<boolean>;
   onDownloadSearchResult: (result: SearchResult) => void;
   onNewConversation: () => void;
   onSearch: (event: FormEvent<HTMLFormElement>) => Promise<void>;
@@ -1118,6 +1123,7 @@ function KnowledgeView({
   const citationCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [activeCitationCard, setActiveCitationCard] = useState<string | null>(null);
   const [selectedCitation, setSelectedCitation] = useState<ChatCitation | null>(null);
+  const [downloadingCitation, setDownloadingCitation] = useState<string | null>(null);
 
   function citationCardKey(entryId: string, reference: number) {
     return `${entryId}-${reference}`;
@@ -1127,9 +1133,16 @@ function KnowledgeView({
     const cardKey = citationCardKey(entryId, citation.reference);
     setActiveCitationCard(cardKey);
     setSelectedCitation(citation);
-    requestAnimationFrame(() => {
-      citationCardRefs.current[cardKey]?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    });
+  }
+
+  async function downloadCitation(entryId: string, citation: ChatCitation) {
+    const cardKey = citationCardKey(entryId, citation.reference);
+    setDownloadingCitation(cardKey);
+    try {
+      await onDownloadCitation(citation);
+    } finally {
+      setDownloadingCitation(null);
+    }
   }
 
   function closeCitationDialog() {
@@ -1212,7 +1225,7 @@ function KnowledgeView({
                   <span className="text-sm text-white/55">{formatScore(result.score)}</span>
                 </div>
                 <p className="mt-5 text-sm leading-7 text-white/68">{result.snippet}</p>
-                <p className="mt-4 text-xs uppercase tracking-[0.14em] text-white/35">Chunk {result.chunkIndex} / Score {formatScore(result.score)}</p>
+                <p className="mt-4 text-xs uppercase tracking-[0.14em] text-white/35">Passage {result.chunkIndex + 1} / Score {formatScore(result.score)}</p>
               </article>
             ))}
           </div>
@@ -1250,31 +1263,57 @@ function KnowledgeView({
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] opacity-65">{entry.role === "user" ? "You" : "Amanah Drive"}</p>
                 {entry.role === "assistant" ? <ChatAnswer content={entry.content} citations={entry.citations ?? []} onCitationClick={(citation) => openCitation(entry.id, citation)} /> : <p className="mt-3 whitespace-pre-wrap text-sm leading-7">{entry.content}</p>}
                 {entry.citations && entry.citations.length > 0 ? (
-                  <div className="mt-5 space-y-3 border-t border-white/10 pt-4">
-                    <p className={labelClass}>Sources & citations</p>
-                    {entry.citations.map((citation, index) => {
-                      const cardKey = citationCardKey(entry.id, citation.reference);
-                      const isActive = activeCitationCard === cardKey;
+                  <div className="mt-6 border-t border-white/10 pt-5">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                      <div>
+                        <p className={labelClass}>Answer sources</p>
+                        <h4 className="mt-1.5 text-lg font-semibold text-white/90">Where this answer came from</h4>
+                      </div>
+                      <span className="w-fit rounded-full border border-white/12 bg-white/[0.04] px-2.5 py-1 text-[11px] text-white/48">
+                        {entry.citations.length} cited passage{entry.citations.length === 1 ? "" : "s"}
+                      </span>
+                    </div>
+                    <div className="mt-4 grid gap-3">
+                      {entry.citations.map((citation, index) => {
+                        const cardKey = citationCardKey(entry.id, citation.reference);
+                        const isActive = activeCitationCard === cardKey;
+                        const isDownloading = downloadingCitation === cardKey;
 
-                      return (
-                        <div
-                          key={`${citation.chunkId}-${citation.fileId ?? "none"}-${citation.reference}-${index}`}
-                          ref={(node) => {
-                            citationCardRefs.current[cardKey] = node;
-                          }}
-                          className={`rounded-[8px] border bg-[#ffffff]/[0.05] p-3 transition ${isActive ? "border-[#ffffff]/65 ring-1 ring-[#ffffff]/40" : "border-[#ffffff]/20"}`}
-                          data-citation-active={isActive ? "true" : undefined}
-                        >
-                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                            <p className="text-sm font-semibold text-white/85">[{citation.reference}] {citation.fileName}</p>
-                            <button className="text-xs font-semibold uppercase tracking-[0.14em] text-[#ffffff] transition hover:text-white" onClick={() => onDownloadCitation(citation)} type="button">
-                              Download
-                            </button>
+                        return (
+                          <div
+                            key={`${citation.chunkId}-${citation.fileId ?? "none"}-${citation.reference}-${index}`}
+                            ref={(node) => {
+                              citationCardRefs.current[cardKey] = node;
+                            }}
+                            className={`group rounded-[10px] border bg-white/[0.035] p-4 transition ${isActive ? "border-white/60 ring-1 ring-white/25" : "border-white/12 hover:border-white/28 hover:bg-white/[0.055]"}`}
+                            data-citation-active={isActive ? "true" : undefined}
+                          >
+                            <div className="flex items-start gap-3">
+                              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[7px] border border-white/20 bg-white/[0.08] text-xs font-bold text-white">
+                                {citation.reference}
+                              </span>
+                              <button className="min-w-0 flex-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60" onClick={() => openCitation(entry.id, citation)} type="button" aria-label={`View citation ${citation.reference} from ${citation.fileName}`}>
+                                <span className="block break-words text-sm font-semibold text-white/88">{citation.fileName}</span>
+                                <span className="mt-1 block text-xs text-white/42">
+                                  {citation.chunkIndex === null ? "Retrieved passage" : `Passage ${citation.chunkIndex + 1}`}
+                                  {citation.relevanceScore === null ? "" : ` · ${formatPercentage(citation.relevanceScore)} match`}
+                                </span>
+                              </button>
+                              <span className="rounded-[5px] border border-white/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/42">{fileExtension(citation.fileName)}</span>
+                            </div>
+                            <p className="mt-3 max-h-[4.5rem] overflow-hidden text-sm leading-6 text-white/58">{citation.snippet}</p>
+                            <div className="mt-3 flex items-center justify-between gap-3 border-t border-white/10 pt-3">
+                              <button className="text-xs font-semibold text-white/72 transition hover:text-white" onClick={() => openCitation(entry.id, citation)} type="button">
+                                View excerpt <span aria-hidden="true">→</span>
+                              </button>
+                              <button className="inline-flex items-center gap-1.5 text-xs font-semibold text-white/58 transition hover:text-white disabled:cursor-not-allowed disabled:opacity-35" disabled={!citation.fileId || isDownloading} onClick={() => void downloadCitation(entry.id, citation)} type="button" aria-label={`Download ${citation.fileName}`}>
+                                <DownloadGlyph /> {isDownloading ? "Downloading…" : "Download file"}
+                              </button>
+                            </div>
                           </div>
-                          <p className="mt-2 text-sm leading-6 text-white/55">{citation.snippet}</p>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
                 ) : null}
               </article>
@@ -1316,8 +1355,9 @@ function KnowledgeView({
   );
 }
 
-function CitationSnippetDialog({ citation, onClose, onDownload }: { citation: ChatCitation; onClose: () => void; onDownload: () => void }) {
+function CitationSnippetDialog({ citation, onClose, onDownload }: { citation: ChatCitation; onClose: () => void; onDownload: () => Promise<boolean> }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const [isDownloading, setDownloading] = useState(false);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -1328,11 +1368,20 @@ function CitationSnippetDialog({ citation, onClose, onDownload }: { citation: Ch
     dialog.showModal();
   }, []);
 
+  async function handleDownload() {
+    setDownloading(true);
+    try {
+      await onDownload();
+    } finally {
+      setDownloading(false);
+    }
+  }
+
   return (
     <dialog
       ref={dialogRef}
       aria-labelledby="citation-dialog-title"
-      className="w-[min(92vw,620px)] rounded-[10px] border border-[#ffffff]/35 bg-[#0a0a0a] p-0 text-white shadow-[0_28px_90px_rgba(0,0,0,0.7)] backdrop:bg-black/75"
+      className="fixed inset-0 m-auto max-h-[calc(100vh-2rem)] w-[min(92vw,660px)] overflow-y-auto rounded-[12px] border border-[#ffffff]/30 bg-[#0a0a0a] p-0 text-white shadow-[0_28px_90px_rgba(0,0,0,0.7)] backdrop:bg-black/75"
       onClick={(event) => {
         if (event.target === event.currentTarget) {
           dialogRef.current?.close();
@@ -1340,23 +1389,32 @@ function CitationSnippetDialog({ citation, onClose, onDownload }: { citation: Ch
       }}
       onClose={onClose}
     >
-      <div className="p-5 sm:p-6">
+      <div className="p-5 sm:p-7">
         <div className="flex items-start justify-between gap-5">
           <div>
-            <p className={labelClass}>Citation [{citation.reference}]</p>
-            <h4 id="citation-dialog-title" className="mt-2 break-words text-3xl font-semibold tracking-[-0.02em] text-white/92">{citation.fileName}</h4>
+            <p className={labelClass}>Source {citation.reference}</p>
+            <h4 id="citation-dialog-title" className="mt-2 break-words text-2xl font-semibold tracking-[-0.02em] text-white/92 sm:text-3xl">{citation.fileName}</h4>
           </div>
           <button className={iconButtonClass} onClick={() => dialogRef.current?.close()} type="button" aria-label="Close citation">
             ×
           </button>
         </div>
-        <p className="mt-5 rounded-[8px] border border-white/10 bg-white/[0.035] p-4 text-sm leading-7 text-white/68">{citation.snippet}</p>
+        <div className="mt-5 flex flex-wrap gap-2 text-xs text-white/52">
+          <span className="rounded-full border border-white/12 bg-white/[0.04] px-3 py-1.5">{citation.chunkIndex === null ? "Retrieved passage" : `Passage ${citation.chunkIndex + 1}`}</span>
+          {citation.relevanceScore === null ? null : <span className="rounded-full border border-white/12 bg-white/[0.04] px-3 py-1.5">{formatPercentage(citation.relevanceScore)} relevance</span>}
+          <span className="rounded-full border border-white/12 bg-white/[0.04] px-3 py-1.5 uppercase">{fileExtension(citation.fileName)}</span>
+        </div>
+        <div className="mt-5 rounded-[10px] border border-white/10 bg-white/[0.035] p-5">
+          <p className={labelClass}>Retrieved excerpt</p>
+          <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-white/72">{citation.snippet}</p>
+        </div>
+        <p className="mt-3 text-xs leading-5 text-white/38">This excerpt is from the passage used to ground the answer. Download the original file to review its full context.</p>
         <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <button className={secondaryButtonClass} onClick={() => dialogRef.current?.close()} type="button">
             Close
           </button>
-          <button className={primaryButtonClass} onClick={onDownload} type="button">
-            Download source
+          <button className={primaryButtonClass} disabled={!citation.fileId || isDownloading} onClick={() => void handleDownload()} type="button">
+            {isDownloading ? "Downloading…" : "Download original"}
           </button>
         </div>
       </div>
@@ -1879,6 +1937,10 @@ function formatBytes(bytes: number) {
 
 function formatScore(score: number) {
   return score.toFixed(3);
+}
+
+function formatPercentage(score: number) {
+  return `${Math.round(Math.max(0, Math.min(1, score)) * 100)}%`;
 }
 
 function fileExtension(fileName: string) {

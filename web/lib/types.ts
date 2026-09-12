@@ -49,6 +49,8 @@ export type ChatCitation = {
   fileId: string | null;
   fileName: string;
   snippet: string;
+  chunkIndex: number | null;
+  relevanceScore: number | null;
 };
 
 export type ChatResponse = {

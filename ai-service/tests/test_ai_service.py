@@ -309,11 +309,14 @@ def test_rag_prompt_includes_question_and_chunks():
     assert "using only their numeric markers" in prompt
 
 
-def test_rag_citations_use_one_based_chunk_order():
-    citations = create_citations(rag_request())
+def test_rag_citations_include_only_valid_markers_in_first_mention_order():
+    citations = create_citations(
+        rag_request(),
+        "Policy [2], repeated [2], then lease [1]. Invalid [99] and code `[1]` are ignored.",
+    )
 
-    assert [citation.reference for citation in citations] == ["1", "2"]
-    assert citations[1].fileName == "policy.md"
+    assert [citation.reference for citation in citations] == ["2", "1"]
+    assert [citation.fileName for citation in citations] == ["policy.md", "lease.pdf"]
 
 
 def test_rag_answer_with_stubbed_llm_returns_expected_shape():

@@ -84,7 +84,7 @@ sequenceDiagram
 
 ### RAG Chat Flow
 
-Retrieval stays in the API. The AI service receives the already-retrieved chunks and generates a grounded answer with citations.
+Retrieval stays in the API. The AI service receives the already-retrieved chunks and generates a grounded answer with numeric citation markers. The API treats its retrieved chunks as the source of truth: it parses valid markers actually present in the answer, removes duplicates, and maps each marker to the database-owned file ID, filename, excerpt, passage index, and relevance score. Model-returned citation metadata is never used to identify a source.
 
 ```mermaid
 sequenceDiagram
@@ -102,7 +102,8 @@ sequenceDiagram
     SC->>AI: POST /rag/answer { question, chunks, history }
     AI->>HF: chat completion
     HF-->>AI: generated answer
-    AI-->>SC: answer + citations
+    AI-->>SC: answer + numeric markers
+    SC->>SC: map cited markers to retrieved chunk metadata
     SC->>DB: persist user and assistant messages
     SC-->>U: answer + citations
 ```

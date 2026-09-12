@@ -76,7 +76,7 @@ def generate_grounded_answer(payload: RagAnswerRequest, app_state: Any) -> RagAn
     return RagAnswerResponse(
         answer=result.answer,
         model=model,
-        citations=create_citations(payload),
+        citations=create_citations(payload, result.answer),
         usage=ModelUsage(
             provider="huggingface",
             inputTokens=result.input_tokens,
@@ -162,15 +162,42 @@ def call_hugging_face(prompt: str, model: str) -> HuggingFaceResult:
     )
 
 
-def create_citations(payload: RagAnswerRequest) -> List[RagCitation]:
+def create_citations(payload: RagAnswerRequest, answer: str) -> List[RagCitation]:
     return [
         RagCitation(
             reference=str(reference),
-            fileName=chunk.fileName,
-            snippet=create_snippet(chunk.text),
+            fileName=payload.chunks[reference - 1].fileName,
+            snippet=create_snippet(payload.chunks[reference - 1].text),
         )
-        for reference, chunk in enumerate(payload.chunks, start=1)
+        for reference in cited_references(answer, len(payload.chunks))
     ]
+
+
+def cited_references(answer: str, chunk_count: int) -> List[int]:
+    references: List[int] = []
+    seen = set()
+    inside_code = False
+    index = 0
+
+    while index < len(answer):
+        if answer[index] == "`" and (index == 0 or answer[index - 1] != "\\"):
+            while index + 1 < len(answer) and answer[index + 1] == "`":
+                index += 1
+            inside_code = not inside_code
+        elif not inside_code and answer[index] == "[":
+            closing_bracket = answer.find("]", index + 1)
+            if closing_bracket < 0:
+                break
+            candidate = answer[index + 1:closing_bracket]
+            if candidate.isdigit():
+                reference = int(candidate)
+                if 1 <= reference <= chunk_count and reference not in seen:
+                    references.append(reference)
+                    seen.add(reference)
+            index = closing_bracket
+        index += 1
+
+    return references
 
 
 def create_snippet(text: str, max_length: int = 300) -> str:

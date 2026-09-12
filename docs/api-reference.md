@@ -29,8 +29,8 @@ The browsable OpenAPI/Scalar UI is available at `/docs` in Development, or when 
 | PATCH | `/drive/files/{fileId}/move` | Bearer JWT | Move a file to another folder or the root. |
 | DELETE | `/drive/files/{fileId}` | Bearer JWT | Delete file metadata, stored bytes, processing job, and chunks. |
 | GET | `/search` | Bearer JWT | Semantic search over processed chunks with `query` and optional `topK`. |
-| POST | `/chat` | Bearer JWT | Retrieve relevant chunks, ask the AI service for a grounded answer, and persist the exchange. |
-| GET | `/chat/{conversationId}` | Bearer JWT | Return conversation message history with `page` and `pageSize`. |
+| POST | `/chat` | Bearer JWT | Retrieve relevant chunks, ask the AI service for a grounded answer, and persist the exchange with authoritative source metadata for valid cited markers. |
+| GET | `/chat/{conversationId}` | Bearer JWT | Return conversation message history and persisted citation metadata with `page` and `pageSize`. |
 | POST | `/agent/runs` | Bearer JWT | Persist a `Pending` approval-aware agent run and return immediately, optionally continuing an agent conversation. |
 | GET | `/agent/runs/{runId}` | Bearer JWT | Return a run's current state and its conversation's readable ordered step history. |
 | POST | `/agent/runs/{runId}/approve` | Bearer JWT | Atomically approve the pending tool call, requeue the run as `Pending`, and return immediately. |
